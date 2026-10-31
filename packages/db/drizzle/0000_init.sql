@@ -1,0 +1,2 @@
+-- Baseline kosong: titik awal riwayat migrasi trush. Tabel auth menyusul
+-- dari CLI better-auth (B6). Jangan sunting migrasi yang sudah diterapkan.

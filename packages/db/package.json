@@ -1,0 +1,32 @@
+{
+  "name": "@trush/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./id": "./src/id.ts",
+    "./schema": "./src/schema/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "catalog:db",
+    "@trush/env": "workspace:*",
+    "drizzle-orm": "catalog:db",
+    "uuid": "^14.0.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:db",
+    "@trush/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "drizzle-kit": "catalog:db",
+    "typescript": "catalog:",
+    "vitest": "catalog:test"
+  }
+}

@@ -31,6 +31,13 @@
       "cache": false,
       "passThroughEnv": ["CI", "CLOUDFLARE_ENV"]
     },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL_UNPOOLED"]
+    },
     "dev": {
       "cache": false,
       "passThroughEnv": ["CLOUDFLARE_ENV"],
