@@ -4,7 +4,11 @@ import { createMiddleware } from "hono/factory";
 import type { AppContext } from "./context";
 import { notFound, onError } from "./middleware/error";
 import { requestContext } from "./middleware/request-context";
-import { cors, securityHeaders } from "./middleware/security";
+import {
+  cors,
+  SCALAR_BUNDLE_URL,
+  securityHeaders,
+} from "./middleware/security";
 import {
   createRouter,
   DOCS_PATH,
@@ -42,7 +46,11 @@ const routes = app.route("/", healthRoutes);
 app.doc31(OPENAPI_PATH, OPENAPI_DOCUMENT);
 app.get(
   DOCS_PATH,
-  Scalar((c) => ({ nonce: c.get("secureHeadersNonce"), url: OPENAPI_PATH }))
+  Scalar((c) => ({
+    cdn: SCALAR_BUNDLE_URL,
+    nonce: c.get("secureHeadersNonce"),
+    url: OPENAPI_PATH,
+  }))
 );
 
 export type AppType = typeof routes;

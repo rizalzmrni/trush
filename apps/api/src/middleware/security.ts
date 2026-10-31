@@ -13,7 +13,14 @@ const NON_OFFICIAL_HOST =
   /(?:^localhost|^127\.0\.0\.1|\.workers\.dev)(?::\d+)?$/u;
 
 /** CDN bundel Scalar; satu-satunya host luar yang diizinkan di `/docs`. */
-export const SCALAR_CDN_ORIGIN = "https://cdn.jsdelivr.net";
+const SCALAR_CDN_ORIGIN = "https://cdn.jsdelivr.net";
+
+/**
+ * Bundel UMD `@scalar/api-reference` yang di-pin. Versi 1.76.3 dirilis
+ * bersamaan dengan `@scalar/hono-api-reference` 0.12.17 yang terpasang
+ * (sama-sama memakai `@scalar/schemas` 0.16.0). Naikkan keduanya bersamaan.
+ */
+export const SCALAR_BUNDLE_URL = `${SCALAR_CDN_ORIGIN}/npm/@scalar/api-reference@1.76.3/dist/browser/standalone.js`;
 
 const SHARED_HEADERS = {
   referrerPolicy: "strict-origin-when-cross-origin",
@@ -44,7 +51,8 @@ const docsHeaders = secureHeaders({
     fontSrc: ["'self'", "https://fonts.scalar.com"],
     frameAncestors: ["'none'"],
     imgSrc: ["'self'", "data:"],
-    scriptSrc: [NONCE, SCALAR_CDN_ORIGIN],
+    // Hanya file bundel yang di-pin, bukan seluruh jsDelivr.
+    scriptSrc: [NONCE, SCALAR_BUNDLE_URL],
     styleSrc: ["'self'", "'unsafe-inline'", SCALAR_CDN_ORIGIN],
   },
 });
