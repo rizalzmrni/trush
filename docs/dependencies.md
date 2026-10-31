@@ -43,7 +43,7 @@ Sebutkan hasil keputusan (lokasi + alasan satu kalimat) di baris "Dependensi" la
 | `db` | `drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`, `@electric-sql/pglite` (test) | `drizzle-orm` & `drizzle-kit` wajib cocok |
 | `services` | `better-auth`, `@polar-sh/better-auth`, `@polar-sh/sdk`, `resend`, `posthog-js`, `@react-email/*`, `react-email` | Integrasi layanan pihak ketiga |
 | `logtape` | `@logtape/logtape`, `@logtape/redaction` | Inti & paket LogTape wajib satu versi |
-| `test` | `vitest`, `@vitest/ui`, `@cloudflare/vitest-plugin`, `@msw/cloudflare`, `@playwright/test`, `@testing-library/react`, `@testing-library/dom`, `happy-dom` | `vitest` harus masuk peer `@cloudflare/vitest-plugin` |
+| `test` | `vitest`, `@vitest/ui`, `@cloudflare/vitest-plugin`, `@msw/cloudflare`, `@playwright/test`, `@testing-library/react`, `@testing-library/dom`, `@testing-library/user-event`, `happy-dom` | `vitest` harus masuk peer `@cloudflare/vitest-plugin` |
 | `storybook` | `storybook` dan paket `@storybook/*` yang dipakai | Semua paket Storybook wajib berversi sama |
 
 Paket baru yang jelas termasuk sebuah kelompok langsung masuk catalog itu. Catalog bernama **baru** harus diusulkan dulu ke user dan hanya layak bila berisi ≥2 paket yang harus di-upgrade bersamaan.
