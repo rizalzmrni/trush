@@ -4,6 +4,13 @@ const NONCE_BYTES = 16;
 // Tanpa `preload`: pendaftaran preload list adalah keputusan pemilik domain.
 const HSTS = "max-age=31536000; includeSubDomains";
 
+/**
+ * Host tanpa HSTS karena bukan domain resmi (`docs/react-router.md`). Pola sama
+ * dengan `NON_OFFICIAL_HOST` di apps/api (disalin, bukan diimpor lintas app).
+ */
+const NON_OFFICIAL_HOST =
+  /(?:^localhost|^127\.0\.0\.1|\.workers\.dev)(?::\d+)?$/u;
+
 /** Nonce base64 acak per request untuk `script-src`. */
 export const createNonce = (): string => {
   const bytes = crypto.getRandomValues(new Uint8Array(NONCE_BYTES));
@@ -31,12 +38,22 @@ const contentSecurityPolicy = (nonce: string, env: WebEnv): string => {
 /** Header keamanan untuk respons dokumen HTML (`docs/react-router.md`). */
 export const applySecurityHeaders = (
   headers: Headers,
-  { env, nonce }: { env: WebEnv; nonce: string }
+  {
+    env,
+    nonce,
+    requestUrl,
+  }: {
+    env: WebEnv;
+    nonce: string;
+    /** URL request dokumen; host-nya menentukan HSTS. */
+    requestUrl: string | URL;
+  }
 ): void => {
   headers.set("Content-Security-Policy", contentSecurityPolicy(nonce, env));
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  if (env.APP_ENV === "production") {
+  const isOfficialHost = !NON_OFFICIAL_HOST.test(new URL(requestUrl).host);
+  if (env.APP_ENV === "production" && isOfficialHost) {
     headers.set("Strict-Transport-Security", HSTS);
   }
 };

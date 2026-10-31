@@ -14,14 +14,23 @@ const webEnv = (appEnv: "development" | "staging" | "production") =>
     runtimeEnv: { ...TEST_ENV, ...envFor(appEnv) },
   });
 
+const OFFICIAL_URL = "https://trush.example.test/";
+const HSTS_VALUE = "max-age=31536000; includeSubDomains";
+
 const headersFor = (
   appEnv: "development" | "staging" | "production",
-  nonce = "bm9uY2UtdWppLTEyMw=="
+  nonce = "bm9uY2UtdWppLTEyMw==",
+  requestUrl = OFFICIAL_URL
 ) => {
   const headers = new Headers();
-  applySecurityHeaders(headers, { env: webEnv(appEnv), nonce });
+  applySecurityHeaders(headers, { env: webEnv(appEnv), nonce, requestUrl });
   return headers;
 };
+
+const hstsAt = (
+  appEnv: "development" | "staging" | "production",
+  requestUrl: string
+) => headersFor(appEnv, undefined, requestUrl).get("strict-transport-security");
 
 const directive = (csp: string, name: string) =>
   csp
@@ -84,13 +93,43 @@ describe(applySecurityHeaders, () => {
     expect(directive(prodCsp ?? "", "connect-src")).toBe("connect-src 'self'");
   });
 
-  it("HSTS hanya di production", () => {
-    expect(headersFor("production").get("strict-transport-security")).toBe(
-      "max-age=31536000; includeSubDomains"
-    );
-    expect(headersFor("staging").get("strict-transport-security")).toBeNull();
-    expect(
-      headersFor("development").get("strict-transport-security")
-    ).toBeNull();
+  it.each(["development", "staging"] as const)(
+    "%s: tanpa HSTS meski domain resmi",
+    (appEnv) => {
+      expect(hstsAt(appEnv, OFFICIAL_URL)).toBeNull();
+    }
+  );
+});
+
+describe("HSTS production per host", () => {
+  it.each([
+    "https://trush.example.test/",
+    "https://www.trush.example.test/harga",
+    "https://trush.example.test:443/",
+  ])("domain resmi %s: HSTS terpasang", (url) => {
+    expect(hstsAt("production", url)).toBe(HSTS_VALUE);
+  });
+
+  it.each([
+    "http://localhost/",
+    "https://trush-web-production.example.workers.dev/",
+    "http://127.0.0.1/",
+  ])("host bukan resmi %s: tanpa HSTS", (url) => {
+    expect(hstsAt("production", url)).toBeNull();
+  });
+
+  it.each(["http://localhost:5173/", "http://127.0.0.1:8787/"])(
+    "host bukan resmi dengan port %s: tanpa HSTS",
+    (url) => {
+      expect(hstsAt("production", url)).toBeNull();
+    }
+  );
+
+  it.each([
+    // Mirip pola, tetapi domain resmi: "." harus literal.
+    "https://trush-workersXdev.example.test/",
+    "https://127a0b0c1.example.test/",
+  ])("domain resmi yang mirip pola %s: HSTS tetap terpasang", (url) => {
+    expect(hstsAt("production", url)).toBe(HSTS_VALUE);
   });
 });

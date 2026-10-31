@@ -40,7 +40,11 @@ export default async function handleRequest(
   await body.allReady;
 
   responseHeaders.set("Content-Type", "text/html; charset=utf-8");
-  applySecurityHeaders(responseHeaders, { env, nonce });
+  applySecurityHeaders(responseHeaders, {
+    env,
+    nonce,
+    requestUrl: request.url,
+  });
 
   return new Response(body, { headers: responseHeaders, status });
 }
