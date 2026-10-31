@@ -32,7 +32,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | ID | Tugas | Pemilik | Status | Bergantung |
 | --- | --- | --- | --- | --- |
 | L0 | Root: workspaces bun, `turbo.json`, `typescript-config`, Ultracite (`oxlint.config.mts`, `oxfmt.config.mts`), Husky + lint-staged + `commitlint.config.ts`, catalog bun, template PR | lead | done (PR #1) | — |
-| L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | wip (CI + bot `trush-app[bot]` done; ruleset `protect-main` belum lengkap: Code Owners review, squash-only, blokir hapus branch) | L0 |
+| L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | done (CI, ruleset `protect-main` lengkap, bot `trush-app[bot]`) | L0 |
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
 | L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | todo | L3 |
@@ -91,7 +91,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 - 2026-10-31 — PR #4 di-merge ke `main`. L1 done: git/gh agent kini memakai GitHub App `trush-app[bot]` (token lokal, di luar repo), jadi PR dibuat bot dan `rizalzmrni` dapat approve sebagai CODEOWNER. PR ini PR pertama dari bot.
 - 2026-10-31 — L5: `e2e` PR #5 gagal di langkah "Buat branch Neon sementara" karena branch parent `dev` tidak ada (hanya `production`). Branch Neon `dev` dibuat dari `production`.
-- 2026-10-31 — L1 dibuka lagi: ruleset `protect-main` belum mewajibkan review Code Owners, masih mengizinkan merge/rebase, dan belum memblokir penghapusan `main`. Sampai diperbaiki, prasyarat merge oleh lead (`docs/pull-requests.md` bagian 0) belum terpenuhi; manusia yang merge.
+- 2026-10-31 — L1 done: ruleset `protect-main` dilengkapi (review Code Owners wajib, squash saja, penghapusan `main` diblokir; sebelumnya ketiganya belum ada). Prasyarat merge oleh lead (`docs/pull-requests.md` bagian 0) terpenuhi: lead merge dengan `gh pr merge <n> --squash --auto --delete-branch`.
 - 2026-10-31 — PR #4 siap merge (B5, B5a, F3, F3a, F3b, F3c, Q1 `/health`, Q6 done). CODEOWNERS diperbaiki ke `oxlint.config.mts`/`oxfmt.config.mts`. L5 wip: secret Neon diisi; `e2e` (bukan check wajib) tetap merah sampai `@trush/db` (B4), `e2e/scripts/write-dev-vars.ts`, dan test Q3 ada. PR #4 dibuat dari akun manusia, jadi approval CODEOWNERS tidak bisa diberikan author; akun bot agent (L1) masih belum ada.
 - 2026-10-31 — CI PR #4 merah: tipe `Env` dari `wrangler types` membaca `.dev.vars` lokal, berbeda dengan CI. F3c + B5a (`fix(web)`, `fix(api)`): typegen dari `.dev.vars.example`. Check `e2e` tetap merah sampai L5 (secret Neon).
 - 2026-10-31 — F3b done (`fix(web)`): HSTS web hanya production di domain resmi, test regresi per host. Batch `feat/fase0-api-web` ditutup: PR #4 (Draft).
