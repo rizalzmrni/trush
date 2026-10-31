@@ -31,7 +31,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 | ID | Tugas | Pemilik | Status | Bergantung |
 | --- | --- | --- | --- | --- |
-| L0 | Root: workspaces bun, `turbo.json`, `typescript-config`, Ultracite (`oxlint.config.mts`, `oxfmt.config.mts`), Husky + lint-staged + `commitlint.config.ts`, catalog bun, template PR | lead | done | — |
+| L0 | Root: workspaces bun, `turbo.json`, `typescript-config`, Ultracite (`oxlint.config.mts`, `oxfmt.config.mts`), Husky + lint-staged + `commitlint.config.ts`, catalog bun, template PR | lead | done (PR #1) | — |
 | L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | todo | L0 |
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
@@ -68,7 +68,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
-- 2026-10-31 — L0 done (branch `chore/l0-root-bootstrap`): workspaces bun + catalog, `turbo.json`, `@trush/typescript-config` (`base`, `react`), Ultracite (Oxlint + Oxfmt), Husky + lint-staged + commitlint, `.gitattributes` LF. Kerangka `e2e/package.json` dibuat lead; selanjutnya milik qa-tester.
+- 2026-10-31 — L0 done (PR #1, branch `chore/l0-root-bootstrap`): workspaces bun + catalog, `turbo.json`, `@trush/typescript-config` (`base`, `react`), Ultracite (Oxlint + Oxfmt), Husky + lint-staged + commitlint, `.gitattributes` LF. Kerangka `e2e/package.json` dibuat lead; selanjutnya milik qa-tester.
 - {{YYYY-MM-DD}} — Plugin `captcha` (Turnstile) diizinkan; aturan layanan pihak ketiga + ADR 0002.
 - {{YYYY-MM-DD}} — Review: `CLOUDFLARE_ENV`, lingkungan lokal `e2e`, `VITE_APP_ENV`, rate limit better-auth, security headers, backup, README.
 - {{YYYY-MM-DD}} — Aturan lingkungan (`docs/environments.md`) dan setup e2e Playwright ditetapkan.
