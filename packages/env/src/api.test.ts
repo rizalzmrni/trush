@@ -135,4 +135,58 @@ describe(createApiEnv, () => {
       })
     ).toThrow(/CORS_ORIGINS/u);
   });
+
+  it("BetterStack opsional: tanpa keduanya valid", () => {
+    const env = createApiEnv({ runtimeEnv: validEnv });
+
+    expect(env.BETTERSTACK_INGEST_URL).toBeUndefined();
+    expect(env.BETTERSTACK_SOURCE_TOKEN).toBeUndefined();
+  });
+
+  it("BetterStack diisi bersama diterima", () => {
+    const env = createApiEnv({
+      runtimeEnv: {
+        ...validEnv,
+        BETTERSTACK_INGEST_URL: "https://ingest.example.test",
+        BETTERSTACK_SOURCE_TOKEN: "fake-source-token",
+      },
+    });
+
+    expect(env.BETTERSTACK_INGEST_URL).toBe("https://ingest.example.test");
+    expect(env.BETTERSTACK_SOURCE_TOKEN).toBe("fake-source-token");
+  });
+
+  it.each([
+    ["hanya URL", { BETTERSTACK_INGEST_URL: "https://ingest.example.test" }],
+    ["hanya token", { BETTERSTACK_SOURCE_TOKEN: "fake-source-token" }],
+    [
+      "token string kosong",
+      {
+        BETTERSTACK_INGEST_URL: "https://ingest.example.test",
+        BETTERSTACK_SOURCE_TOKEN: "",
+      },
+    ],
+  ])("BetterStack %s ditolak tanpa membocorkan token", (_label, partial) => {
+    const create = () =>
+      createApiEnv({ runtimeEnv: { ...validEnv, ...partial } });
+
+    expect(create).toThrow(/BETTERSTACK_INGEST_URL.*BETTERSTACK_SOURCE_TOKEN/u);
+    expect(create).toThrow(
+      expect.objectContaining({
+        message: expect.not.stringContaining("fake-source-token"),
+      })
+    );
+  });
+
+  it("BETTERSTACK_INGEST_URL bukan URL ditolak", () => {
+    expect(() =>
+      createApiEnv({
+        runtimeEnv: {
+          ...validEnv,
+          BETTERSTACK_INGEST_URL: "bukan-url",
+          BETTERSTACK_SOURCE_TOKEN: "fake-source-token",
+        },
+      })
+    ).toThrow(/BETTERSTACK_INGEST_URL/u);
+  });
 });
