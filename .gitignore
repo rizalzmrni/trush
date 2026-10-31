@@ -33,3 +33,6 @@ storybook-static
 # Misc
 .DS_Store
 *.pem
+
+# Hasil `wrangler types` (dijalankan turbo typegen)
+worker-configuration.d.ts

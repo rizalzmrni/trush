@@ -32,6 +32,12 @@ export const createWebEnv = ({
       VITE_APP_ENV: appEnvSchema,
       /** URL `apps/app` untuk tautan login/daftar. */
       VITE_APP_URL: z.url(),
+      /**
+       * URL publik `apps/web` sendiri, untuk canonical, `og:url`, URL gambar
+       * absolut, dan `Sitemap:` di robots (`@trush/seo`). Tidak ditebak dari
+       * hostname request.
+       */
+      VITE_SITE_URL: z.url(),
     },
     server: {
       APP_ENV: appEnvSchema,

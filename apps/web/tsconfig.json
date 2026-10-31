@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@trush/typescript-config/react.json",
+  "compilerOptions": {
+    "rootDirs": [".", "./.react-router/types"],
+    // Impor CSS/aset `?url` di-resolve Vite. Tipe Worker (`Env`, runtime)
+    // dari worker-configuration.d.ts hasil `wrangler types`.
+    "types": ["vite/client"]
+  },
+  "include": [
+    ".react-router/types/**/*",
+    "src",
+    "worker-configuration.d.ts",
+    "react-router.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
+}

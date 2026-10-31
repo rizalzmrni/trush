@@ -1,0 +1,9 @@
+{
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    // Global Worker (fetch, Request, crypto) dari `wrangler types`, bukan DOM.
+    "lib": ["ES2024"],
+    "types": ["./worker-configuration.d.ts"]
+  },
+  "include": ["src", "vitest.config.ts"]
+}

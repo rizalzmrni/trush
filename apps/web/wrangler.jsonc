@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Blok top-level = development lokal (`bun run dev`); APP_ENV dari .dev.vars.
+  // Lingkungan dipilih dengan CLOUDFLARE_ENV saat `vite build`
+  // (docs/environments.md), bukan flag --env.
+  "name": "trush-web",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-08-04",
+  "observability": {
+    "enabled": true,
+  },
+  "env": {
+    "staging": {
+      "name": "trush-web-staging",
+      "vars": {
+        "APP_ENV": "staging",
+      },
+    },
+    "production": {
+      "name": "trush-web-production",
+      "vars": {
+        "APP_ENV": "production",
+      },
+    },
+  },
+}

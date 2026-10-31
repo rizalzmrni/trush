@@ -1,0 +1,19 @@
+{
+  "name": "@trush/seo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./meta": "./src/meta.ts",
+    "./robots": "./src/robots.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@trush/typescript-config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:test"
+  }
+}

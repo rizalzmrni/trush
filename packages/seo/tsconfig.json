@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    // `URL` (Web API) dipakai di browser dan Worker; tidak ada di lib ES saja.
+    "lib": ["ES2024", "DOM"]
+  },
+  "include": ["src", "vitest.config.ts"]
+}

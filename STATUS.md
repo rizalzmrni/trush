@@ -9,23 +9,23 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 ### backend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: B3 `packages/observability`
-- Berikutnya: B5 `apps/api` atau B4 `packages/db`
+- Selesai terakhir: B5 `apps/api` (+ pin Scalar); `VITE_SITE_URL` di `@trush/env` web
+- Berikutnya: B4 `packages/db`
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F1a perbaikan `formatCurrency`
-- Berikutnya: F3 `apps/web`
+- Selesai terakhir: F3b HSTS web; F3a `toAbsoluteUrl`; F3 `apps/web` + `packages/seo`
+- Berikutnya: F4 `apps/app` (menunggu B6)
 - Blocker: —
 
 ### qa-tester
 
 - Sedang dikerjakan: —
-- Selesai terakhir: Q5 test observability; Q4; Q1 bagian env + core
-- Berikutnya: Q1 bagian `/health` (setelah B5)
-- Blocker: Q1 `/health` menunggu B5
+- Selesai terakhir: Q6 (seo 54, web 29); Q1; Q5; Q4
+- Berikutnya: Q2 (setelah B6, F4)
+- Blocker: —
 
 ## Backlog bootstrap
 
@@ -36,26 +36,42 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
 | L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | todo | L3 |
-| L5 | Environment GitHub `e2e` (`NEON_API_KEY`, `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | todo | Q3 |
+| L5 | Environment GitHub `e2e` (secret `NEON_API_KEY`, variable `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | wip (secret diisi 2026-10-31; job tetap merah sampai B4 + Q3) | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
 | B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | done (PR #3) | B1 |
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | todo | B1 |
-| B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | todo | B1, B3 |
+| B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | done (PR #4) | B1, B3 |
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | todo | B4, B5 |
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
 | F1a | Perbaiki `formatCurrency`: IDR + `minimumFractionDigits` > 0 melempar RangeError (bug dari Q4, `it.fails` di `format.test.ts`) | frontend-engineer | done (PR #3) | F1, Q4 |
-| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | todo | F1, B1 |
+| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | done (PR #4) | F1, B1 |
+| F3a | `toAbsoluteUrl` menolak path yang berpindah origin (`/	/…`, `/\…`; bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
+| F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
+| F3c | `typegen` web deterministik (`wrangler types --env-file .dev.vars.example`; CI PR #4 merah karena `.dev.vars` lokal) | frontend-engineer | done (PR #4) | F3 |
+| B5a | `typegen` api memakai pola yang sama | backend-engineer | done (PR #4) | B5 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
-| Q1 | Test env, core, api `/health` | qa-tester | wip (env, core done PR #3; `/health` menunggu B5) | B1, B2, B5 |
+| Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
+| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
+
+Catatan lanjutan dari batch ini:
+
+- F4: naikkan `ErrorPage` (`apps/web/src/features/errors`) ke `@trush/design-system` `components/feedback` + story.
+- `apps/web` `entry.server.tsx` `onError` belum melaporkan error ke mana pun; sambungkan saat analytics/observability web dikerjakan.
+- `@trush/seo`: sitemap + JSON-LD saat ada halaman marketing nyata.
+- Q3: blok `env.e2e` di `wrangler.jsonc` web (dan api di B8).
+- L3/L4: ganti placeholder `CORS_ORIGINS` di `apps/api/wrangler.jsonc`; sediakan `VITE_SITE_URL`/`VITE_APP_URL`/`VITE_APP_ENV` saat `CLOUDFLARE_ENV=… vite build`.
+- `typegen` semua app memakai `wrangler types --env-file .dev.vars.example`: setiap var/secret baru WAJIB masuk `.dev.vars.example` agar ada di tipe `Env` (F4 `apps/app` ikut pola ini).
+- Regex `NON_OFFICIAL_HOST` kini disalin di `apps/api` dan `apps/web`; bila F4 butuh salinan ketiga, pindahkan ke paket bersama (usulan: `@trush/core`).
+- Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
 
@@ -65,6 +81,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 | --- | --- | --- | --- |
 | `ErrorResponse` (`@trush/core/schemas/error`): `{ error: { code, message, details? } }` | backend-engineer | `apps/api` (onError, defaultHook), klien `apps/app`/`apps/web` | done (B2) |
 | `HealthResponse` (`@trush/core/schemas/health`): `{ status: "ok" }` | backend-engineer | `apps/api` `GET /health` (B5), Q1 | done (B2) |
+| `@trush/api/client`: `hcWithType`, `Client`, `AppType` (tipe dari `dist/types`, `build:types`) | backend-engineer | `apps/app`, `apps/web` | done (B5) |
 
 ## Blocker aktif
 
@@ -72,6 +89,13 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — PR #4 siap merge (B5, B5a, F3, F3a, F3b, F3c, Q1 `/health`, Q6 done). CODEOWNERS diperbaiki ke `oxlint.config.mts`/`oxfmt.config.mts`. L5 wip: secret Neon diisi; `e2e` (bukan check wajib) tetap merah sampai `@trush/db` (B4), `e2e/scripts/write-dev-vars.ts`, dan test Q3 ada. PR #4 dibuat dari akun manusia, jadi approval CODEOWNERS tidak bisa diberikan author; akun bot agent (L1) masih belum ada.
+- 2026-10-31 — CI PR #4 merah: tipe `Env` dari `wrangler types` membaca `.dev.vars` lokal, berbeda dengan CI. F3c + B5a (`fix(web)`, `fix(api)`): typegen dari `.dev.vars.example`. Check `e2e` tetap merah sampai L5 (secret Neon).
+- 2026-10-31 — F3b done (`fix(web)`): HSTS web hanya production di domain resmi, test regresi per host. Batch `feat/fase0-api-web` ditutup: PR #4 (Draft).
+- 2026-10-31 — Q6 done (`test(web)`): 54 test seo + 29 test web; `@testing-library/react` + `/dom` (catalog:test) di apps/web. Bug Q6: F3a (`toAbsoluteUrl` keluar origin lewat tab/newline/backslash) done (`fix(seo)`); F3b (HSTS web tanpa cek host) wip.
+- 2026-10-31 — F3 done (`feat(web)`): SSR React Router 8.5.1 di Workers, CSP nonce per request, tanpa `isbot` (render penuh), `@trush/seo` `./meta` + `./robots`. `VITE_SITE_URL` di-commit bersama fixture (`feat(env)`). Q1 done: 53 test api (`test(api)`). Scalar di-pin 1.76.3 (`fix(api)`). Q6 wip.
+- 2026-10-31 — B5 done (`feat(api)`): `.meta({ id })` Zod 4 terbukti dibaca `@hono/zod-openapi` 1.6.3 (komponen ber-`$ref`); tipe `node:async_hooks` lewat deklarasi ambient minimal `apps/api/src/async-hooks.d.ts`; header `x-request-id`; `/docs` + `/openapi.json` 404 di luar development kecuali `API_DOCS_ENABLED`. `worker-configuration.d.ts` di-ignore (dibuat ulang oleh `typegen`). `CORS_ORIGINS` staging/production masih placeholder (L3/L4). Env web baru `VITE_SITE_URL` (wajib).
+- 2026-10-31 — PR #3 di-merge. Batch `feat/fase0-api-web`: B5 dan F3 wip; Q1 `/health` menunggu B5; Q6 (test web + seo) ditambahkan, menunggu F3.
 - 2026-10-31 — Q5 done (29 test observability + 6 kasus env BetterStack). Batch `feat/fase0-observability-storybook` ditutup: PR #3 (Draft).
 - 2026-10-31 — B3 done (`feat(observability)`): `AsyncLocalStorage` disuntik pemanggil (opsi A, tipe `node:async_hooks` diputuskan di B5). Env api baru: `BETTERSTACK_INGEST_URL` + `BETTERSTACK_SOURCE_TOKEN` (opsional, berpasangan). Format ingest BetterStack dicek ke dokumentasi resmi. Q5 ditambahkan.
 - 2026-10-31 — Q4 done (66 test design-system, termasuk keyboard via user-event). F1a done: bug `formatCurrency` IDR dari Q4 diperbaiki.

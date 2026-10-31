@@ -12,8 +12,8 @@
 /docs/                         @rizalzmrni
 
 # Quality gate: mematikan rule, hook, atau pipeline sama dengan melewati review.
-/oxlint.config.ts              @rizalzmrni
-/oxfmt.config.ts               @rizalzmrni
+/oxlint.config.mts              @rizalzmrni
+/oxfmt.config.mts               @rizalzmrni
 /commitlint.config.ts          @rizalzmrni
 /.lintstagedrc.json            @rizalzmrni
 /.husky/                       @rizalzmrni
