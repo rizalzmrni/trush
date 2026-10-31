@@ -6,11 +6,13 @@ const validEnv = {
   APP_ENV: "development",
   VITE_APP_ENV: "development",
   VITE_APP_URL: "http://localhost:5174",
+  VITE_SITE_URL: "http://localhost:5173",
 } as const;
 
 const clientEnv = {
   VITE_APP_ENV: "staging",
   VITE_APP_URL: "https://app.example.test",
+  VITE_SITE_URL: "https://example.test",
 } as const;
 
 describe("createWebEnv di server", () => {
@@ -20,6 +22,7 @@ describe("createWebEnv di server", () => {
     expect(env.APP_ENV).toBe("development");
     expect(env.VITE_APP_ENV).toBe("development");
     expect(env.VITE_APP_URL).toBe("http://localhost:5174");
+    expect(env.VITE_SITE_URL).toBe("http://localhost:5173");
   });
 
   it("tanpa window dianggap server", () => {
@@ -28,32 +31,37 @@ describe("createWebEnv di server", () => {
     expect(env.APP_ENV).toBe("development");
   });
 
-  it.each(["APP_ENV", "VITE_APP_ENV", "VITE_APP_URL"] as const)(
-    "menolak bila %s hilang",
-    (name) => {
-      const { [name]: _omitted, ...rest } = validEnv;
+  it.each([
+    "APP_ENV",
+    "VITE_APP_ENV",
+    "VITE_APP_URL",
+    "VITE_SITE_URL",
+  ] as const)("menolak bila %s hilang", (name) => {
+    const { [name]: _omitted, ...rest } = validEnv;
 
-      expect(() => createWebEnv({ isServer: true, runtimeEnv: rest })).toThrow(
-        new RegExp(`Env tidak valid: .*${name}`, "u")
+    expect(() => createWebEnv({ isServer: true, runtimeEnv: rest })).toThrow(
+      new RegExp(`Env tidak valid: .*${name}`, "u")
+    );
+  });
+
+  it.each(["VITE_APP_URL", "VITE_SITE_URL"] as const)(
+    "menolak %s bukan URL tanpa membocorkan nilainya",
+    (name) => {
+      const fakeValue = "nilai-palsu-bukan-url";
+      const create = () =>
+        createWebEnv({
+          isServer: true,
+          runtimeEnv: { ...validEnv, [name]: fakeValue },
+        });
+
+      expect(create).toThrow(new RegExp(name, "u"));
+      expect(create).toThrow(
+        expect.objectContaining({
+          message: expect.not.stringContaining(fakeValue),
+        })
       );
     }
   );
-
-  it("menolak VITE_APP_URL bukan URL tanpa membocorkan nilainya", () => {
-    const fakeValue = "nilai-palsu-bukan-url";
-    const create = () =>
-      createWebEnv({
-        isServer: true,
-        runtimeEnv: { ...validEnv, VITE_APP_URL: fakeValue },
-      });
-
-    expect(create).toThrow(/VITE_APP_URL/u);
-    expect(create).toThrow(
-      expect.objectContaining({
-        message: expect.not.stringContaining(fakeValue),
-      })
-    );
-  });
 
   it("menolak VITE_APP_ENV yang berbeda dari APP_ENV", () => {
     expect(() =>
@@ -80,6 +88,7 @@ describe("createWebEnv di klien", () => {
 
     expect(env.VITE_APP_ENV).toBe("staging");
     expect(env.VITE_APP_URL).toBe("https://app.example.test");
+    expect(env.VITE_SITE_URL).toBe("https://example.test");
   });
 
   it("akses var server dari klien melempar error", () => {
@@ -91,9 +100,14 @@ describe("createWebEnv di klien", () => {
     expect(() => env.APP_ENV).toThrow(/server-side/u);
   });
 
-  it("menolak var klien yang hilang", () => {
-    expect(() =>
-      createWebEnv({ isServer: false, runtimeEnv: { VITE_APP_ENV: "staging" } })
-    ).toThrow(/VITE_APP_URL/u);
-  });
+  it.each(["VITE_APP_URL", "VITE_SITE_URL"] as const)(
+    "menolak bila var klien %s hilang",
+    (name) => {
+      const { [name]: _omitted, ...rest } = clientEnv;
+
+      expect(() => createWebEnv({ isServer: false, runtimeEnv: rest })).toThrow(
+        new RegExp(name, "u")
+      );
+    }
+  );
 });
