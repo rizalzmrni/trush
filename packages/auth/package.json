@@ -15,6 +15,7 @@
   "dependencies": {
     "@trush/db": "workspace:*",
     "@trush/env": "workspace:*",
+    "@trush/phone": "workspace:*",
     "better-auth": "catalog:services",
     "drizzle-orm": "catalog:db",
     "hono": "catalog:api"
