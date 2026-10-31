@@ -1,0 +1,20 @@
+{
+  "name": "@trush/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@neondatabase/serverless": "catalog:db",
+    "@trush/env": "workspace:*",
+    "drizzle-orm": "catalog:db",
+    "uuid": "^14.0.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:db",
+    "@trush/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "drizzle-kit": "catalog:db",
+    "typescript": "catalog:",
+    "vitest": "catalog:test"
+  }
+}
