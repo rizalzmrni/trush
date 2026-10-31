@@ -8,8 +8,8 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: B3 `packages/observability`
-- Selesai terakhir: B2 `packages/core`
+- Sedang dikerjakan: —
+- Selesai terakhir: B3 `packages/observability`
 - Berikutnya: B5 `apps/api` atau B4 `packages/db`
 - Blocker: —
 
@@ -22,7 +22,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### qa-tester
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: Q5 test observability
 - Selesai terakhir: Q4 test design-system; Q1 bagian env + core
 - Berikutnya: Q1 bagian `/health` (setelah B5)
 - Blocker: Q1 `/health` menunggu B5
@@ -40,7 +40,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
-| B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | wip | B1 |
+| B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | done | B1 |
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | todo | B1 |
 | B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | todo | B1, B3 |
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | todo | B4, B5 |
@@ -55,6 +55,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done | F1 |
+| Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | wip | B3 |
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
 
@@ -71,6 +72,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — B3 done (`feat(observability)`): `AsyncLocalStorage` disuntik pemanggil (opsi A, tipe `node:async_hooks` diputuskan di B5). Env api baru: `BETTERSTACK_INGEST_URL` + `BETTERSTACK_SOURCE_TOKEN` (opsional, berpasangan). Format ingest BetterStack dicek ke dokumentasi resmi. Q5 ditambahkan.
 - 2026-10-31 — Q4 done (66 test design-system, termasuk keyboard via user-event). F1a done: bug `formatCurrency` IDR dari Q4 diperbaiki.
 - 2026-10-31 — F2 done (`feat(storybook)`): import `@trush/design-system/...` ter-resolve di Vite; telemetri Storybook dimatikan. Q1 bagian env + core done (`test(env)`). Catalog: `@storybook/addon-a11y` 10.6.5, `@testing-library/user-event`.
 - 2026-10-31 — PR #2 di-merge. Batch `feat/fase0-observability-storybook`: B3, F2, Q4 wip; Q1 dimulai untuk env + core (`/health` menunggu B5). qa-tester di-spawn.
