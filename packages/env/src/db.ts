@@ -6,10 +6,18 @@ import type { RuntimeEnvInput } from "./shared";
 
 const POSTGRES_PROTOCOLS = new Set(["postgres:", "postgresql:"]);
 
+/**
+ * Zod 4 tetap menjalankan refine setelah `z.url()` gagal; `new URL()` pada
+ * nilai tak valid melempar TypeError yang membawa nilai mentah (bisa memuat
+ * password). Kembalikan `undefined` agar refine menghasilkan issue biasa.
+ */
+const parseUrl = (value: string): URL | undefined =>
+  URL.canParse(value) ? new URL(value) : undefined;
+
 /** Connection string Postgres (Neon), mis. `postgresql://user:pass@host/db`. */
 export const databaseUrlSchema = z
-  .url()
-  .refine((value) => POSTGRES_PROTOCOLS.has(new URL(value).protocol), {
+  .url({ abort: true })
+  .refine((value) => POSTGRES_PROTOCOLS.has(parseUrl(value)?.protocol ?? ""), {
     message: "harus berprotokol postgres:// atau postgresql://",
   });
 
@@ -18,7 +26,10 @@ export const databaseUrlSchema = z
  * bisa gagal di sana.
  */
 export const unpooledDatabaseUrlSchema = databaseUrlSchema.refine(
-  (value) => !new URL(value).hostname.includes("-pooler"),
+  (value) => {
+    const url = parseUrl(value);
+    return url !== undefined && !url.hostname.includes("-pooler");
+  },
   { message: "harus koneksi direct (host tanpa -pooler)" }
 );
 
