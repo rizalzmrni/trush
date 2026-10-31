@@ -1,0 +1,27 @@
+import { createAppEnv } from "@trush/env/app";
+import type { AppEnv } from "@trush/env/app";
+import { createContext } from "react-router";
+import type { RouterContextProvider } from "react-router";
+
+export interface CloudflareContext {
+  readonly ctx: ExecutionContext;
+  readonly env: Env;
+}
+
+/** Diisi `src/worker.ts` per request lewat `context.set(...)`. */
+export const cloudflareContext = createContext<CloudflareContext>();
+
+/** Binding & `ctx` Worker; hanya dipanggil di loader/action/entry.server. */
+export const getCloudflare = (
+  context: Readonly<RouterContextProvider>
+): CloudflareContext => context.get(cloudflareContext);
+
+/**
+ * Env tervalidasi untuk request ini. `VITE_*` dibakar saat build
+ * (`import.meta.env`), sisanya dari binding Worker.
+ */
+export const getAppEnv = (context: Readonly<RouterContextProvider>): AppEnv =>
+  createAppEnv({
+    isServer: true,
+    runtimeEnv: { ...import.meta.env, ...getCloudflare(context).env },
+  });

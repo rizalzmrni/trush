@@ -3,6 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "check-types": "tsc --noEmit",
+    "dev": "react-router dev",
+    "preview": "bun run build && vite preview",
+    "test": "vitest run --passWithNoTests",
+    "typegen": "wrangler types --env-file .dev.vars.example && react-router typegen"
+  },
   "dependencies": {
     "@tabler/icons-react": "catalog:ui",
     "@tanstack/react-query": "catalog:tanstack",

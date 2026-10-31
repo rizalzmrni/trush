@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Blok top-level = development lokal (`bun run dev`); APP_ENV dari .dev.vars.
+  // Lingkungan dipilih dengan CLOUDFLARE_ENV saat `vite build`
+  // (docs/environments.md), bukan flag --env.
+  "name": "trush-app",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-08-04",
+  "observability": {
+    "enabled": true,
+  },
+  // Service Binding ke Worker api (docs/react-router.md). Saat dev, jalankan
+  // `bun run dev` di apps/api juga; binding tersambung lewat dev registry.
+  "services": [{ "binding": "API", "service": "trush-api" }],
+  "env": {
+    "staging": {
+      "name": "trush-app-staging",
+      "services": [{ "binding": "API", "service": "trush-api-staging" }],
+      "vars": {
+        "APP_ENV": "staging",
+      },
+    },
+    "production": {
+      "name": "trush-app-production",
+      "services": [{ "binding": "API", "service": "trush-api-production" }],
+      "vars": {
+        "APP_ENV": "production",
+      },
+    },
+  },
+}
