@@ -35,6 +35,12 @@ export default defineConfig({
       rules: { "sort-keys": "off" },
     },
     {
+      // Hasil CLI better-auth (tidak disunting tangan) memuat penanda
+      // `/* @__PURE__ */` di dalam ekspresi.
+      files: ["packages/db/src/schema/auth.ts"],
+      rules: { "no-inline-comments": "off" },
+    },
+    {
       // Test e2e Playwright memakai pola fixture kosong:
       // test.beforeEach(async ({}, testInfo) => ...).
       files: ["e2e/**/*.ts"],
