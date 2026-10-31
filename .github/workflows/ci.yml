@@ -1,0 +1,44 @@
+# CI trush: tanpa secret. Job "checks" dan "pr-title" dijadikan status check
+# wajib di ruleset main (lihat docs/pull-requests.md bagian 0).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Samakan dengan devEngines di package.json setiap upgrade bun.
+          bun-version: "1.4.3"
+      - run: bun install --frozen-lockfile
+      - run: bun run check-types
+      - run: bun run check
+      - run: bun run test
+
+  pr-title:
+    # Judul PR menjadi pesan commit squash, jadi divalidasi commitlint.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - run: bun install --frozen-lockfile
+      - name: Validasi judul PR
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | bunx commitlint

@@ -1,0 +1,58 @@
+# E2E: Playwright terhadap dev server lokal + branch Neon sementara per PR.
+# Butuh Environment GitHub "e2e" (tanpa reviewer) berisi secret NEON_API_KEY
+# dan variable NEON_PROJECT_ID. Jadikan status check wajib setelah stabil.
+name: E2E
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    environment: e2e
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_BRANCH: e2e-pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - run: bun install --frozen-lockfile
+
+      - name: Buat branch Neon sementara
+        run: |
+          bunx neonctl branches delete "$NEON_BRANCH" --project-id "$NEON_PROJECT_ID" || true
+          bunx neonctl branches create --project-id "$NEON_PROJECT_ID" --name "$NEON_BRANCH" --parent dev
+          pooled=$(bunx neonctl connection-string "$NEON_BRANCH" --project-id "$NEON_PROJECT_ID" --pooled)
+          direct=$(bunx neonctl connection-string "$NEON_BRANCH" --project-id "$NEON_PROJECT_ID")
+          echo "::add-mask::$pooled"
+          echo "::add-mask::$direct"
+          echo "DATABASE_URL=$pooled" >> "$GITHUB_ENV"
+          echo "DATABASE_URL_UNPOOLED=$direct" >> "$GITHUB_ENV"
+
+      - run: bunx turbo run db:migrate --filter=@trush/db
+      - name: Tulis .dev.vars.e2e (nilai palsu + DATABASE_URL)
+        run: bun run e2e/scripts/write-dev-vars.ts
+      - run: bunx playwright install --with-deps chromium
+        working-directory: e2e
+      - run: bun run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
+      - name: Hapus branch Neon
+        if: always()
+        run: bunx neonctl branches delete "$NEON_BRANCH" --project-id "$NEON_PROJECT_ID"

@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "twilio-docs": {
+      "type": "http",
+      "url": "https://mcp.twilio.com/docs"
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["@playwright/mcp@0.0.83"]
+    },
+    "Neon": {
+      "type": "http",
+      "url": "https://mcp.neon.tech/mcp"
+    }
+  }
+}

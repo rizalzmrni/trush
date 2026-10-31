@@ -1,0 +1,37 @@
+# Path di bawah ini wajib di-approve manusia sebelum PR bisa di-merge
+# (ruleset main: "Require review from Code Owners").
+# Ganti {{github_username}} dengan username GitHub-mu (bukan akun bot agent).
+# PR yang tidak menyentuh path ini boleh di-merge lead setelah CI hijau.
+
+# Aturan & izin agent: agent tidak boleh mengubah aturannya sendiri tanpa manusia.
+/CLAUDE.md                     @rizalzmrni
+/AGENTS.md                     @rizalzmrni
+/.claude/                      @rizalzmrni
+/.mcp.json                     @rizalzmrni
+/.github/                      @rizalzmrni
+/docs/                         @rizalzmrni
+
+# Quality gate: mematikan rule, hook, atau pipeline sama dengan melewati review.
+/oxlint.config.ts              @rizalzmrni
+/oxfmt.config.ts               @rizalzmrni
+/commitlint.config.ts          @rizalzmrni
+/.lintstagedrc.json            @rizalzmrni
+/.husky/                       @rizalzmrni
+/turbo.json                    @rizalzmrni
+
+# Identitas visual: token hanya berubah bersama DESIGN.md.
+/DESIGN.md                                       @rizalzmrni
+/packages/design-system/src/styles/globals.css   @rizalzmrni
+
+# Rantai pasok: dependensi baru dan versi catalog.
+/package.json                  @rizalzmrni
+/bun.lock                      @rizalzmrni
+
+# Data, uang, akses akun, konfigurasi produksi.
+/packages/db/drizzle/          @rizalzmrni
+/packages/db/src/schema/       @rizalzmrni
+/packages/auth/                @rizalzmrni
+/packages/payments/            @rizalzmrni
+/packages/phone/               @rizalzmrni
+/packages/env/                 @rizalzmrni
+wrangler.jsonc                 @rizalzmrni
