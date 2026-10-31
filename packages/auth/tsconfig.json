@@ -1,0 +1,10 @@
+{
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    // fetch, Request, crypto tanpa DOM; mendekati global workerd.
+    "lib": ["ES2024", "WebWorker"]
+  },
+  "include": ["src"],
+  // Test berjalan di Node (PGlite); dicek tsconfig.node.json.
+  "exclude": ["src/**/*.test.ts"]
+}

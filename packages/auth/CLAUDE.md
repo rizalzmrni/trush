@@ -27,14 +27,16 @@ Konfigurasi better-auth server dan klien trush: sesi, akun, plugin, middleware u
 - `betterAuth({...})` di scope modul → secret belum ada di Workers. Pakai factory.
 - CLI mencari `auth.ts` statis → sediakan `src/auth.cli.ts` (env dev, plugin sama persis dengan factory) dan berikan lewat `--config`.
 - `auth@latest` lebih baru dari `better-auth` terpasang → skema tidak cocok. Naikkan `better-auth` ke versi yang sama sebelum generate.
+- Test dengan PGlite: `createAuth({ db })` menerima `AnyDatabase`, jadi `createTestDb().db` bisa dipakai langsung. Mock `fetch` untuk Turnstile (`challenges.cloudflare.com`) dan HIBP (`api.pwnedpasswords.com`).
+- `useSecureCookies` → nama cookie sesi `__Secure-better-auth.session_token`.
 
 ## Prosedur
 
 ### Menambah plugin / opsi yang memengaruhi skema
 
 1. Pastikan plugin ada di daftar izin; ubah factory, `auth.cli.ts`, dan klien.
-2. `bun x auth@latest generate --config src/auth.cli.ts --output ../db/src/schema/auth.ts --yes`
-3. Lanjutkan prosedur migrasi di `packages/db/CLAUDE.md`.
+2. `bun run auth:generate` (di `packages/auth`; script mem-pin versi CLI `auth@` = `better-auth` terpasang, naikkan keduanya bersamaan).
+3. Tambahkan tabel baru sebagai ekspor bernama di `packages/db/src/schema/index.ts`, lalu lanjutkan prosedur migrasi di `packages/db/CLAUDE.md`.
 
 ## Pengujian
 
