@@ -1,0 +1,20 @@
+{
+  "name": "@trush/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@trush/db": "workspace:*",
+    "@trush/env": "workspace:*",
+    "better-auth": "catalog:services",
+    "drizzle-orm": "catalog:db",
+    "hono": "catalog:api"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "catalog:db",
+    "@trush/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:test"
+  }
+}

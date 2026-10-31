@@ -19,7 +19,9 @@
   "dependencies": {
     "@hono/zod-openapi": "catalog:api",
     "@scalar/hono-api-reference": "catalog:api",
+    "@trush/auth": "workspace:*",
     "@trush/core": "workspace:*",
+    "@trush/db": "workspace:*",
     "@trush/env": "workspace:*",
     "@trush/observability": "workspace:*",
     "hono": "catalog:api",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:test",
+    "@electric-sql/pglite": "catalog:db",
     "@trush/typescript-config": "workspace:*",
     "typescript": "catalog:",
     "vitest": "catalog:test",
