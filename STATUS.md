@@ -8,23 +8,23 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: B5 `apps/api`
 - Selesai terakhir: B3 `packages/observability`
-- Berikutnya: B5 `apps/api` atau B4 `packages/db`
+- Berikutnya: B4 `packages/db`
 - Blocker: —
 
 ### frontend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: F3 `apps/web` + `packages/seo`
 - Selesai terakhir: F1a perbaikan `formatCurrency`
-- Berikutnya: F3 `apps/web`
+- Berikutnya: F4 `apps/app` (menunggu B6)
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: menunggu B5/F3 untuk Q1 `/health` dan Q6
 - Selesai terakhir: Q5 test observability; Q4; Q1 bagian env + core
-- Berikutnya: Q1 bagian `/health` (setelah B5)
+- Berikutnya: Q1 bagian `/health` (setelah B5), Q6 test `apps/web` + `packages/seo` (setelah F3)
 - Blocker: Q1 `/health` menunggu B5
 
 ## Backlog bootstrap
@@ -42,19 +42,20 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
 | B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | done (PR #3) | B1 |
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | todo | B1 |
-| B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | todo | B1, B3 |
+| B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | wip | B1, B3 |
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | todo | B4, B5 |
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
 | F1a | Perbaiki `formatCurrency`: IDR + `minimumFractionDigits` > 0 melempar RangeError (bug dari Q4, `it.fails` di `format.test.ts`) | frontend-engineer | done (PR #3) | F1, Q4 |
-| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | todo | F1, B1 |
+| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | wip | F1, B1 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | wip (env, core done PR #3; `/health` menunggu B5) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
+| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | todo | F3 |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
@@ -72,6 +73,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — PR #3 di-merge. Batch `feat/fase0-api-web`: B5 dan F3 wip; Q1 `/health` menunggu B5; Q6 (test web + seo) ditambahkan, menunggu F3.
 - 2026-10-31 — Q5 done (29 test observability + 6 kasus env BetterStack). Batch `feat/fase0-observability-storybook` ditutup: PR #3 (Draft).
 - 2026-10-31 — B3 done (`feat(observability)`): `AsyncLocalStorage` disuntik pemanggil (opsi A, tipe `node:async_hooks` diputuskan di B5). Env api baru: `BETTERSTACK_INGEST_URL` + `BETTERSTACK_SOURCE_TOKEN` (opsional, berpasangan). Format ingest BetterStack dicek ke dokumentasi resmi. Q5 ditambahkan.
 - 2026-10-31 — Q4 done (66 test design-system, termasuk keyboard via user-event). F1a done: bug `formatCurrency` IDR dari Q4 diperbaiki.
