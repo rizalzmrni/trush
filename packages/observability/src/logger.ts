@@ -194,14 +194,17 @@ export const getRequestId = (request: RequestLike): string =>
 /**
  * Menjalankan handler dengan `requestId` sebagai konteks setiap log, lalu
  * menjadwalkan flush BetterStack lewat `ctx.waitUntil` tanpa menahan respons.
+ * `requestId` boleh diberikan pemanggil (mis. agar sama dengan header
+ * respons); tanpa itu diambil dari `getRequestId(request)`.
  */
 export const withRequestLogging = async <T>(
   request: RequestLike,
   ctx: WaitUntilContext,
-  handler: () => Promise<T>
+  handler: () => Promise<T>,
+  requestId: string = getRequestId(request)
 ): Promise<T> => {
   try {
-    return await withContext({ requestId: getRequestId(request) }, handler);
+    return await withContext({ requestId }, handler);
   } finally {
     ctx.waitUntil(flushLogs());
   }

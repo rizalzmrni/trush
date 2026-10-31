@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "trush-api",
+  "main": "src/index.ts",
+  // Sama di semua app; >= 2026-08-04 mengaktifkan Node.js compat tanpa flag.
+  "compatibility_date": "2026-08-04",
+  // Workers Logs: baris JSON dari sink console @trush/observability.
+  "observability": {
+    "enabled": true,
+  },
+  // Development: APP_ENV dan nilai lain datang dari .dev.vars (tanpa default).
+  "env": {
+    "staging": {
+      "name": "trush-api-staging",
+      "vars": {
+        "APP_ENV": "staging",
+        "API_DOCS_ENABLED": true,
+        "LOG_LEVEL": "info",
+        // L3: ganti dengan URL *.workers.dev app & web staging yang sebenarnya.
+        "CORS_ORIGINS": "https://trush-app-staging.example.workers.dev,https://trush-web-staging.example.workers.dev",
+      },
+    },
+    "production": {
+      "name": "trush-api-production",
+      "vars": {
+        "APP_ENV": "production",
+        "API_DOCS_ENABLED": false,
+        "LOG_LEVEL": "info",
+        // L4: ganti dengan domain resmi (app.<domain>, <domain>).
+        "CORS_ORIGINS": "https://app.example.com,https://example.com",
+      },
+    },
+  },
+}

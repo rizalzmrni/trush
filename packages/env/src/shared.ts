@@ -8,9 +8,11 @@ export type AppEnvName = z.infer<typeof appEnvSchema>;
 /**
  * Bentuk env yang diterima factory. Binding Worker (`c.env`,
  * `getCloudflare(context).env`) boleh berisi objek seperti R2 atau Service
- * Binding; hanya nilai primitif yang diteruskan ke validasi.
+ * Binding; hanya nilai primitif yang diteruskan ke validasi. Sengaja `object`,
+ * bukan `Record<string, unknown>`: interface `Env` hasil `wrangler types`
+ * tidak punya index signature sehingga tidak bisa di-assign ke `Record`.
  */
-export type RuntimeEnvInput = Readonly<Record<string, unknown>>;
+export type RuntimeEnvInput = object;
 
 type RuntimeEnv = Record<string, string | number | boolean | undefined>;
 
