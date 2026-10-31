@@ -9,7 +9,7 @@
       "outputs": ["dist/**", "build/**", "storybook-static/**"]
     },
     "build:types": {
-      "dependsOn": ["^build:types"],
+      "dependsOn": ["typegen", "^build:types"],
       "outputs": ["dist/**/*.d.ts", "dist/**/*.d.ts.map"]
     },
     "typegen": {
