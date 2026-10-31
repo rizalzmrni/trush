@@ -80,8 +80,13 @@ export const formatCurrency = (
     ...options
   }: LocaleOptions & Intl.NumberFormatOptions = {}
 ): string => {
+  // Default tanpa desimal hanya bila pemanggil tidak mengatur digit pecahan;
+  // memasangnya bersama `minimumFractionDigits` pemanggil memicu RangeError.
+  const callerSetsFraction =
+    options.minimumFractionDigits !== undefined ||
+    options.maximumFractionDigits !== undefined;
   const fractionDigits =
-    currency === "IDR"
+    currency === "IDR" && !callerSetsFraction
       ? { maximumFractionDigits: 0, minimumFractionDigits: 0 }
       : {};
   return numberFormat(locale, {

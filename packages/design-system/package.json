@@ -29,6 +29,7 @@
   "devDependencies": {
     "@testing-library/dom": "catalog:test",
     "@testing-library/react": "catalog:test",
+    "@testing-library/user-event": "catalog:test",
     "@trush/typescript-config": "workspace:*",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",

@@ -25,6 +25,7 @@ e2e/.auth
 # Build outputs
 build
 dist
+storybook-static
 
 # Debug
 *.log
