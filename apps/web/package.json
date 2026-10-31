@@ -9,7 +9,7 @@
     "dev": "react-router dev",
     "preview": "bun run build && vite preview",
     "test": "vitest run --passWithNoTests",
-    "typegen": "wrangler types && react-router typegen"
+    "typegen": "wrangler types --env-file .dev.vars.example && react-router typegen"
   },
   "dependencies": {
     "@tabler/icons-react": "catalog:ui",
