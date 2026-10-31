@@ -26,6 +26,16 @@ const BASE_ENV: AuthEnv = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   CORS_ORIGINS: [ORIGIN],
+  PHONE_ALLOWED_COUNTRIES: ["ID"],
+  PHONE_ALLOWLIST: undefined,
+  PHONE_DRIVER: "memory",
+  TWILIO_ACCOUNT_SID: undefined,
+  TWILIO_API_KEY_SECRET: undefined,
+  TWILIO_API_KEY_SID: undefined,
+  TWILIO_MESSAGING_SERVICE_SID: undefined,
+  TWILIO_TEST_ACCOUNT_SID: undefined,
+  TWILIO_TEST_AUTH_TOKEN: undefined,
+  TWILIO_WHATSAPP_OTP_CONTENT_SID: undefined,
   TURNSTILE_SECRET_KEY: PASS_SECRET,
 };
 
@@ -304,7 +314,7 @@ describe(createAuth, () => {
   });
 
   describe("plugin aktif", () => {
-    it("persis daftar izin B6", () => {
+    it("persis daftar izin (B6 + phone-number B7)", () => {
       const ids = (makeAuth().options.plugins ?? []).map((plugin) => plugin.id);
 
       expect(ids.toSorted()).toStrictEqual(
@@ -316,6 +326,7 @@ describe(createAuth, () => {
           "multi-session",
           "open-api",
           "organization",
+          "phone-number",
           "two-factor",
           "username",
         ].toSorted()
