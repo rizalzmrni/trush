@@ -2,6 +2,8 @@ import { newId } from "@trush/db";
 import type { AnyDatabase } from "@trush/db";
 import * as schema from "@trush/db/schema";
 import type { ApiEnv } from "@trush/env/api";
+import { createPhoneSender } from "@trush/phone";
+import type { PhoneEnv, PhoneLogger, PhoneSender } from "@trush/phone";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -12,9 +14,12 @@ import {
   multiSession,
   openAPI,
   organization,
+  phoneNumber,
   twoFactor,
   username,
 } from "better-auth/plugins";
+
+import { normalizePhoneBody, otpChannelFrom } from "./phone";
 
 /** Path handler better-auth di `apps/api`. */
 export const AUTH_BASE_PATH = "/api/auth";
@@ -22,15 +27,19 @@ export const AUTH_BASE_PATH = "/api/auth";
 /**
  * Endpoint ber-captcha. Ditulis eksplisit karena opsi ini mengganti daftar
  * bawaan; cocokkan dengan versi better-auth setiap upgrade. Tambahkan
- * `/phone-number/send-otp` (B7) dan `/email-otp/send-verification-otp` saat
- * plugin-nya dipasang. `/sign-in/username` (plugin `username`) ikut agar
- * captcha tidak bisa dilewati lewat login username.
+ * `/email-otp/send-verification-otp` saat plugin `emailOTP` dipasang.
+ * Varian login lain (`/sign-in/username`, `/sign-in/phone-number`) dan
+ * pengirim OTP reset (`/phone-number/request-password-reset`) ikut agar
+ * captcha tidak bisa dilewati lewat jalur lain.
  */
 export const CAPTCHA_ENDPOINTS = [
   "/sign-up/email",
   "/sign-in/email",
   "/sign-in/username",
+  "/sign-in/phone-number",
   "/request-password-reset",
+  "/phone-number/send-otp",
+  "/phone-number/request-password-reset",
 ];
 
 const MINUTE_SECONDS = 60;
@@ -57,12 +66,17 @@ export type AuthEnv = Pick<
   | "BETTER_AUTH_URL"
   | "CORS_ORIGINS"
   | "TURNSTILE_SECRET_KEY"
->;
+> &
+  PhoneEnv;
 
 export interface CreateAuthOptions {
   /** Klien per request dari `createDb`; auth tidak membuka koneksi sendiri. */
   db: AnyDatabase;
   env: AuthEnv;
+  /** Logger untuk driver `log` `@trush/phone` (development). */
+  phoneLogger?: PhoneLogger | undefined;
+  /** Pengganti pengirim OTP (test); default `createPhoneSender` dari env. */
+  phoneSender?: PhoneSender | undefined;
   /** `executionCtx.waitUntil` agar tugas latar tidak dibatalkan runtime. */
   waitUntil?: (promise: Promise<unknown>) => void;
 }
@@ -72,7 +86,13 @@ export interface CreateAuthOptions {
  * request masuk). `auth.cli.ts` memanggil factory ini juga, jadi plugin untuk
  * CLI dan runtime selalu sama.
  */
-export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
+export const createAuth = ({
+  db,
+  env,
+  phoneLogger,
+  phoneSender = createPhoneSender({ env, logger: phoneLogger }),
+  waitUntil,
+}: CreateAuthOptions) =>
   betterAuth({
     advanced: {
       backgroundTasks: waitUntil ? { handler: waitUntil } : undefined,
@@ -93,6 +113,8 @@ export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
     basePath: AUTH_BASE_PATH,
     baseURL: env.BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
+    // Nomor di body disimpan & dicari dalam bentuk E.164 (`0812…` → `+62812…`).
+    hooks: { before: normalizePhoneBody(phoneSender) },
     emailAndPassword: {
       enabled: true,
       // WAJIB diubah ke `true` (plus `emailVerification.sendVerificationEmail`)
@@ -107,6 +129,17 @@ export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
       haveIBeenPwned(),
       lastLoginMethod(),
       multiSession(),
+      phoneNumber({
+        // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
+        // valid, negara di luar PHONE_ALLOWED_COUNTRIES, atau di luar allowlist.
+        phoneNumberValidator: (phone) => phoneSender.canSendTo(phone),
+        // Dengan `backgroundTasks`, better-auth menjalankan pengiriman lewat
+        // waitUntil: error penyedia hanya di-log, respons tetap "code sent".
+        sendOTP: ({ code, phoneNumber: phone }, ctx) =>
+          phoneSender.sendOtp({ channel: otpChannelFrom(ctx), code, phone }),
+        sendPasswordResetOTP: ({ code, phoneNumber: phone }, ctx) =>
+          phoneSender.sendOtp({ channel: otpChannelFrom(ctx), code, phone }),
+      }),
       // Referensi bawaan memuat skrip Scalar tanpa pin; skemanya digabung ke
       // `/docs` api lewat `/api/auth/open-api/generate-schema`.
       openAPI({ disableDefaultReference: true }),

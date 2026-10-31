@@ -29,6 +29,7 @@ Konfigurasi better-auth server dan klien trush: sesi, akun, plugin, middleware u
 - `auth@latest` lebih baru dari `better-auth` terpasang → skema tidak cocok. Naikkan `better-auth` ke versi yang sama sebelum generate.
 - Test dengan PGlite: `createAuth({ db })` menerima `AnyDatabase`, jadi `createTestDb().db` bisa dipakai langsung. Mock `fetch` untuk Turnstile (`challenges.cloudflare.com`) dan HIBP (`api.pwnedpasswords.com`).
 - `useSecureCookies` → nama cookie sesi `__Secure-better-auth.session_token`.
+- `phoneNumber`: hook `before` (`src/phone.ts`) mengganti `body.phoneNumber` ke E.164, jadi kolom `user.phone_number` selalu E.164. Kanal OTP dari header `x-otp-channel: sms` (default WhatsApp). Tanpa `signUpOnVerification`, verifikasi nomor yang belum terdaftar dan tanpa sesi → 500 `FAILED_TO_UPDATE_USER` (perilaku library).
 
 ## Prosedur
 

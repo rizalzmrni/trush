@@ -3,12 +3,19 @@ import {
   lastLoginMethodClient,
   multiSessionClient,
   organizationClient,
+  phoneNumberClient,
   twoFactorClient,
   usernameClient,
 } from "better-auth/client/plugins";
 
 /** Header token Turnstile yang dibaca plugin `captcha` di server. */
 export const CAPTCHA_HEADER = "x-captcha-response";
+
+/**
+ * Header kanal OTP `phoneNumber`: `sms` untuk "kirim ulang via SMS"; tanpa
+ * header = WhatsApp. Sama dengan `OTP_CHANNEL_HEADER` server.
+ */
+export const OTP_CHANNEL_HEADER = "x-otp-channel";
 
 export interface AuthClientPluginOptions {
   /** Dipanggil saat login butuh verifikasi 2FA (arahkan ke halaman 2FA). */
@@ -30,4 +37,5 @@ export const createAuthClientPlugins = ({
   usernameClient(),
   lastLoginMethodClient(),
   multiSessionClient(),
+  phoneNumberClient(),
 ];
