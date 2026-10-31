@@ -8,24 +8,24 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: pin versi CDN Scalar (lanjutan B5)
-- Selesai terakhir: B5 `apps/api`; `VITE_SITE_URL` di `@trush/env` web (menunggu fixture Q)
+- Sedang dikerjakan: —
+- Selesai terakhir: B5 `apps/api` (+ pin Scalar); `VITE_SITE_URL` di `@trush/env` web
 - Berikutnya: B4 `packages/db`
 - Blocker: —
 
 ### frontend-engineer
 
-- Sedang dikerjakan: F3 `apps/web` + `packages/seo`
-- Selesai terakhir: F1a perbaikan `formatCurrency`
+- Sedang dikerjakan: —
+- Selesai terakhir: F3 `apps/web` + `packages/seo`
 - Berikutnya: F4 `apps/app` (menunggu B6)
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: fixture `web.test.ts` untuk `VITE_SITE_URL`, lalu Q1 `/health`
-- Selesai terakhir: Q5 test observability; Q4; Q1 bagian env + core
-- Berikutnya: Q1 bagian `/health` (setelah B5), Q6 test `apps/web` + `packages/seo` (setelah F3)
-- Blocker: Q6 menunggu F3
+- Sedang dikerjakan: Q6 test web + seo
+- Selesai terakhir: Q1 (env, core, `/health`); Q5; Q4
+- Berikutnya: Q2 (setelah B6, F4)
+- Blocker: —
 
 ## Backlog bootstrap
 
@@ -49,14 +49,23 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
 | F1a | Perbaiki `formatCurrency`: IDR + `minimumFractionDigits` > 0 melempar RangeError (bug dari Q4, `it.fails` di `format.test.ts`) | frontend-engineer | done (PR #3) | F1, Q4 |
-| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | wip | F1, B1 |
+| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | done | F1, B1 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
-| Q1 | Test env, core, api `/health` | qa-tester | wip (env, core done PR #3; `/health` dimulai) | B1, B2, B5 |
+| Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL`; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
-| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | todo | F3 |
+| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | wip | F3 |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
+
+Catatan lanjutan dari batch ini:
+
+- F4: naikkan `ErrorPage` (`apps/web/src/features/errors`) ke `@trush/design-system` `components/feedback` + story.
+- `apps/web` `entry.server.tsx` `onError` belum melaporkan error ke mana pun; sambungkan saat analytics/observability web dikerjakan.
+- `@trush/seo`: sitemap + JSON-LD saat ada halaman marketing nyata.
+- Q3: blok `env.e2e` di `wrangler.jsonc` web (dan api di B8).
+- L3/L4: ganti placeholder `CORS_ORIGINS` di `apps/api/wrangler.jsonc`; sediakan `VITE_SITE_URL`/`VITE_APP_URL`/`VITE_APP_ENV` saat `CLOUDFLARE_ENV=… vite build`.
+- Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
 
@@ -70,10 +79,11 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Blocker aktif
 
-- `test` `@trush/env` merah di working tree: `web.ts` mewajibkan `VITE_SITE_URL`, fixture `web.test.ts` belum diperbarui (qa-tester). `web.ts` belum di-commit sampai fixture siap.
+- —
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — F3 done (`feat(web)`): SSR React Router 8.5.1 di Workers, CSP nonce per request, tanpa `isbot` (render penuh), `@trush/seo` `./meta` + `./robots`. `VITE_SITE_URL` di-commit bersama fixture (`feat(env)`). Q1 done: 53 test api (`test(api)`). Scalar di-pin 1.76.3 (`fix(api)`). Q6 wip.
 - 2026-10-31 — B5 done (`feat(api)`): `.meta({ id })` Zod 4 terbukti dibaca `@hono/zod-openapi` 1.6.3 (komponen ber-`$ref`); tipe `node:async_hooks` lewat deklarasi ambient minimal `apps/api/src/async-hooks.d.ts`; header `x-request-id`; `/docs` + `/openapi.json` 404 di luar development kecuali `API_DOCS_ENABLED`. `worker-configuration.d.ts` di-ignore (dibuat ulang oleh `typegen`). `CORS_ORIGINS` staging/production masih placeholder (L3/L4). Env web baru `VITE_SITE_URL` (wajib).
 - 2026-10-31 — PR #3 di-merge. Batch `feat/fase0-api-web`: B5 dan F3 wip; Q1 `/health` menunggu B5; Q6 (test web + seo) ditambahkan, menunggu F3.
 - 2026-10-31 — Q5 done (29 test observability + 6 kasus env BetterStack). Batch `feat/fase0-observability-storybook` ditutup: PR #3 (Draft).
