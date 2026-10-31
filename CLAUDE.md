@@ -47,6 +47,7 @@ Boilerplate SaaS: Turborepo + bun, TypeScript strict; `apps/web`, `apps/app`, `a
 - `bun run check` harus bersih (`bun run fix` untuk memperbaiki). Konfigurasi ada di `oxlint.config.mts` dan `oxfmt.config.mts` root, milik lead. Teammate tidak mengubahnya dan tidak menambah komentar `oxlint-disable` tanpa persetujuan lead.
 - Pengecualian yang berlaku (di luar ini semua rule aktif):
   - `sort-keys` mati di `packages/db/src/schema/**`, karena urutan kolom bermakna.
+  - `no-inline-comments` mati di `packages/db/src/schema/auth.ts`, karena CLI better-auth menulis penanda `/* @__PURE__ */`.
   - `no-console` AKTIF di seluruh repo (preset Ultracite mematikannya, trush menyalakannya), kecuali `packages/observability/src/logger.ts` dan `logger.test.ts`. Di tempat lain pakai logger `@trush/observability` (server) atau pelaporan error `@trush/analytics` (klien).
   - `packages/design-system/src/components/ui/**` tidak di-lint dan tidak di-format (hasil `bunx shadcn@latest add`). Boleh disesuaikan, tanpa logika bisnis, dan wajib direview manual.
   - `.agents/skills/**` dan `.claude/skills/**` tidak di-format dan tidak di-lint.

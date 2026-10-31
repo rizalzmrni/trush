@@ -5,6 +5,18 @@ import { createApiEnv } from "./api";
 const validEnv = {
   APP_ENV: "staging",
   CORS_ORIGINS: "https://app.example.test",
+  DATABASE_URL:
+    "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
+  BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
+  BETTER_AUTH_URL: "http://localhost:8787",
+  TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+} as const;
+
+const productionEnv = {
+  ...validEnv,
+  APP_ENV: "production",
+  BETTER_AUTH_URL: "https://api.example.com",
+  TURNSTILE_SECRET_KEY: "0x4AAAAAAAfake-production-secret",
 } as const;
 
 describe(createApiEnv, () => {
@@ -68,16 +80,20 @@ describe(createApiEnv, () => {
     expect(env.LOG_LEVEL).toBe("info");
   });
 
-  it.each(["APP_ENV", "CORS_ORIGINS"] as const)(
-    "menolak bila %s hilang",
-    (name) => {
-      const { [name]: _omitted, ...rest } = validEnv;
+  it.each([
+    "APP_ENV",
+    "CORS_ORIGINS",
+    "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "TURNSTILE_SECRET_KEY",
+  ] as const)("menolak bila %s hilang", (name) => {
+    const { [name]: _omitted, ...rest } = validEnv;
 
-      expect(() => createApiEnv({ runtimeEnv: rest })).toThrow(
-        new RegExp(`Env tidak valid: .*${name}`, "u")
-      );
-    }
-  );
+    expect(() => createApiEnv({ runtimeEnv: rest })).toThrow(
+      new RegExp(`Env tidak valid: .*${name}`, "u")
+    );
+  });
 
   it("menolak APP_ENV di luar daftar", () => {
     expect(() =>
@@ -188,5 +204,131 @@ describe(createApiEnv, () => {
         },
       })
     ).toThrow(/BETTERSTACK_INGEST_URL/u);
+  });
+
+  it("var auth B6 terbaca; AUTH_COOKIE_DOMAIN opsional", () => {
+    const env = createApiEnv({ runtimeEnv: validEnv });
+
+    expect(env.DATABASE_URL).toBe(validEnv.DATABASE_URL);
+    expect(env.BETTER_AUTH_URL).toBe("http://localhost:8787");
+    expect(env.AUTH_COOKIE_DOMAIN).toBeUndefined();
+  });
+
+  it("AUTH_COOKIE_DOMAIN string kosong dianggap tidak diisi", () => {
+    const env = createApiEnv({
+      runtimeEnv: { ...validEnv, AUTH_COOKIE_DOMAIN: "" },
+    });
+
+    expect(env.AUTH_COOKIE_DOMAIN).toBeUndefined();
+  });
+
+  it.each(["example.com", ".example.com", "auth.example.co.id"])(
+    "AUTH_COOKIE_DOMAIN %s diterima",
+    (domain) => {
+      const env = createApiEnv({
+        runtimeEnv: { ...validEnv, AUTH_COOKIE_DOMAIN: domain },
+      });
+
+      expect(env.AUTH_COOKIE_DOMAIN).toBe(domain);
+    }
+  );
+
+  it.each([
+    "https://example.com",
+    "example.com:8787",
+    "localhost",
+    "Example.com",
+    "example.com/path",
+  ])("AUTH_COOKIE_DOMAIN %s ditolak", (domain) => {
+    expect(() =>
+      createApiEnv({ runtimeEnv: { ...validEnv, AUTH_COOKIE_DOMAIN: domain } })
+    ).toThrow(/AUTH_COOKIE_DOMAIN/u);
+  });
+
+  it.each([
+    "mysql://user:password@db.example.test/neondb",
+    "https://db.example.test",
+    "bukan-url",
+  ])("DATABASE_URL %s ditolak", (url) => {
+    expect(() =>
+      createApiEnv({ runtimeEnv: { ...validEnv, DATABASE_URL: url } })
+    ).toThrow(/DATABASE_URL/u);
+  });
+
+  it("BETTER_AUTH_SECRET kurang dari 32 karakter ditolak tanpa membocorkan nilai", () => {
+    const shortSecret = "pendek-palsu-0123456789abcdef01";
+    const create = () =>
+      createApiEnv({
+        runtimeEnv: { ...validEnv, BETTER_AUTH_SECRET: shortSecret },
+      });
+
+    expect(shortSecret).toHaveLength(31);
+    expect(create).toThrow(/BETTER_AUTH_SECRET/u);
+    expect(create).toThrow(
+      expect.objectContaining({
+        message: expect.not.stringContaining(shortSecret),
+      })
+    );
+  });
+
+  it("BETTER_AUTH_SECRET tepat 32 karakter diterima", () => {
+    const secret = "a".repeat(32);
+    const env = createApiEnv({
+      runtimeEnv: { ...validEnv, BETTER_AUTH_SECRET: secret },
+    });
+
+    expect(env.BETTER_AUTH_SECRET).toBe(secret);
+  });
+
+  it("BETTER_AUTH_URL bukan URL ditolak", () => {
+    expect(() =>
+      createApiEnv({
+        runtimeEnv: { ...validEnv, BETTER_AUTH_URL: "bukan-url" },
+      })
+    ).toThrow(/BETTER_AUTH_URL/u);
+  });
+
+  it("production dengan nilai aman diterima", () => {
+    const env = createApiEnv({ runtimeEnv: productionEnv });
+
+    expect(env.APP_ENV).toBe("production");
+  });
+
+  it.each([
+    "1x0000000000000000000000000000000AA",
+    "2x0000000000000000000000000000000AA",
+    "3x0000000000000000000000000000000AA",
+  ])("production menolak kunci uji Turnstile %s", (key) => {
+    const create = () =>
+      createApiEnv({
+        runtimeEnv: { ...productionEnv, TURNSTILE_SECRET_KEY: key },
+      });
+
+    expect(create).toThrow(/TURNSTILE_SECRET_KEY/u);
+    expect(create).toThrow(
+      expect.objectContaining({ message: expect.not.stringContaining(key) })
+    );
+  });
+
+  it.each(["development", "staging"])(
+    "%s menerima kunci uji Turnstile dan BETTER_AUTH_URL http",
+    (appEnv) => {
+      const env = createApiEnv({
+        runtimeEnv: { ...validEnv, APP_ENV: appEnv },
+      });
+
+      expect(env.TURNSTILE_SECRET_KEY).toBe(validEnv.TURNSTILE_SECRET_KEY);
+    }
+  );
+
+  it("production menolak BETTER_AUTH_URL http", () => {
+    expect(() =>
+      createApiEnv({
+        runtimeEnv: {
+          ...productionEnv,
+          BETTER_AUTH_URL: "http://api.example.com",
+        },
+      })
+    ).toThrow(/BETTER_AUTH_URL.*https/u);
   });
 });

@@ -5,5 +5,9 @@
     "lib": ["ES2024"],
     "types": ["./worker-configuration.d.ts"]
   },
-  "include": ["src", "vitest.config.ts"]
+  "include": ["src", "vitest.config.ts"],
+  // Project `db` (Node + PGlite) memuat @types/node lewat rantai impor
+  // `@trush/db/testing`; tipenya bentrok dengan global Worker, jadi dicek
+  // tsconfig.node.json.
+  "exclude": ["src/**/*.db.test.ts", "src/testing/db-*.ts"]
 }

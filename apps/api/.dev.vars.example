@@ -7,3 +7,13 @@ LOG_LEVEL=debug
 # BetterStack: kosongkan keduanya di development (log hanya ke console).
 BETTERSTACK_INGEST_URL=
 BETTERSTACK_SOURCE_TOKEN=
+# Neon branch dev, koneksi pooled (host -pooler). Migrasi memakai
+# DATABASE_URL_UNPOOLED di packages/db/.dev.vars.
+DATABASE_URL=postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+# better-auth. Secret: `openssl rand -base64 32` (min 32 karakter).
+BETTER_AUTH_SECRET=dev-only-secret-ganti-dengan-openssl-rand-base64-32
+BETTER_AUTH_URL=http://localhost:8787
+# Kosongkan di development (cookie hanya untuk host api).
+AUTH_COOKIE_DOMAIN=
+# Kunci uji Cloudflare Turnstile yang selalu lolos (docs/auth-plugins.md).
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA

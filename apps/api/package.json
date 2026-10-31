@@ -12,14 +12,16 @@
   "scripts": {
     "dev": "wrangler dev",
     "typegen": "wrangler types --env-file .dev.vars.example",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "build:types": "tsc -p tsconfig.types.json",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@hono/zod-openapi": "catalog:api",
     "@scalar/hono-api-reference": "catalog:api",
+    "@trush/auth": "workspace:*",
     "@trush/core": "workspace:*",
+    "@trush/db": "workspace:*",
     "@trush/env": "workspace:*",
     "@trush/observability": "workspace:*",
     "hono": "catalog:api",
@@ -27,7 +29,9 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "catalog:test",
+    "@electric-sql/pglite": "catalog:db",
     "@trush/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:test",
     "wrangler": "catalog:api"

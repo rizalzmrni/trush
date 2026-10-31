@@ -9,6 +9,8 @@
     "enabled": true,
   },
   // Development: APP_ENV dan nilai lain datang dari .dev.vars (tanpa default).
+  // Secret per lingkungan (DATABASE_URL, BETTER_AUTH_SECRET,
+  // TURNSTILE_SECRET_KEY) diset manusia lewat `wrangler secret put`.
   "env": {
     "staging": {
       "name": "trush-api-staging",
@@ -18,6 +20,8 @@
         "LOG_LEVEL": "info",
         // L3: ganti dengan URL *.workers.dev app & web staging yang sebenarnya.
         "CORS_ORIGINS": "https://trush-app-staging.example.workers.dev,https://trush-web-staging.example.workers.dev",
+        // L3: URL Worker api staging. AUTH_COOKIE_DOMAIN kosong di *.workers.dev.
+        "BETTER_AUTH_URL": "https://trush-api-staging.example.workers.dev",
       },
     },
     "production": {
@@ -28,6 +32,10 @@
         "LOG_LEVEL": "info",
         // L4: ganti dengan domain resmi (app.<domain>, <domain>).
         "CORS_ORIGINS": "https://app.example.com,https://example.com",
+        // L4: ganti dengan domain resmi. Secret (DATABASE_URL,
+        // BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) lewat `wrangler secret put`.
+        "BETTER_AUTH_URL": "https://api.example.com",
+        "AUTH_COOKIE_DOMAIN": "example.com",
       },
     },
   },

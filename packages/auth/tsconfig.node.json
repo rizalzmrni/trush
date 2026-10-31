@@ -1,0 +1,9 @@
+{
+  // Test & tooling (Node): @types/node hanya di sini, tidak bocor ke kode Worker.
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "WebWorker"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*.test.ts", "vitest.config.ts"]
+}
