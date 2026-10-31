@@ -25,7 +25,7 @@ Pengirim pesan telepon trush di atas Twilio Programmable Messaging, dipakai plug
 - Magic number `+15005550006` sebagai pengirim hanya berlaku dengan test credentials; dengan kredensial live permintaan gagal.
 - Pesan WhatsApp di luar template autentikasi yang disetujui Meta → ditolak. Isi pesan OTP diatur di template, bukan di kode.
 - Respons 201 dari Twilio berarti masuk antrean, bukan terkirim. Status akhir datang lewat status callback.
-- Di api, better-auth menjalankan `sendOTP` lewat `waitUntil` (`backgroundTasks`): `PhoneError` dari Twilio hanya di-log, respons tetap 200. Penolakan yang harus terlihat pengguna (nomor/negara/allowlist) diputuskan `canSendTo()` di `phoneNumberValidator`, sebelum OTP dibuat.
+- `sendOTP` di `@trush/auth` berjalan sinkron (tanpa `waitUntil`/`backgroundTasks`): `PhoneError` sampai ke pengguna sebagai 4xx berkode domain, atau 502 `OTP_DELIVERY_FAILED` untuk `PROVIDER_*`. Pesan ke klien diambil dari pemetaan per kode di `packages/auth/src/phone.ts`, bukan dari `error.message`, jadi kode `PhoneError` baru wajib ikut dipetakan di sana. Nomor/negara/allowlist tetap ditolak lebih awal oleh `canSendTo()` di `phoneNumberValidator`, sebelum OTP dibuat.
 - Test credentials Twilio tidak menerima API Key → driver `twilio-test` memakai `TWILIO_TEST_ACCOUNT_SID` + `TWILIO_TEST_AUTH_TOKEN` dan selalu SMS dari magic number.
 - Driver `memory` menulis ke `defaultOutbox` per isolate (dibaca `/__e2e/outbox`, B8); test sebaiknya memberi `createOutbox()` sendiri.
 

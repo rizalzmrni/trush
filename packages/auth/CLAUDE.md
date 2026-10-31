@@ -29,7 +29,8 @@ Konfigurasi better-auth server dan klien trush: sesi, akun, plugin, middleware u
 - `auth@latest` lebih baru dari `better-auth` terpasang → skema tidak cocok. Naikkan `better-auth` ke versi yang sama sebelum generate.
 - Test dengan PGlite: `createAuth({ db })` menerima `AnyDatabase`, jadi `createTestDb().db` bisa dipakai langsung. Mock `fetch` untuk Turnstile (`challenges.cloudflare.com`) dan HIBP (`api.pwnedpasswords.com`).
 - `useSecureCookies` → nama cookie sesi `__Secure-better-auth.session_token`.
-- `phoneNumber`: hook `before` (`src/phone.ts`) mengganti `body.phoneNumber` ke E.164, jadi kolom `user.phone_number` selalu E.164. Kanal OTP dari header `x-otp-channel: sms` (default WhatsApp). Tanpa `signUpOnVerification`, verifikasi nomor yang belum terdaftar dan tanpa sesi → 500 `FAILED_TO_UPDATE_USER` (perilaku library).
+- `phoneNumber` (`src/phone.ts`): telepon hanya tambahan akun, bukan jalur daftar (`signUpOnVerification` sengaja mati). Hook `before` mengganti `body.phoneNumber` ke E.164; untuk nomor tak terdaftar, `/sign-in/phone-number` tetap meng-hash password (waktu sama) dan `/phone-number/verify` tanpa `updatePhoneNumber` diberi kode mustahil, jadi hasilnya identik dengan kode salah (library aslinya 500 `FAILED_TO_UPDATE_USER`). OTP hanya dikirim ke pengguna login atau nomor terdaftar; nomor lain tetap 200 "code sent" tanpa kirim. Kanal dari header `x-otp-channel: sms` (default WhatsApp).
+- Jangan isi `advanced.backgroundTasks`: plugin `phoneNumber` lalu mengirim OTP di latar dan error Twilio tidak sampai ke pengguna. Kirim OTP sinkron; `PhoneError` → 400/422/429 berkode domain, `PROVIDER_*` → 502 `OTP_DELIVERY_FAILED`.
 
 ## Prosedur
 

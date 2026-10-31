@@ -10,8 +10,8 @@ const phoneLogger = getLogger(["trush", "phone"]);
 
 /**
  * Membuat klien DB dan instance better-auth per request (tidak ada klien
- * global) untuk route di bawah `/api/*`. Tugas latar better-auth diteruskan ke
- * `waitUntil` agar tidak dibatalkan setelah respons terkirim.
+ * global) untuk route di bawah `/api/*`. Tanpa `waitUntil`: pengiriman OTP
+ * dan tugas better-auth lain ditunggu sebelum respons (lihat `createAuth`).
  */
 export const authContext = createMiddleware<AppContext>(async (c, next) => {
   const { env } = c.var;
@@ -23,7 +23,6 @@ export const authContext = createMiddleware<AppContext>(async (c, next) => {
       db,
       env,
       phoneLogger,
-      waitUntil: (promise) => c.executionCtx.waitUntil(promise),
     })
   );
   return await next();

@@ -19,7 +19,7 @@ import {
   username,
 } from "better-auth/plugins";
 
-import { normalizePhoneBody, otpChannelFrom } from "./phone";
+import { createSendOtp, phoneBeforeHook } from "./phone";
 
 /** Path handler better-auth di `apps/api`. */
 export const AUTH_BASE_PATH = "/api/auth";
@@ -77,8 +77,6 @@ export interface CreateAuthOptions {
   phoneLogger?: PhoneLogger | undefined;
   /** Pengganti pengirim OTP (test); default `createPhoneSender` dari env. */
   phoneSender?: PhoneSender | undefined;
-  /** `executionCtx.waitUntil` agar tugas latar tidak dibatalkan runtime. */
-  waitUntil?: (promise: Promise<unknown>) => void;
 }
 
 /**
@@ -91,11 +89,13 @@ export const createAuth = ({
   env,
   phoneLogger,
   phoneSender = createPhoneSender({ env, logger: phoneLogger }),
-  waitUntil,
-}: CreateAuthOptions) =>
-  betterAuth({
+}: CreateAuthOptions) => {
+  const sendOtp = createSendOtp(phoneSender);
+  return betterAuth({
     advanced: {
-      backgroundTasks: waitUntil ? { handler: waitUntil } : undefined,
+      // Sengaja tanpa `backgroundTasks`: plugin phoneNumber akan mengirim OTP
+      // di latar bila diisi, padahal error kirim harus sampai ke pengguna.
+      // Tugas latar lain better-auth jadi ditunggu sebelum respons.
       crossSubDomainCookies: env.AUTH_COOKIE_DOMAIN
         ? { domain: env.AUTH_COOKIE_DOMAIN, enabled: true }
         : undefined,
@@ -113,8 +113,8 @@ export const createAuth = ({
     basePath: AUTH_BASE_PATH,
     baseURL: env.BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    // Nomor di body disimpan & dicari dalam bentuk E.164 (`0812…` → `+62812…`).
-    hooks: { before: normalizePhoneBody(phoneSender) },
+    // Nomor di body → E.164; nomor tak terdaftar tidak membocorkan keberadaannya.
+    hooks: { before: phoneBeforeHook(phoneSender) },
     emailAndPassword: {
       enabled: true,
       // WAJIB diubah ke `true` (plus `emailVerification.sendVerificationEmail`)
@@ -133,12 +133,9 @@ export const createAuth = ({
         // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
         // valid, negara di luar PHONE_ALLOWED_COUNTRIES, atau di luar allowlist.
         phoneNumberValidator: (phone) => phoneSender.canSendTo(phone),
-        // Dengan `backgroundTasks`, better-auth menjalankan pengiriman lewat
-        // waitUntil: error penyedia hanya di-log, respons tetap "code sent".
-        sendOTP: ({ code, phoneNumber: phone }, ctx) =>
-          phoneSender.sendOtp({ channel: otpChannelFrom(ctx), code, phone }),
-        sendPasswordResetOTP: ({ code, phoneNumber: phone }, ctx) =>
-          phoneSender.sendOtp({ channel: otpChannelFrom(ctx), code, phone }),
+        // Sinkron: error Twilio → 4xx kode domain / 502 OTP_DELIVERY_FAILED.
+        sendOTP: sendOtp,
+        sendPasswordResetOTP: sendOtp,
       }),
       // Referensi bawaan memuat skrip Scalar tanpa pin; skemanya digabung ke
       // `/docs` api lewat `/api/auth/open-api/generate-schema`.
@@ -158,6 +155,7 @@ export const createAuth = ({
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: env.CORS_ORIGINS,
   });
+};
 
 export type Auth = ReturnType<typeof createAuth>;
 
