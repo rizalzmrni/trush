@@ -10,7 +10,7 @@ Diimpor oleh `packages/auth/CLAUDE.md`. Daftar izin plugin ada di file itu; doku
 | `twoFactor` | QR code mengikuti pengecualian tercatat di `DESIGN.md`. |
 | `haveIBeenPwned` | Memanggil API eksternal; wajib di-mock di test. |
 | `emailOTP` | OTP dikirim lewat `@trush/email`. |
-| `phoneNumber` | `sendOTP` memanggil `sendOtp()` dari `@trush/phone` (Twilio); OTP dibuat dan diverifikasi better-auth, bukan penyedia. `phoneNumberValidator` menolak nomor di luar negara/allowlist (400) sebelum OTP dibuat; kanal dari header `x-otp-channel` (`sms`, default WhatsApp). Pengiriman berjalan di latar (`waitUntil`), jadi error Twilio hanya di-log dan respons tetap 200. |
+| `phoneNumber` | `sendOTP` memanggil `sendOtp()` dari `@trush/phone` (Twilio); OTP dibuat dan diverifikasi better-auth, bukan penyedia. `phoneNumberValidator` menolak nomor di luar negara/allowlist (400) sebelum OTP dibuat; kanal dari header `x-otp-channel` (`sms`, default WhatsApp). Telepon hanya tambahan akun: login OTP mati (`/phone-number/verify` hanya dengan `updatePhoneNumber: true` + sesi), `send-otp` tanpa sesi tidak mengirim, `phoneNumber` di `/sign-up/*` ditolak 400, dan `/sign-in/phone-number` hanya untuk nomor terverifikasi. Pengiriman sinkron (tanpa `backgroundTasks`): error Twilio menjadi 4xx berkode domain atau 502 `OTP_DELIVERY_FAILED`. |
 | `openAPI` | `disableDefaultReference: true`: referensi bawaan `/api/auth/reference` memuat skrip Scalar tanpa pin dan inline script yang ditolak CSP api. Skema auth tersedia di `/api/auth/open-api/generate-schema`, dijaga `API_DOCS_ENABLED` sama dengan `/docs`. |
 | `captcha` | Cloudflare Turnstile; lihat bagian di bawah. |
 | `username`, `lastLoginMethod`, `multiSession` | Tanpa aturan khusus. |
