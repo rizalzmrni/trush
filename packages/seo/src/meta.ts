@@ -96,6 +96,13 @@ export const toAbsoluteUrl = (path: string, siteUrl: string): string => {
     throw new RangeError(`Path harus diawali "/" (diterima: "${path}").`);
   }
   const url = new URL(path, siteUrl);
+  // Cek string saja tidak cukup: parser URL membuang tab/newline dan membaca
+  // "\" sebagai "/", jadi "/\t/evil" atau "/\\evil" menjadi protocol-relative.
+  if (url.origin !== new URL(siteUrl).origin) {
+    throw new RangeError(
+      `Path tidak boleh berpindah origin (diterima: ${JSON.stringify(path)}).`
+    );
+  }
   url.search = "";
   url.hash = "";
   return url.href;
