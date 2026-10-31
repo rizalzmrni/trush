@@ -25,7 +25,7 @@
     },
     "test": {
       "dependsOn": ["typegen", "^build:types"],
-      "outputs": ["coverage/**"]
+      "outputs": []
     },
     "test:e2e": {
       "cache": false,
