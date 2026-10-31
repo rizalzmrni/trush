@@ -1,0 +1,2 @@
+# Oxfmt memakai LF; cegah core.autocrlf mengubahnya menjadi CRLF saat checkout.
+* text=auto eol=lf

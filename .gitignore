@@ -1,37 +1,33 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # Dependencies
 node_modules
-.pnp
-.pnp.js
 
-# Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Env & secret lokal (contoh tetap di-commit)
+.env*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
 
 # Testing
 coverage
+test-results
+playwright-report
+blob-report
+e2e/.auth
 
 # Turbo
 .turbo
 
-# Vercel
-.vercel
+# Cloudflare & React Router
+.wrangler
+.react-router
 
-# Build Outputs
-.next/
-out/
+# Build outputs
 build
 dist
 
-
 # Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+*.log
 
 # Misc
 .DS_Store
