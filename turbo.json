@@ -4,17 +4,36 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": ["APP_ENV", "CLOUDFLARE_ENV", "VITE_*"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"]
+      "outputs": ["dist/**", "build/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
+    "build:types": {
+      "dependsOn": ["^build:types"],
+      "outputs": ["dist/**/*.d.ts", "dist/**/*.d.ts.map"]
+    },
+    "typegen": {
+      "env": ["CLOUDFLARE_ENV"],
+      "outputs": ["worker-configuration.d.ts", ".react-router/types/**"]
     },
     "check-types": {
-      "dependsOn": ["^check-types"]
+      "dependsOn": ["typegen", "^build:types"],
+      "outputs": []
+    },
+    "check": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["typegen", "^build:types"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "cache": false,
+      "passThroughEnv": ["CI", "CLOUDFLARE_ENV"]
     },
     "dev": {
       "cache": false,
+      "passThroughEnv": ["CLOUDFLARE_ENV"],
       "persistent": true
     }
   }
