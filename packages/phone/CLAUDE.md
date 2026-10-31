@@ -12,7 +12,8 @@ Pengirim pesan telepon trush di atas Twilio Programmable Messaging, dipakai plug
 
 ## Aturan wajib
 
-- Driver dipilih dari env `PHONE_DRIVER`: `memory` (test, dan wajib bila `E2E=true`), `log` (development), `twilio-test` (test credentials + magic number, tanpa biaya), `twilio` (staging/produksi). Selain `twilio` ditolak bila `APP_ENV=production`.
+- Driver dipilih dari env `PHONE_DRIVER`: `memory` (test, dan wajib bila `E2E=true`), `log` (development), `twilio-test` (test credentials + magic number, tanpa biaya), `twilio` (staging/produksi). `memory` dan `log` hanya sah bila `APP_ENV=development`; selain `twilio` ditolak bila `APP_ENV=production`.
+- `@trush/auth` hanya memanggil `sendOtp` untuk pengguna login (menambah nomor) dan reset password nomor terdaftar; login OTP mati.
 - Nomor dinormalisasi ke E.164 sebelum dikirim (`08…` → `+628…`); negara di luar `PHONE_ALLOWED_COUNTRIES` (awal: `ID`) ditolak.
 - Staging memakai `PHONE_ALLOWLIST` (nomor tim); nomor lain ditolak tanpa memanggil Twilio.
 - Kanal default WhatsApp: template autentikasi `TWILIO_WHATSAPP_OTP_CONTENT_SID` lewat `ContentSid` + `ContentVariables`. SMS lewat `TWILIO_MESSAGING_SERVICE_SID`; UI menyediakan "kirim ulang via SMS".

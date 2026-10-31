@@ -19,7 +19,11 @@ import {
   username,
 } from "better-auth/plugins";
 
-import { createSendOtp, phoneBeforeHook } from "./phone";
+import {
+  createSendOtp,
+  createSendPasswordResetOtp,
+  phoneBeforeHook,
+} from "./phone";
 
 /** Path handler better-auth di `apps/api`. */
 export const AUTH_BASE_PATH = "/api/auth";
@@ -90,7 +94,15 @@ export const createAuth = ({
   phoneLogger,
   phoneSender = createPhoneSender({ env, logger: phoneLogger }),
 }: CreateAuthOptions) => {
-  const sendOtp = createSendOtp(phoneSender);
+  const phonePlugin = phoneNumber({
+    // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
+    // valid, negara di luar PHONE_ALLOWED_COUNTRIES, atau di luar allowlist.
+    phoneNumberValidator: (phone) => phoneSender.canSendTo(phone),
+    // Sinkron: error Twilio → 4xx kode domain / 502 OTP_DELIVERY_FAILED.
+    // Hanya untuk pengguna login (menambah nomor); login OTP mati.
+    sendOTP: createSendOtp(phoneSender),
+    sendPasswordResetOTP: createSendPasswordResetOtp(phoneSender),
+  });
   return betterAuth({
     advanced: {
       // Sengaja tanpa `backgroundTasks`: plugin phoneNumber akan mengirim OTP
@@ -113,8 +125,14 @@ export const createAuth = ({
     basePath: AUTH_BASE_PATH,
     baseURL: env.BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    // Nomor di body → E.164; nomor tak terdaftar tidak membocorkan keberadaannya.
-    hooks: { before: phoneBeforeHook(phoneSender) },
+    // Nomor di body → E.164; login OTP dan phoneNumber di sign-up ditolak;
+    // nomor tak terdaftar/belum terverifikasi tidak membocorkan keberadaannya.
+    hooks: {
+      before: phoneBeforeHook({
+        errors: phonePlugin.$ERROR_CODES,
+        phoneSender,
+      }),
+    },
     emailAndPassword: {
       enabled: true,
       // WAJIB diubah ke `true` (plus `emailVerification.sendVerificationEmail`)
@@ -129,14 +147,7 @@ export const createAuth = ({
       haveIBeenPwned(),
       lastLoginMethod(),
       multiSession(),
-      phoneNumber({
-        // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
-        // valid, negara di luar PHONE_ALLOWED_COUNTRIES, atau di luar allowlist.
-        phoneNumberValidator: (phone) => phoneSender.canSendTo(phone),
-        // Sinkron: error Twilio → 4xx kode domain / 502 OTP_DELIVERY_FAILED.
-        sendOTP: sendOtp,
-        sendPasswordResetOTP: sendOtp,
-      }),
+      phonePlugin,
       // Referensi bawaan memuat skrip Scalar tanpa pin; skemanya digabung ke
       // `/docs` api lewat `/api/auth/open-api/generate-schema`.
       openAPI({ disableDefaultReference: true }),

@@ -281,7 +281,7 @@ describe("plugin phoneNumber", () => {
     expect(outbox.list()).toStrictEqual([]);
   });
 
-  it("nomor terdaftar tanpa sesi (jalur login) → OTP terkirim", async () => {
+  it("nomor terdaftar tanpa sesi (login OTP mati) → 200 code sent tanpa kirim", async () => {
     const auth = makeAuth();
     await signUpWithPhone(auth, E164_ID);
     outbox.clear();
@@ -289,7 +289,10 @@ describe("plugin phoneNumber", () => {
     const response = await sendOtp(auth, LOCAL_ID);
 
     expect(response.status).toBe(200);
-    expect(outbox.latestFor(E164_ID)?.code).toMatch(SIX_DIGITS);
+    await expect(response.json()).resolves.toStrictEqual({
+      message: "code sent",
+    });
+    expect(outbox.list()).toStrictEqual([]);
   });
 
   it.each([
@@ -473,8 +476,7 @@ describe("plugin phoneNumber", () => {
     return { auth, code: await storedOtp(phone) };
   };
 
-  // BUG: verify tanpa updatePhoneNumber untuk nomor terdaftar + kode benar membuat sesi (login OTP harus mati).
-  it.fails("verify nomor terdaftar tanpa updatePhoneNumber, kode benar → 4xx tanpa cookie sesi", async () => {
+  it("verify nomor terdaftar tanpa updatePhoneNumber, kode benar → 4xx tanpa cookie sesi", async () => {
     const { auth, code } = await validCodeForRegistered(E164_ID);
 
     const response = await postTo(auth, "/phone-number/verify", {
@@ -487,8 +489,7 @@ describe("plugin phoneNumber", () => {
     }).toStrictEqual({ clientError: true, session: false });
   });
 
-  // BUG: login OTP lewat /phone-number/verify melewati 2FA pengguna yang mengaktifkannya.
-  it.fails("verify nomor terdaftar milik pengguna 2FA → 4xx tanpa cookie sesi", async () => {
+  it("verify nomor terdaftar milik pengguna 2FA → 4xx tanpa cookie sesi", async () => {
     const { auth, code } = await validCodeForRegistered(E164_ID);
     await handle.db.execute(sql`update "user" set two_factor_enabled = true`);
 
@@ -502,8 +503,7 @@ describe("plugin phoneNumber", () => {
     }).toStrictEqual({ clientError: true, session: false });
   });
 
-  // BUG: disableSession pada verify tanpa updatePhoneNumber tidak boleh jadi jalur login/konfirmasi kode.
-  it.fails("verify disableSession tanpa updatePhoneNumber → 4xx tanpa cookie sesi", async () => {
+  it("verify disableSession tanpa updatePhoneNumber → 4xx tanpa cookie sesi", async () => {
     const { auth, code } = await validCodeForRegistered(E164_ID);
 
     const response = await postTo(auth, "/phone-number/verify", {
@@ -523,8 +523,7 @@ describe("plugin phoneNumber", () => {
     return result.rows[0]?.total ?? 0;
   };
 
-  // BUG: sign-up/email menerima phoneNumber dan menyimpannya tanpa verifikasi OTP.
-  it.fails("sign-up email dengan phoneNumber → nomor tidak tersimpan", async () => {
+  it("sign-up email dengan phoneNumber → nomor tidak tersimpan", async () => {
     const auth = makeAuth();
 
     await signUpClaimingPhone(auth, LOCAL_ID);
@@ -532,8 +531,7 @@ describe("plugin phoneNumber", () => {
     await expect(usersWithPhone(E164_ID)).resolves.toBe(0);
   });
 
-  // BUG: nomor dari sign-up (belum diverifikasi) bisa dipakai login /sign-in/phone-number.
-  it.fails("nomor dari sign-up tanpa OTP tidak bisa dipakai sign-in/phone-number", async () => {
+  it("nomor dari sign-up tanpa OTP tidak bisa dipakai sign-in/phone-number", async () => {
     const auth = makeAuth();
     await signUpClaimingPhone(auth, E164_ID);
 
@@ -547,8 +545,7 @@ describe("plugin phoneNumber", () => {
     }).toStrictEqual({ clientError: true, session: false });
   });
 
-  // BUG: nomor dari sign-up (belum diverifikasi) dianggap terdaftar, jadi send-otp tanpa sesi mengirim OTP.
-  it.fails("nomor dari sign-up tanpa OTP: send-otp tanpa sesi tidak mengirim", async () => {
+  it("nomor dari sign-up tanpa OTP: send-otp tanpa sesi tidak mengirim", async () => {
     const auth = makeAuth();
     await signUpClaimingPhone(auth, E164_ID);
     outbox.clear();
@@ -558,8 +555,7 @@ describe("plugin phoneNumber", () => {
     expect(outbox.list()).toStrictEqual([]);
   });
 
-  // BUG: sign-up kedua dengan nomor yang sama memberi status berbeda (oracle enumerasi nomor).
-  it.fails("sign-up dengan nomor yang sudah dipakai → status sama dengan nomor baru", async () => {
+  it("sign-up dengan nomor yang sudah dipakai → status sama dengan nomor baru", async () => {
     const auth = makeAuth();
     await signUpClaimingPhone(auth, E164_ID);
 

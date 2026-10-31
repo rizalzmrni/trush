@@ -10,12 +10,32 @@ import {
 /** Header pilihan kanal OTP: `sms` untuk "kirim ulang via SMS", default WhatsApp. */
 export const OTP_CHANNEL_HEADER = "x-otp-channel";
 
+/** Kode error `{ code, message }` seperti `$ERROR_CODES` plugin better-auth. */
+interface ErrorCode {
+  code: string;
+  message: string;
+}
+
 /**
- * Pengganti kode OTP untuk nomor tak terdaftar di `/phone-number/verify`.
- * Tidak mungkin sama dengan OTP numerik, jadi plugin menempuh jalur "kode
- * salah" biasa (hitungan percobaan, TOO_MANY_ATTEMPTS, OTP_NOT_FOUND identik).
+ * Kode error plugin `phoneNumber` yang dipakai ulang hook, diambil dari
+ * `$ERROR_CODES` instance plugin agar body error identik dengan bawaannya.
  */
-const UNMATCHABLE_OTP = "-";
+export interface PhoneErrorCodes {
+  INVALID_OTP: ErrorCode;
+  INVALID_PHONE_NUMBER_OR_PASSWORD: ErrorCode;
+}
+
+/** Sama dengan `BASE_ERROR_CODES.USER_NOT_FOUND` (verify tanpa sesi). */
+const NO_SESSION_ERROR: ErrorCode = {
+  code: "USER_NOT_FOUND",
+  message: "User not found",
+};
+
+/** Sama dengan error `input: false` better-auth (`FIELD_NOT_ALLOWED`). */
+const PHONE_FIELD_NOT_ALLOWED: ErrorCode = {
+  code: "FIELD_NOT_ALLOWED",
+  message: "phoneNumber is not allowed to be set",
+};
 
 /** Error domain yang terlihat pengguna saat kirim OTP gagal di penyedia. */
 type ApiErrorStatus = Parameters<typeof APIError.from>[0];
@@ -62,93 +82,152 @@ export const otpChannelFrom = (
 ): OtpChannel =>
   ctx?.headers?.get(OTP_CHANNEL_HEADER) === "sms" ? "sms" : "whatsapp";
 
-const findUserIdByPhone = async (
-  ctx: GenericEndpointContext,
-  phoneNumber: string
-): Promise<string | undefined> => {
-  const user = await ctx.context.adapter.findOne<{ id: string }>({
-    model: "user",
-    where: [{ field: "phoneNumber", value: phoneNumber }],
-  });
-  return user?.id;
+/** Kirim OTP sinkron; `PhoneError` → `APIError` 4xx/502. */
+const deliverOtp = async (
+  phoneSender: PhoneSender,
+  { code, phoneNumber }: { code: string; phoneNumber: string },
+  ctx: GenericEndpointContext | undefined
+): Promise<void> => {
+  try {
+    await phoneSender.sendOtp({
+      channel: otpChannelFrom(ctx),
+      code,
+      phone: phoneNumber,
+    });
+  } catch (error) {
+    throw error instanceof PhoneError ? toAuthError(error) : error;
+  }
 };
 
 /**
  * `sendOTP` plugin `phoneNumber`, SINKRON (tanpa waitUntil): error penyedia
- * menjadi respons 4xx/502. Telepon hanya tambahan akun, jadi OTP hanya
- * dikirim ke pengguna yang login (menambah nomor) atau ke nomor terdaftar
- * (login). Nomor lain tidak dikirimi, tetapi responsnya tetap sama ("code
- * sent") agar keberadaan nomor tidak bocor dan tidak bisa dipakai SMS pumping.
+ * menjadi respons 4xx/502. Login OTP mati (telepon hanya tambahan akun),
+ * jadi OTP hanya dikirim ke pengguna yang login untuk menambah nomornya.
+ * Tanpa sesi tidak pernah ada pengiriman, sedangkan responsnya tetap sama
+ * ("code sent"): keberadaan nomor tidak bocor (status maupun waktu) dan
+ * endpoint tidak bisa dipakai SMS pumping tanpa akun.
  */
 export const createSendOtp =
   (phoneSender: PhoneSender) =>
   async (
-    { code, phoneNumber }: { code: string; phoneNumber: string },
+    data: { code: string; phoneNumber: string },
     ctx?: GenericEndpointContext
   ): Promise<void> => {
-    if (ctx) {
-      const session = await getSessionFromCtx(ctx);
-      const isRegistered =
-        session !== null ||
-        (await findUserIdByPhone(ctx, phoneNumber)) !== undefined;
-      if (!isRegistered) {
-        return;
-      }
+    const session = ctx ? await getSessionFromCtx(ctx) : null;
+    if (session === null) {
+      return;
     }
-    try {
-      await phoneSender.sendOtp({
-        channel: otpChannelFrom(ctx),
-        code,
-        phone: phoneNumber,
-      });
-    } catch (error) {
-      throw error instanceof PhoneError ? toAuthError(error) : error;
-    }
+    await deliverOtp(phoneSender, data, ctx);
   };
+
+/**
+ * `sendPasswordResetOTP`: plugin hanya memanggilnya untuk nomor terdaftar.
+ * Nomor tak terdaftar tetap 200 `{ status: true }`, tetapi waktunya lebih
+ * singkat (tanpa panggilan penyedia); lihat `packages/auth/CLAUDE.md`.
+ */
+export const createSendPasswordResetOtp =
+  (phoneSender: PhoneSender) =>
+  (
+    data: { code: string; phoneNumber: string },
+    ctx?: GenericEndpointContext
+  ): Promise<void> =>
+    deliverOtp(phoneSender, data, ctx);
+
+const isRecord = (body: unknown): body is Record<string, unknown> =>
+  typeof body === "object" && body !== null;
 
 const hasPhoneNumber = (
   body: unknown
 ): body is Record<string, unknown> & { phoneNumber: string } =>
-  typeof body === "object" &&
-  body !== null &&
-  "phoneNumber" in body &&
-  typeof body.phoneNumber === "string";
+  isRecord(body) && typeof body.phoneNumber === "string";
+
+/** Nomor hanya sah untuk login bila terverifikasi lewat OTP. */
+const hasVerifiedPhone = async (
+  ctx: GenericEndpointContext,
+  phoneNumber: string
+): Promise<boolean> => {
+  const user = await ctx.context.adapter.findOne<{ id: string }>({
+    model: "user",
+    where: [
+      { field: "phoneNumber", value: phoneNumber },
+      { field: "phoneNumberVerified", value: true },
+    ],
+  });
+  return user !== null;
+};
 
 /** Hasil hook `before`: `context` digabung ke context endpoint. */
 type BodyOverride = { context: { body: Record<string, unknown> } } | undefined;
 
+interface PhoneBeforeHookOptions {
+  errors: PhoneErrorCodes;
+  phoneSender: PhoneSender;
+}
+
 /**
- * Hook `before` untuk body ber-`phoneNumber`:
- * 1. `phoneNumber` diganti E.164, jadi OTP, kolom `user.phone_number`, dan
- *    pencarian login memakai satu bentuk.
- * 2. `/sign-in/phone-number` dengan nomor tak terdaftar tetap meng-hash
- *    password (plugin langsung melempar 401), agar waktu respons tidak
- *    membedakan nomor terdaftar dan tidak.
- * 3. `/phone-number/verify` tanpa `updatePhoneNumber` untuk nomor tak
- *    terdaftar: telepon bukan jalur daftar, dan plugin akan melempar 500
- *    `FAILED_TO_UPDATE_USER` untuk kode yang benar. Kodenya diganti agar
- *    hasilnya 400 `INVALID_OTP`, sama persis dengan kode salah.
+ * `/phone-number/verify` hanya untuk menambah nomor ke akun yang login.
+ * Tanpa `updatePhoneNumber: true` (jalur login OTP bawaan plugin, termasuk
+ * `disableSession`) ditolak 400 `INVALID_OTP` SEBELUM kode diperiksa, jadi
+ * tidak ada sesi, tidak melewati 2FA, dan bukan oracle kode benar/salah.
+ * Tanpa sesi ditolak 401 sebelum kode dikonsumsi.
  */
-export const phoneBeforeHook = (phoneSender: PhoneSender) =>
+const assertVerifyAddsPhone = async (
+  ctx: GenericEndpointContext,
+  body: unknown,
+  errors: PhoneErrorCodes
+): Promise<void> => {
+  if (!isRecord(body) || body.updatePhoneNumber !== true) {
+    throw APIError.from("BAD_REQUEST", errors.INVALID_OTP);
+  }
+  if ((await getSessionFromCtx(ctx)) === null) {
+    throw APIError.from("UNAUTHORIZED", NO_SESSION_ERROR);
+  }
+};
+
+/**
+ * Hook `before` (aturan lengkap di `packages/auth/CLAUDE.md`):
+ * 1. `/sign-up/*` dengan `phoneNumber` ditolak 400, apa pun nomornya (tanpa
+ *    oracle nomor terpakai). Nomor hanya masuk lewat verify + sesi.
+ * 2. `/phone-number/verify` lihat `assertVerifyAddsPhone`.
+ * 3. `phoneNumber` diganti E.164, jadi OTP, kolom `user.phone_number`, dan
+ *    pencarian login memakai satu bentuk.
+ * 4. `/sign-in/phone-number` untuk nomor tak terdaftar atau belum
+ *    terverifikasi: password tetap di-hash (waktu setara) lalu 401 yang sama
+ *    persis dengan password salah.
+ */
+export const phoneBeforeHook = ({
+  errors,
+  phoneSender,
+}: PhoneBeforeHookOptions) =>
   createAuthMiddleware(async (ctx): Promise<BodyOverride> => {
     const { body } = ctx;
+    if (ctx.path.startsWith("/sign-up/")) {
+      const claimsPhone =
+        isRecord(body) &&
+        body.phoneNumber !== undefined &&
+        body.phoneNumber !== null;
+      if (claimsPhone) {
+        throw APIError.from("BAD_REQUEST", PHONE_FIELD_NOT_ALLOWED);
+      }
+      return undefined;
+    }
+    if (ctx.path === "/phone-number/verify") {
+      await assertVerifyAddsPhone(ctx, body, errors);
+    }
     if (!hasPhoneNumber(body)) {
       return undefined;
     }
     const phoneNumber =
       phoneSender.normalize(body.phoneNumber) ?? body.phoneNumber;
-    const override: Record<string, unknown> = { phoneNumber };
-    const needsRegisteredUser =
-      ctx.path === "/sign-in/phone-number" ||
-      (ctx.path === "/phone-number/verify" && body.updatePhoneNumber !== true);
-    const isRegistered =
-      !needsRegisteredUser ||
-      (await findUserIdByPhone(ctx, phoneNumber)) !== undefined;
-    if (!isRegistered && ctx.path === "/sign-in/phone-number") {
+    if (
+      ctx.path === "/sign-in/phone-number" &&
+      !(await hasVerifiedPhone(ctx, phoneNumber))
+    ) {
       await ctx.context.password.hash(String(body.password ?? ""));
+      throw APIError.from(
+        "UNAUTHORIZED",
+        errors.INVALID_PHONE_NUMBER_OR_PASSWORD
+      );
     }
-    if (!isRegistered && ctx.path === "/phone-number/verify") {
-      override.code = UNMATCHABLE_OTP;
-    }
-    return { context: { body: { ...body, ...override } } };
+    return { context: { body: { ...body, phoneNumber } } };
   });
