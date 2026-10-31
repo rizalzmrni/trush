@@ -1,0 +1,9 @@
+{
+  // Test project `db` (Node + PGlite) dan konfigurasi Vitest. Tanpa
+  // `worker-configuration.d.ts`; @types/node hanya dipakai di sini.
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/**/*.db.test.ts", "src/testing/db-*.ts", "vitest.config.ts"]
+}

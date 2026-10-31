@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "typegen": "wrangler types --env-file .dev.vars.example",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
     "build:types": "tsc -p tsconfig.types.json",
     "test": "vitest run --passWithNoTests"
   },
@@ -31,6 +31,7 @@
     "@cloudflare/vitest-plugin": "catalog:test",
     "@electric-sql/pglite": "catalog:db",
     "@trush/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:test",
     "wrangler": "catalog:api"
