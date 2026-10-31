@@ -1,7 +1,8 @@
+import { NotFoundPage } from "@trush/design-system/components/feedback/error-page";
+import { buttonVariants } from "@trush/design-system/components/ui/button";
 import { createNoindexMeta } from "@trush/seo/meta";
-import { data } from "react-router";
+import { data, Link } from "react-router";
 
-import { NotFound } from "../features/errors/status-pages";
 import type { Route } from "./+types/not-found";
 
 const NOT_FOUND = 404;
@@ -12,5 +13,13 @@ export const loader = () => data(null, { status: NOT_FOUND });
 export const meta: Route.MetaFunction = () =>
   createNoindexMeta("Halaman tidak ditemukan");
 
-const NotFoundRoute = () => <NotFound />;
+const NotFoundRoute = () => (
+  <NotFoundPage
+    action={
+      <Link className={buttonVariants({ size: "lg" })} to="/">
+        Kembali ke beranda
+      </Link>
+    }
+  />
+);
 export default NotFoundRoute;
