@@ -5,6 +5,7 @@
     "lib": ["ES2024", "WebWorker"]
   },
   "include": ["src"],
-  // Entry testing berjalan di Node (PGlite + fs) dan dicek tsconfig.node.json.
-  "exclude": ["src/testing.ts"]
+  // Entry testing dan semua test berjalan di Node (PGlite + fs); dicek
+  // tsconfig.node.json agar @types/node tidak bocor ke kode Worker.
+  "exclude": ["src/testing.ts", "src/**/*.test.ts"]
 }

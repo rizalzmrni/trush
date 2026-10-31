@@ -4,5 +4,10 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["src/testing.ts", "drizzle.config.ts", "vitest.config.ts"]
+  "include": [
+    "src/testing.ts",
+    "src/**/*.test.ts",
+    "drizzle.config.ts",
+    "vitest.config.ts"
+  ]
 }
