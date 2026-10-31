@@ -1,0 +1,4 @@
+# Salin ke .dev.vars (tidak di-commit). Nilai di bawah palsu.
+# Skema: createDbToolingEnv di @trush/env (packages/env/src/db.ts).
+# Dipakai drizzle-kit (db:migrate). Koneksi DIRECT branch Neon dev (host tanpa -pooler).
+DATABASE_URL_UNPOOLED=postgresql://user:password@ep-example-123456.ap-southeast-1.aws.neon.tech/neondb?sslmode=require

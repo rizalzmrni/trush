@@ -37,6 +37,13 @@ Sumber kebenaran skema Drizzle, factory klien Neon Postgres, generator ID, migra
 3. `bun run db:migrate` ke branch Neon dev dan verifikasi.
 4. Perbarui seed bila relevan; kabari lead bila skema `core` ikut berubah.
 
+### Menjalankan migrasi lokal
+
+- Salin `.dev.vars.example` ke `packages/db/.dev.vars`, isi `DATABASE_URL_UNPOOLED` (direct, branch Neon dev). `drizzle.config.ts` memuatnya bila ada; var dari shell/CI menang.
+- `bunx turbo run db:migrate --filter=@trush/db`. `db:generate` tidak butuh URL.
+- Setelah `db:generate`, jalankan `bun run fix` (JSON di `drizzle/meta` ikut diformat Oxfmt).
+- Ekspor tabel dari `src/schema/index.ts` dengan nama; `export *` ditolak `no-barrel-file`.
+
 ## Pengujian
 
 - **Lingkungan:** Node + PGlite in-memory (`drizzle-orm/pglite`), migrasi diterapkan di setup.
