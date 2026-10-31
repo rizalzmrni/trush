@@ -24,6 +24,8 @@
     "@cloudflare/vite-plugin": "catalog:api",
     "@react-router/dev": "catalog:react",
     "@tailwindcss/vite": "catalog:ui",
+    "@testing-library/dom": "catalog:test",
+    "@testing-library/react": "catalog:test",
     "@trush/typescript-config": "workspace:*",
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
