@@ -14,6 +14,18 @@ const SCRIPT_URL = `${"javascript"}:alert(1)`;
 
 const CONTROL_CHARS = /\p{Cc}/u;
 
+// Path yang dinormalisasi parser URL menjadi `//host` (protocol-relative).
+const DOT_SEGMENT_BYPASSES = [
+  "/.//evil.example",
+  "/a/..//evil.example",
+  "/%2e//evil.example",
+  "/%2e%2e//evil.example",
+];
+
+// Halaman auth dengan garis miring akhir / huruf besar: tetap cocok dengan
+// route auth karena pencocokan React Router tidak peka keduanya.
+const AUTH_PATH_VARIANTS = ["/sign-in/", "/sign-up/", "/sign-out/", "/SIGN-IN"];
+
 describe(getSafeRedirect, () => {
   it.each([
     ["/", "/"],
@@ -56,6 +68,22 @@ describe(getSafeRedirect, () => {
 
   it.each(["/sign-in", "/sign-up", "/sign-out", "/sign-in?redirectTo=/x"])(
     "menolak halaman auth %j (cegah putaran redirect)",
+    (input) => {
+      expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
+    }
+  );
+
+  // BUG: dot-segment sebelum `//` lolos cek awal lalu dinormalisasi URL menjadi `//evil.example` (open redirect).
+  it.fails.each(DOT_SEGMENT_BYPASSES)(
+    "menolak dot-segment yang menjadi protocol-relative %j",
+    (input) => {
+      expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
+    }
+  );
+
+  // BUG: halaman auth dengan garis miring akhir / huruf besar tidak dikenali sebagai halaman auth.
+  it.fails.each(AUTH_PATH_VARIANTS)(
+    "menolak varian halaman auth %j",
     (input) => {
       expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
     }

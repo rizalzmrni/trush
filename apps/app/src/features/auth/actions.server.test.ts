@@ -189,6 +189,21 @@ describe.each([
     expect(asRedirect(result).headers.get("location")).toBe("/");
   });
 
+  // BUG: getSafeRedirect meloloskan dot-segment sehingga Location menjadi `//evil.example`.
+  it.fails.each([
+    "/.//evil.example",
+    "/a/..//evil.example",
+    "/%2e//evil.example",
+  ])("redirectTo dot-segment %j disaring → /", async (redirectTo) => {
+    const { result } = await run(action, {
+      fields: { ...fields, redirectTo },
+      handler: () => okWithCookies(NEW_SESSION_COOKIE),
+      path,
+    });
+
+    expect(asRedirect(result).headers.get("location")).toBe("/");
+  });
+
   it("validasi gagal → 400 dengan fieldErrors, tanpa memanggil api", async () => {
     const { api, result } = await run(action, {
       fields: { email: "bukan-email", name: "Budi", password: PASSWORD },

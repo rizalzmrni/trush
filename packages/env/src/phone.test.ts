@@ -169,8 +169,22 @@ describe("env telepon di createApiEnv", () => {
     expect(env.PHONE_ALLOWLIST).toStrictEqual(["+6281234567890"]);
   });
 
-  it("staging + memory tanpa allowlist diterima", () => {
-    expect(create({ APP_ENV: "staging" }).PHONE_DRIVER).toBe("memory");
+  it.each(["memory", "log"] as const)("development + %s diterima", (driver) => {
+    expect(create({ PHONE_DRIVER: driver }).PHONE_DRIVER).toBe(driver);
+  });
+
+  // BUG: assertPhoneEnv mengizinkan PHONE_DRIVER=log saat staging; log hanya development.
+  it.fails("staging + log ditolak", () => {
+    expect(() => create({ APP_ENV: "staging", PHONE_DRIVER: "log" })).toThrow(
+      /PHONE_DRIVER/u
+    );
+  });
+
+  // BUG: assertPhoneEnv mengizinkan PHONE_DRIVER=memory saat staging (pengecualian E2E menyusul di B8).
+  it.fails("staging + memory ditolak", () => {
+    expect(() =>
+      create({ APP_ENV: "staging", PHONE_DRIVER: "memory" })
+    ).toThrow(/PHONE_DRIVER/u);
   });
 
   it("PHONE_ALLOWLIST string kosong dianggap tidak diisi", () => {

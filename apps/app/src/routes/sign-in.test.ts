@@ -82,4 +82,29 @@ describe("route /sign-in", () => {
 
     expect((result as Response).headers.get("location")).toBe("/");
   });
+
+  // BUG: getSafeRedirect meloloskan dot-segment; pengguna login diarahkan ke `//evil.example`.
+  it.fails.each([
+    "%2F.%2F%2Fevil.example",
+    "%2Fa%2F..%2F%2Fevil.example",
+    "%2F%252e%2F%2Fevil.example",
+  ])(
+    "sudah login dengan redirectTo dot-segment %s → redirect ke /",
+    async (encoded) => {
+      const result = await runLoader(`/sign-in?redirectTo=${encoded}`, () =>
+        jsonResponse(ME_FIXTURE)
+      );
+
+      expect((result as Response).headers.get("location")).toBe("/");
+    }
+  );
+
+  // BUG: `/sign-in/` (garis miring akhir) tidak dianggap halaman auth.
+  it.fails("sudah login dengan redirectTo /sign-in/ → redirect ke /", async () => {
+    const result = await runLoader("/sign-in?redirectTo=%2Fsign-in%2F", () =>
+      jsonResponse(ME_FIXTURE)
+    );
+
+    expect((result as Response).headers.get("location")).toBe("/");
+  });
 });

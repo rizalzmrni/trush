@@ -143,6 +143,20 @@ const sendOtp = (
 ) =>
   postTo(auth, "/phone-number/send-otp", { ...options, body: { phoneNumber } });
 
+const OTHER_ID = "+6281299998888";
+const HTTP_BAD_REQUEST = 400;
+const HTTP_SERVER_ERROR = 500;
+
+/** Response membawa cookie sesi baru (login terjadi). */
+const setsSessionCookie = (response: Response): boolean =>
+  response.headers
+    .getSetCookie()
+    .some((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
+
+/** Status 4xx: ditolak sebagai kesalahan permintaan. */
+const isClientError = (status: number): boolean =>
+  status >= HTTP_BAD_REQUEST && status < HTTP_SERVER_ERROR;
+
 /** Daftar lewat email; mengembalikan cookie sesi. */
 const signUp = async (auth: TestAuth): Promise<string> =>
   sessionCookieOf(
@@ -150,6 +164,17 @@ const signUp = async (auth: TestAuth): Promise<string> =>
       body: { email: nextEmail(), name: "Pengguna Uji", password: PASSWORD },
     })
   );
+
+/** Sign-up email yang menyelipkan `phoneNumber` di body (tanpa OTP). */
+const signUpClaimingPhone = (auth: TestAuth, phoneNumber: string) =>
+  postTo(auth, "/sign-up/email", {
+    body: {
+      email: nextEmail(),
+      name: "Pengguna Uji",
+      password: PASSWORD,
+      phoneNumber,
+    },
+  });
 
 /** Pengirim yang selalu gagal dengan `PhoneError` (meniru error Twilio). */
 const failingSender =
@@ -435,6 +460,113 @@ describe("plugin phoneNumber", () => {
 
     expect([unknown.status, wrongPassword.status]).toStrictEqual([401, 401]);
     expect(unknownBody).toStrictEqual(wrongBody);
+  });
+
+  /**
+   * Kode OTP benar untuk nomor terdaftar, tanpa bergantung pada send-otp tanpa
+   * sesi: pemilik nomor (login) meminta kode, lalu request lain memakainya.
+   */
+  const validCodeForRegistered = async (phone: string) => {
+    const auth = makeAuth();
+    const cookie = await signUpWithPhone(auth, phone);
+    await sendOtp(auth, phone, { cookie });
+    return { auth, code: await storedOtp(phone) };
+  };
+
+  // BUG: verify tanpa updatePhoneNumber untuk nomor terdaftar + kode benar membuat sesi (login OTP harus mati).
+  it.fails("verify nomor terdaftar tanpa updatePhoneNumber, kode benar → 4xx tanpa cookie sesi", async () => {
+    const { auth, code } = await validCodeForRegistered(E164_ID);
+
+    const response = await postTo(auth, "/phone-number/verify", {
+      body: { code, phoneNumber: E164_ID },
+    });
+
+    expect({
+      clientError: isClientError(response.status),
+      session: setsSessionCookie(response),
+    }).toStrictEqual({ clientError: true, session: false });
+  });
+
+  // BUG: login OTP lewat /phone-number/verify melewati 2FA pengguna yang mengaktifkannya.
+  it.fails("verify nomor terdaftar milik pengguna 2FA → 4xx tanpa cookie sesi", async () => {
+    const { auth, code } = await validCodeForRegistered(E164_ID);
+    await handle.db.execute(sql`update "user" set two_factor_enabled = true`);
+
+    const response = await postTo(auth, "/phone-number/verify", {
+      body: { code, phoneNumber: E164_ID },
+    });
+
+    expect({
+      clientError: isClientError(response.status),
+      session: setsSessionCookie(response),
+    }).toStrictEqual({ clientError: true, session: false });
+  });
+
+  // BUG: disableSession pada verify tanpa updatePhoneNumber tidak boleh jadi jalur login/konfirmasi kode.
+  it.fails("verify disableSession tanpa updatePhoneNumber → 4xx tanpa cookie sesi", async () => {
+    const { auth, code } = await validCodeForRegistered(E164_ID);
+
+    const response = await postTo(auth, "/phone-number/verify", {
+      body: { code, disableSession: true, phoneNumber: E164_ID },
+    });
+
+    expect({
+      clientError: isClientError(response.status),
+      session: setsSessionCookie(response),
+    }).toStrictEqual({ clientError: true, session: false });
+  });
+
+  const usersWithPhone = async (phone: string): Promise<number> => {
+    const result = await handle.db.execute<{ total: number }>(
+      sql`select count(*)::int as total from "user" where phone_number = ${phone}`
+    );
+    return result.rows[0]?.total ?? 0;
+  };
+
+  // BUG: sign-up/email menerima phoneNumber dan menyimpannya tanpa verifikasi OTP.
+  it.fails("sign-up email dengan phoneNumber → nomor tidak tersimpan", async () => {
+    const auth = makeAuth();
+
+    await signUpClaimingPhone(auth, LOCAL_ID);
+
+    await expect(usersWithPhone(E164_ID)).resolves.toBe(0);
+  });
+
+  // BUG: nomor dari sign-up (belum diverifikasi) bisa dipakai login /sign-in/phone-number.
+  it.fails("nomor dari sign-up tanpa OTP tidak bisa dipakai sign-in/phone-number", async () => {
+    const auth = makeAuth();
+    await signUpClaimingPhone(auth, E164_ID);
+
+    const response = await postTo(auth, "/sign-in/phone-number", {
+      body: { password: PASSWORD, phoneNumber: E164_ID },
+    });
+
+    expect({
+      clientError: isClientError(response.status),
+      session: setsSessionCookie(response),
+    }).toStrictEqual({ clientError: true, session: false });
+  });
+
+  // BUG: nomor dari sign-up (belum diverifikasi) dianggap terdaftar, jadi send-otp tanpa sesi mengirim OTP.
+  it.fails("nomor dari sign-up tanpa OTP: send-otp tanpa sesi tidak mengirim", async () => {
+    const auth = makeAuth();
+    await signUpClaimingPhone(auth, E164_ID);
+    outbox.clear();
+
+    await sendOtp(auth, E164_ID);
+
+    expect(outbox.list()).toStrictEqual([]);
+  });
+
+  // BUG: sign-up kedua dengan nomor yang sama memberi status berbeda (oracle enumerasi nomor).
+  it.fails("sign-up dengan nomor yang sudah dipakai → status sama dengan nomor baru", async () => {
+    const auth = makeAuth();
+    await signUpClaimingPhone(auth, E164_ID);
+
+    const taken = await signUpClaimingPhone(auth, E164_ID);
+    const fresh = await signUpClaimingPhone(auth, OTHER_ID);
+
+    expect(taken.status).toBe(fresh.status);
   });
 
   it("rate limit send-otp aktif di staging: panggilan ke-4 → 429", async () => {
