@@ -73,21 +73,16 @@ describe(getSafeRedirect, () => {
     }
   );
 
-  // BUG: dot-segment sebelum `//` lolos cek awal lalu dinormalisasi URL menjadi `//evil.example` (open redirect).
-  it.fails.each(DOT_SEGMENT_BYPASSES)(
+  it.each(DOT_SEGMENT_BYPASSES)(
     "menolak dot-segment yang menjadi protocol-relative %j",
     (input) => {
       expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
     }
   );
 
-  // BUG: halaman auth dengan garis miring akhir / huruf besar tidak dikenali sebagai halaman auth.
-  it.fails.each(AUTH_PATH_VARIANTS)(
-    "menolak varian halaman auth %j",
-    (input) => {
-      expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
-    }
-  );
+  it.each(AUTH_PATH_VARIANTS)("menolak varian halaman auth %j", (input) => {
+    expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
+  });
 
   it("memakai fallback yang diberikan", () => {
     expect(getSafeRedirect("https://evil.example", "/home")).toBe("/home");
