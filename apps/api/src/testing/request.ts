@@ -21,7 +21,28 @@ export const BASE_ENV = {
   APP_ENV: "development",
   CORS_ORIGINS: "http://localhost:5173,http://localhost:5174",
   LOG_LEVEL: "info",
+  DATABASE_URL:
+    "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
+  BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
+  BETTER_AUTH_URL: "http://localhost:8787",
+  TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
 } as const;
+
+/**
+ * Penimpa agar `BASE_ENV` lolos guard production: Turnstile bukan kunci uji
+ * Cloudflare dan `BETTER_AUTH_URL` https (nilai palsu).
+ */
+export const PRODUCTION_OVERRIDES = {
+  APP_ENV: "production",
+  BETTER_AUTH_URL: "https://api.example.com",
+  TURNSTILE_SECRET_KEY: "0x4AAAAAAAfake-production-secret",
+} as const;
+
+/** `BASE_ENV` untuk `APP_ENV` tertentu; production memakai penimpa di atas. */
+export const envForAppEnv = (appEnv: string): Record<string, string> =>
+  appEnv === "production"
+    ? { ...BASE_ENV, ...PRODUCTION_OVERRIDES }
+    : { ...BASE_ENV, APP_ENV: appEnv };
 
 /**
  * ExecutionContext tiruan: menampung promise `waitUntil` agar bisa ditunggu

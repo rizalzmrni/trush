@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   ALLOWED_ORIGIN,
   BASE_ENV,
+  PRODUCTION_OVERRIDES,
   fetchWorker,
   requestWithEnv,
 } from "../testing/request";
@@ -12,7 +13,7 @@ const HSTS_VALUE = "max-age=31536000; includeSubDomains";
 
 const PRODUCTION_ENV = {
   ...BASE_ENV,
-  APP_ENV: "production",
+  ...PRODUCTION_OVERRIDES,
   CORS_ORIGINS: "https://app.example.com,https://example.com",
 };
 

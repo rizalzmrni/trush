@@ -2,7 +2,7 @@ import { errorResponseSchema } from "@trush/core/schemas/error";
 import { beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { BASE_ENV, fetchWorker, requestWithEnv } from "./testing/request";
+import { envForAppEnv, fetchWorker, requestWithEnv } from "./testing/request";
 
 const WARMUP_TIMEOUT_MS = 30_000;
 const NONCE_IN_CSP = /'nonce-(?<nonce>[^']+)'/u;
@@ -163,7 +163,7 @@ describe("guard dokumentasi per lingkungan", () => {
   ])(
     "APP_ENV=%s, API_DOCS_ENABLED=%s: %s 404 ErrorResponse",
     async (appEnv, enabled, path) => {
-      const env = { ...BASE_ENV, API_DOCS_ENABLED: enabled, APP_ENV: appEnv };
+      const env = { ...envForAppEnv(appEnv), API_DOCS_ENABLED: enabled };
       const response = await requestWithEnv(path, env);
 
       expect(response.status).toBe(404);
@@ -185,7 +185,7 @@ describe("guard dokumentasi per lingkungan", () => {
   ])(
     "APP_ENV=%s, API_DOCS_ENABLED=%s: %s 200",
     async (appEnv, enabled, path) => {
-      const env = { ...BASE_ENV, API_DOCS_ENABLED: enabled, APP_ENV: appEnv };
+      const env = { ...envForAppEnv(appEnv), API_DOCS_ENABLED: enabled };
       const response = await requestWithEnv(path, env);
 
       expect(response.status).toBe(200);
@@ -193,10 +193,10 @@ describe("guard dokumentasi per lingkungan", () => {
   );
 
   it("/health tetap 200 di production meski dokumentasi nonaktif", async () => {
-    const response = await requestWithEnv("/health", {
-      ...BASE_ENV,
-      APP_ENV: "production",
-    });
+    const response = await requestWithEnv(
+      "/health",
+      envForAppEnv("production")
+    );
 
     expect(response.status).toBe(200);
   });
