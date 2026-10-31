@@ -23,24 +23,40 @@ export const BASE_ENV = {
   LOG_LEVEL: "info",
 } as const;
 
-const noopExecutionContext = {
-  passThroughOnException: () => {},
-  props: {},
-  waitUntil: () => {},
+/**
+ * ExecutionContext tiruan: menampung promise `waitUntil` agar bisa ditunggu
+ * sebelum test selesai (seperti runtime menunggu setelah respons).
+ */
+const createExecutionContext = () => {
+  const pending: Promise<unknown>[] = [];
+  const context = {
+    passThroughOnException: () => {
+      throw new Error("passThroughOnException tidak dipakai api.");
+    },
+    props: {},
+    waitUntil: (promise: Promise<unknown>) => {
+      pending.push(promise);
+    },
+  };
+  return { context, settle: () => Promise.allSettled(pending) };
 };
 
 /**
  * Request ke app dengan binding berbeda dari default (mis. production), lewat
  * `app.request`. `url` boleh absolut agar host bisa diatur (uji HSTS).
  */
-export const requestWithEnv = (
+export const requestWithEnv = async (
   url: string,
   env: Record<string, string>,
   init?: RequestInit
-) =>
-  app.request(
+): Promise<Response> => {
+  const { context, settle } = createExecutionContext();
+  const response = await app.request(
     url.startsWith("/") ? `${TEST_ORIGIN}${url}` : url,
     init,
     env,
-    noopExecutionContext
+    context
   );
+  await settle();
+  return response;
+};
