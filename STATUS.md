@@ -52,6 +52,8 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | done (PR #4) | F1, B1 |
 | F3a | `toAbsoluteUrl` menolak path yang berpindah origin (`/	/…`, `/\…`; bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
 | F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
+| F3c | `typegen` web deterministik (`wrangler types --env-file .dev.vars.example`; CI PR #4 merah karena `.dev.vars` lokal) | frontend-engineer | done (PR #4) | F3 |
+| B5a | `typegen` api memakai pola yang sama | backend-engineer | done (PR #4) | B5 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
@@ -67,6 +69,7 @@ Catatan lanjutan dari batch ini:
 - `@trush/seo`: sitemap + JSON-LD saat ada halaman marketing nyata.
 - Q3: blok `env.e2e` di `wrangler.jsonc` web (dan api di B8).
 - L3/L4: ganti placeholder `CORS_ORIGINS` di `apps/api/wrangler.jsonc`; sediakan `VITE_SITE_URL`/`VITE_APP_URL`/`VITE_APP_ENV` saat `CLOUDFLARE_ENV=… vite build`.
+- `typegen` semua app memakai `wrangler types --env-file .dev.vars.example`: setiap var/secret baru WAJIB masuk `.dev.vars.example` agar ada di tipe `Env` (F4 `apps/app` ikut pola ini).
 - Regex `NON_OFFICIAL_HOST` kini disalin di `apps/api` dan `apps/web`; bila F4 butuh salinan ketiga, pindahkan ke paket bersama (usulan: `@trush/core`).
 - Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
 
@@ -86,6 +89,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — CI PR #4 merah: tipe `Env` dari `wrangler types` membaca `.dev.vars` lokal, berbeda dengan CI. F3c + B5a (`fix(web)`, `fix(api)`): typegen dari `.dev.vars.example`. Check `e2e` tetap merah sampai L5 (secret Neon).
 - 2026-10-31 — F3b done (`fix(web)`): HSTS web hanya production di domain resmi, test regresi per host. Batch `feat/fase0-api-web` ditutup: PR #4 (Draft).
 - 2026-10-31 — Q6 done (`test(web)`): 54 test seo + 29 test web; `@testing-library/react` + `/dom` (catalog:test) di apps/web. Bug Q6: F3a (`toAbsoluteUrl` keluar origin lewat tab/newline/backslash) done (`fix(seo)`); F3b (HSTS web tanpa cek host) wip.
 - 2026-10-31 — F3 done (`feat(web)`): SSR React Router 8.5.1 di Workers, CSP nonce per request, tanpa `isbot` (render penuh), `@trush/seo` `./meta` + `./robots`. `VITE_SITE_URL` di-commit bersama fixture (`feat(env)`). Q1 done: 53 test api (`test(api)`). Scalar di-pin 1.76.3 (`fix(api)`). Q6 wip.
