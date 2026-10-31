@@ -8,9 +8,9 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: B2 `packages/core`
-- Selesai terakhir: B1 `packages/env`
-- Berikutnya: B3 `packages/observability`
+- Sedang dikerjakan: —
+- Selesai terakhir: B2 `packages/core`
+- Berikutnya: B3 `packages/observability` atau B4 `packages/db`
 - Blocker: —
 
 ### frontend-engineer
@@ -39,7 +39,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | L5 | Environment GitHub `e2e` (`NEON_API_KEY`, `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | todo | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done | L0 |
-| B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | wip | L0 |
+| B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done | L0 |
 | B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | todo | B1 |
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | todo | B1 |
 | B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | todo | B1, B3 |
@@ -60,8 +60,9 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 ## Kontrak lintas-wilayah (`packages/core`)
 
 | Kontrak | Penulis | Dipakai oleh | Status |
-| ------- | ------- | ------------ | ------ |
-| —       | —       | —            | —      |
+| --- | --- | --- | --- |
+| `ErrorResponse` (`@trush/core/schemas/error`): `{ error: { code, message, details? } }` | backend-engineer | `apps/api` (onError, defaultHook), klien `apps/app`/`apps/web` | done (B2) |
+| `HealthResponse` (`@trush/core/schemas/health`): `{ status: "ok" }` | backend-engineer | `apps/api` `GET /health` (B5), Q1 | done (B2) |
 
 ## Blocker aktif
 
@@ -69,6 +70,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — B2 done (`feat(core)`): kontrak `ErrorResponse` dan `HealthResponse`. B5 wajib memastikan `@hono/zod-openapi` membaca `.meta({ id })` Zod 4.
 - 2026-10-31 — B1 done (`feat(env)`), F1 done (`feat(design-system)`). Catalog `ui`: `cn` + `@fontsource/outfit` (Outfit self-host, tanpa ADR); `clsx`/`tailwind-merge` dihapus. Q4 ditambahkan. B2 wip.
 - 2026-10-31 — PR #1 (L0) di-merge. Ruleset `main` dibuat manusia (L1 wip: CI wajib dan akun bot belum dikonfirmasi). Batch `feat/fase0-foundation`: B1 dan F1 wip.
 - 2026-10-31 — L0 done (PR #1, branch `chore/l0-root-bootstrap`): workspaces bun + catalog, `turbo.json`, `@trush/typescript-config` (`base`, `react`), Ultracite (Oxlint + Oxfmt), Husky + lint-staged + commitlint, `.gitattributes` LF. Kerangka `e2e/package.json` dibuat lead; selanjutnya milik qa-tester.
