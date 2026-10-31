@@ -23,7 +23,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 ### qa-tester
 
 - Sedang dikerjakan: —
-- Selesai terakhir: Q7 (db 21, env/db 14); Q6 (seo 54, web 29); Q1; Q5; Q4
+- Selesai terakhir: Q7 (db 21, env/db 15); Q6 (seo 54, web 29); Q1; Q5; Q4
 - Berikutnya: Q2 (setelah B6, F4)
 - Blocker: —
 
