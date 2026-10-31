@@ -2,6 +2,7 @@ import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 import { databaseUrlSchema } from "./db";
+import { assertPhoneEnv, phoneServerSchema } from "./phone";
 import {
   appEnvSchema,
   booleanFlagSchema,
@@ -98,6 +99,7 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       AUTH_COOKIE_DOMAIN: cookieDomainSchema.optional(),
       /** Secret. Secret key widget Turnstile (plugin `captcha`). */
       TURNSTILE_SECRET_KEY: z.string().min(1),
+      ...phoneServerSchema,
     },
     runtimeEnv: toRuntimeEnv(runtimeEnv),
     isServer: true,
@@ -113,6 +115,7 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
     );
   }
   assertProductionSafe(env);
+  assertPhoneEnv(env);
   return env;
 };
 
