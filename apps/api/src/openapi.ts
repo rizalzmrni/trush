@@ -37,6 +37,23 @@ export const errorResponse = (description: string) => ({
   description,
 });
 
+/** Nama security scheme cookie sesi better-auth di dokumen OpenAPI. */
+export const SESSION_SECURITY_SCHEME = "sessionCookie";
+
+/** `security` untuk `createRoute` yang memakai `requireSession`. */
+export const SESSION_SECURITY = [{ [SESSION_SECURITY_SCHEME]: [] }];
+
+/**
+ * Cookie sesi better-auth: `useSecureCookies` menambah prefix `__Secure-`
+ * pada nama bawaan `better-auth.session_token`.
+ */
+export const SESSION_SECURITY_SCHEME_OBJECT = {
+  description: "Cookie sesi httpOnly dari `/api/auth/sign-in/*`.",
+  in: "cookie",
+  name: "__Secure-better-auth.session_token",
+  type: "apiKey",
+} as const;
+
 export const OPENAPI_PATH = "/openapi.json";
 export const DOCS_PATH = "/docs";
 
