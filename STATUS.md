@@ -15,15 +15,15 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### frontend-engineer
 
-- Sedang dikerjakan: F2 `apps/storybook`
-- Selesai terakhir: F1 `packages/design-system`
+- Sedang dikerjakan: F1a perbaikan `formatCurrency`
+- Selesai terakhir: F2 `apps/storybook`
 - Berikutnya: F3 `apps/web`
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: Q4 test design-system; Q1 bagian env + core
-- Selesai terakhir: —
+- Sedang dikerjakan: Q4 test keyboard (user-event)
+- Selesai terakhir: Q1 bagian env + core
 - Berikutnya: Q1 bagian `/health` (setelah B5)
 - Blocker: Q1 `/health` menunggu B5
 
@@ -47,10 +47,11 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
-| F2 | `apps/storybook` memuat design-system | frontend-engineer | wip | F1 |
+| F2 | `apps/storybook` memuat design-system | frontend-engineer | done | F1 |
+| F1a | Perbaiki `formatCurrency`: IDR + `minimumFractionDigits` > 0 melempar RangeError (bug dari Q4, `it.fails` di `format.test.ts`) | frontend-engineer | wip | F1, Q4 |
 | F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | todo | F1, B1 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
-| Q1 | Test env, core, api `/health` | qa-tester | wip (env, core) | B1, B2, B5 |
+| Q1 | Test env, core, api `/health` | qa-tester | wip (env, core done; `/health` menunggu B5) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | wip | F1 |
@@ -70,6 +71,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — F2 done (`feat(storybook)`): import `@trush/design-system/...` ter-resolve di Vite; telemetri Storybook dimatikan. Q1 bagian env + core done (`test(env)`). Catalog: `@storybook/addon-a11y` 10.6.5, `@testing-library/user-event`.
 - 2026-10-31 — PR #2 di-merge. Batch `feat/fase0-observability-storybook`: B3, F2, Q4 wip; Q1 dimulai untuk env + core (`/health` menunggu B5). qa-tester di-spawn.
 - 2026-10-31 — Batch `feat/fase0-foundation` ditutup: PR #2 (B1, B2, F1) dibuka sebagai Draft.
 - 2026-10-31 — B2 done (`feat(core)`): kontrak `ErrorResponse` dan `HealthResponse`. B5 wajib memastikan `@hono/zod-openapi` membaca `.meta({ id })` Zod 4.
