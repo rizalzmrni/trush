@@ -104,6 +104,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@tabler/icons-react": "catalog:ui",
+        "@trush/core": "workspace:*",
         "@trush/design-system": "workspace:*",
         "@trush/env": "workspace:*",
         "@trush/seo": "workspace:*",
