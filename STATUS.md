@@ -15,15 +15,15 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### frontend-engineer
 
-- Sedang dikerjakan: —
-- Selesai terakhir: F3 `apps/web` + `packages/seo`
+- Sedang dikerjakan: F3b HSTS web hanya di domain resmi
+- Selesai terakhir: F3a `toAbsoluteUrl` origin; F3 `apps/web` + `packages/seo`
 - Berikutnya: F4 `apps/app` (menunggu B6)
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: Q6 test web + seo
-- Selesai terakhir: Q1 (env, core, `/health`); Q5; Q4
+- Sedang dikerjakan: reproduksi bug F3b (HSTS web)
+- Selesai terakhir: Q6 (seo 54, web 29); Q1; Q5; Q4
 - Berikutnya: Q2 (setelah B6, F4)
 - Blocker: —
 
@@ -50,12 +50,14 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
 | F1a | Perbaiki `formatCurrency`: IDR + `minimumFractionDigits` > 0 melempar RangeError (bug dari Q4, `it.fails` di `format.test.ts`) | frontend-engineer | done (PR #3) | F1, Q4 |
 | F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | done | F1, B1 |
+| F3a | `toAbsoluteUrl` menolak path yang berpindah origin (`/	/…`, `/\…`; bug Q6) | frontend-engineer | done | F3, Q6 |
+| F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | wip | F3, Q6 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL`; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
-| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | wip | F3 |
+| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done | F3 |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
 Catatan lanjutan dari batch ini:
@@ -83,6 +85,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — Q6 done (`test(web)`): 54 test seo + 29 test web; `@testing-library/react` + `/dom` (catalog:test) di apps/web. Bug Q6: F3a (`toAbsoluteUrl` keluar origin lewat tab/newline/backslash) done (`fix(seo)`); F3b (HSTS web tanpa cek host) wip.
 - 2026-10-31 — F3 done (`feat(web)`): SSR React Router 8.5.1 di Workers, CSP nonce per request, tanpa `isbot` (render penuh), `@trush/seo` `./meta` + `./robots`. `VITE_SITE_URL` di-commit bersama fixture (`feat(env)`). Q1 done: 53 test api (`test(api)`). Scalar di-pin 1.76.3 (`fix(api)`). Q6 wip.
 - 2026-10-31 — B5 done (`feat(api)`): `.meta({ id })` Zod 4 terbukti dibaca `@hono/zod-openapi` 1.6.3 (komponen ber-`$ref`); tipe `node:async_hooks` lewat deklarasi ambient minimal `apps/api/src/async-hooks.d.ts`; header `x-request-id`; `/docs` + `/openapi.json` 404 di luar development kecuali `API_DOCS_ENABLED`. `worker-configuration.d.ts` di-ignore (dibuat ulang oleh `typegen`). `CORS_ORIGINS` staging/production masih placeholder (L3/L4). Env web baru `VITE_SITE_URL` (wajib).
 - 2026-10-31 — PR #3 di-merge. Batch `feat/fase0-api-web`: B5 dan F3 wip; Q1 `/health` menunggu B5; Q6 (test web + seo) ditambahkan, menunggu F3.
