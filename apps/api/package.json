@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "wrangler dev",
-    "typegen": "wrangler types",
+    "typegen": "wrangler types --env-file .dev.vars.example",
     "check-types": "tsc --noEmit",
     "build:types": "tsc -p tsconfig.types.json",
     "test": "vitest run --passWithNoTests"
