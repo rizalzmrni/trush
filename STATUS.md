@@ -8,16 +8,16 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
-- Selesai terakhir: —
-- Berikutnya: B1 `packages/env`
+- Sedang dikerjakan: B2 `packages/core`
+- Selesai terakhir: B1 `packages/env`
+- Berikutnya: B3 `packages/observability`
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: —
-- Berikutnya: F1 `packages/design-system`
+- Selesai terakhir: F1 `packages/design-system`
+- Berikutnya: F2 `apps/storybook`
 - Blocker: —
 
 ### qa-tester
@@ -32,27 +32,28 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | ID | Tugas | Pemilik | Status | Bergantung |
 | --- | --- | --- | --- | --- |
 | L0 | Root: workspaces bun, `turbo.json`, `typescript-config`, Ultracite (`oxlint.config.mts`, `oxfmt.config.mts`), Husky + lint-staged + `commitlint.config.ts`, catalog bun, template PR | lead | done (PR #1) | — |
-| L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | todo | L0 |
+| L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | wip | L0 |
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
 | L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | todo | L3 |
 | L5 | Environment GitHub `e2e` (`NEON_API_KEY`, `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | todo | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
-| B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | todo | L0 |
-| B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | todo | L0 |
+| B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done | L0 |
+| B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | wip | L0 |
 | B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | todo | B1 |
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | todo | B1 |
 | B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | todo | B1, B3 |
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | todo | B4, B5 |
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
-| F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | todo | L0, L2 |
+| F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | todo | F1 |
 | F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | todo | F1, B1 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | todo | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
+| Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | todo | F1 |
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
 
@@ -68,6 +69,8 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — B1 done (`feat(env)`), F1 done (`feat(design-system)`). Catalog `ui`: `cn` + `@fontsource/outfit` (Outfit self-host, tanpa ADR); `clsx`/`tailwind-merge` dihapus. Q4 ditambahkan. B2 wip.
+- 2026-10-31 — PR #1 (L0) di-merge. Ruleset `main` dibuat manusia (L1 wip: CI wajib dan akun bot belum dikonfirmasi). Batch `feat/fase0-foundation`: B1 dan F1 wip.
 - 2026-10-31 — L0 done (PR #1, branch `chore/l0-root-bootstrap`): workspaces bun + catalog, `turbo.json`, `@trush/typescript-config` (`base`, `react`), Ultracite (Oxlint + Oxfmt), Husky + lint-staged + commitlint, `.gitattributes` LF. Kerangka `e2e/package.json` dibuat lead; selanjutnya milik qa-tester.
 - {{YYYY-MM-DD}} — Plugin `captcha` (Turnstile) diizinkan; aturan layanan pihak ketiga + ADR 0002.
 - {{YYYY-MM-DD}} — Review: `CLOUDFLARE_ENV`, lingkungan lokal `e2e`, `VITE_APP_ENV`, rate limit better-auth, security headers, backup, README.
