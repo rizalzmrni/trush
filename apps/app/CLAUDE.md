@@ -30,7 +30,7 @@ Aplikasi produk trush untuk pengguna yang login: React Router framework mode (SS
 
 ## Pengujian
 
-- **Lingkungan:** happy-dom
+- **Lingkungan:** dua project Vitest: `node` untuk `src/**/*.test.ts` (loader/action, `*.server`, util), `happy-dom` untuk komponen `src/**/*.test.tsx`.
 - **Wajib diuji:** loader (401 → redirect `/sign-in?redirectTo=…`, error lain → ErrorBoundary), `getSafeRedirect` (tolak URL eksternal), validasi form, logika fitur.
 - **Dilarang di test:** API nyata. Mock factory `src/lib/api-client.ts`.
 
