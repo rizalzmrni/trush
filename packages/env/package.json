@@ -1,0 +1,24 @@
+{
+  "name": "@trush/env",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./api": "./src/api.ts",
+    "./app": "./src/app.ts",
+    "./web": "./src/web.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@t3-oss/env-core": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@trush/typescript-config": "workspace:*",
+    "typescript": "catalog:",
+    "vitest": "catalog:test"
+  }
+}

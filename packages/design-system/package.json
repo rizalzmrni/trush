@@ -1,0 +1,47 @@
+{
+  "name": "@trush/design-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./components/*": "./src/components/*.tsx",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./lib/*": "./src/lib/*.ts",
+    "./styles/globals.css": "./src/styles/globals.css"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@base-ui/react": "catalog:ui",
+    "@fontsource/outfit": "catalog:ui",
+    "@tabler/icons-react": "catalog:ui",
+    "class-variance-authority": "catalog:ui",
+    "cn": "catalog:ui",
+    "next-themes": "catalog:ui",
+    "shadcn": "catalog:ui",
+    "tw-animate-css": "catalog:ui"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "catalog:test",
+    "@testing-library/react": "catalog:test",
+    "@trush/typescript-config": "workspace:*",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "happy-dom": "catalog:test",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
+    "tailwindcss": "catalog:ui",
+    "typescript": "catalog:",
+    "vitest": "catalog:test"
+  },
+  "peerDependencies": {
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
+    "tailwindcss": "catalog:ui"
+  }
+}
