@@ -17,3 +17,18 @@ BETTER_AUTH_URL=http://localhost:8787
 AUTH_COOKIE_DOMAIN=
 # Kunci uji Cloudflare Turnstile yang selalu lolos (docs/auth-plugins.md).
 TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# Telepon (@trush/phone). Development: `log` menulis OTP ke log lokal.
+# Pilihan: memory | log | twilio-test | twilio (production hanya twilio).
+PHONE_DRIVER=log
+PHONE_ALLOWED_COUNTRIES=ID
+# Wajib saat staging + twilio: nomor E.164 tim, dipisah koma.
+PHONE_ALLOWLIST=
+# Driver twilio (API Key, bukan Auth Token utama).
+TWILIO_ACCOUNT_SID=
+TWILIO_API_KEY_SID=
+TWILIO_API_KEY_SECRET=
+TWILIO_MESSAGING_SERVICE_SID=
+TWILIO_WHATSAPP_OTP_CONTENT_SID=
+# Driver twilio-test (test credentials dari Console Twilio, tanpa biaya).
+TWILIO_TEST_ACCOUNT_SID=
+TWILIO_TEST_AUTH_TOKEN=

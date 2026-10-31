@@ -1,8 +1,12 @@
 import { createAuth } from "@trush/auth";
 import { createDb } from "@trush/db";
+import { getLogger } from "@trush/observability/logger";
 import { createMiddleware } from "hono/factory";
 
 import type { AppContext } from "../context";
+
+/** Logger driver `log` `@trush/phone` (development): satu-satunya tempat OTP di-log. */
+const phoneLogger = getLogger(["trush", "phone"]);
 
 /**
  * Membuat klien DB dan instance better-auth per request (tidak ada klien
@@ -18,6 +22,7 @@ export const authContext = createMiddleware<AppContext>(async (c, next) => {
     createAuth({
       db,
       env,
+      phoneLogger,
       waitUntil: (promise) => c.executionCtx.waitUntil(promise),
     })
   );

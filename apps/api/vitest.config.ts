@@ -16,6 +16,7 @@ const TEST_BINDINGS = {
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
   LOG_LEVEL: "info",
+  PHONE_DRIVER: "memory",
   TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
 } as const;
 
