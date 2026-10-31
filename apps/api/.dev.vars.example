@@ -1,0 +1,6 @@
+# Salin ke .dev.vars (tidak di-commit). Nilai di bawah palsu.
+# Skema: createApiEnv di @trush/env (packages/env/src/api.ts).
+APP_ENV=development
+API_DOCS_ENABLED=true
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+LOG_LEVEL=debug

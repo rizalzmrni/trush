@@ -1,0 +1,4 @@
+# Salin ke .dev.vars (tidak di-commit). Nilai di bawah palsu.
+# Skema server: createAppEnv di @trush/env (packages/env/src/app.ts).
+# Var VITE_* dibaca Vite saat build dari .env, lihat .env.example.
+APP_ENV=development
