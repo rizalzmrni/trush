@@ -8,14 +8,14 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: B7 `packages/phone` + plugin `phoneNumber`
 - Selesai terakhir: B6 `packages/auth` + `/api/me`; B4a; B4 `packages/db`
 - Berikutnya: B7 `packages/phone` + plugin `phoneNumber`
 - Blocker: —
 
 ### frontend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: F4 `apps/app`
 - Selesai terakhir: F3b HSTS web; F3a `toAbsoluteUrl`; F3 `apps/web` + `packages/seo`
 - Berikutnya: F4 `apps/app` (B6 di review; kontrak `@trush/core/schemas/me` siap)
 - Blocker: —
@@ -44,8 +44,8 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | done (PR #8; infra saja, tabel auth di B6) | B1 |
 | B4a | `@trush/env/db` menolak URL tak valid sebagai issue (bukan TypeError berisi nilai mentah); tsconfig test Node di db (bug Q7) | backend-engineer | done (PR #8) | B4, Q7 |
 | B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | done (PR #4) | B1, B3 |
-| B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | review (tanpa `phoneNumber`→B7, `emailOTP`/`polar`→fase email/payments; verifikasi email belum wajib) | B4, B5 |
-| B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
+| B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | done (PR #9; tanpa `phoneNumber`→B7, `emailOTP`/`polar`→fase email/payments; verifikasi email belum wajib) | B4, B5 |
+| B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | wip | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
@@ -55,9 +55,9 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
 | F3c | `typegen` web deterministik (`wrangler types --env-file .dev.vars.example`; CI PR #4 merah karena `.dev.vars` lokal) | frontend-engineer | done (PR #4) | F3 |
 | B5a | `typegen` api memakai pola yang sama | backend-engineer | done (PR #4) | B5 |
-| F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
+| F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | wip | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
-| Q2 | Test alur auth (api) + guard (app) | qa-tester | wip (Q2a api/auth/core: review; Q2b guard app menunggu F4) | B6, F4 |
+| Q2 | Test alur auth (api) + guard (app) | qa-tester | wip (Q2a api/auth/core: done PR #9; Q2b guard app menunggu F4) | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
 | Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
@@ -95,6 +95,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — PR #9 di-merge (B6, Q2a). Batch `feat/b7-f4-phone-app`: B7 dan F4 wip paralel. Lead memasang dependensi `packages/phone` (`libphonenumber-js` langsung), `apps/app` (pola `apps/web` + `better-auth`, `@tanstack/react-query`, `@trush/api|auth|core`), dan `@trush/phone` di `packages/auth`.
 - 2026-10-31 — B6 + Q2a selesai di `feat/b6-auth`. Lead: override `no-inline-comments` untuk `schema/auth.ts` hasil CLI, `@types/node` dev di `apps/api` (hanya `tsconfig.node.json` test db), `docs/auth-plugins.md` (captcha `/sign-in/username`, `openAPI` `disableDefaultReference`). Secret staging/production (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY`) diisi manusia saat L3/L4.
 - 2026-10-31 — PR #8 di-merge (B4, B4a, Q7). Approval CODEOWNERS terbukti menahan merge walau `required_approving_review_count: 0`. Batch `feat/b6-auth`: B6 wip. Keputusan user: plugin `phoneNumber` masuk B7, `emailOTP` dan `polar` masuk fase email/payments (masing-masing migrasi auth tambahan); `requireEmailVerification: false` sampai `@trush/email` siap (wajib diaktifkan saat itu).
 - 2026-10-31 — Batch `feat/b4-db`: B4 (user memilih "infra saja": tanpa tabel aplikasi; tabel auth dari CLI di B6), Q7, B4a (bug Q7). Lead: task turbo `db:generate`/`db:migrate` (`passThroughEnv` `DATABASE_URL_UNPOOLED`), dependensi catalog `db`, `packages/db/drizzle/**` diabaikan oxfmt. Migrasi Neon diverifikasi lewat job `e2e` PR.
