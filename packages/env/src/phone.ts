@@ -77,12 +77,30 @@ const REQUIRED_BY_DRIVER: Readonly<
 };
 
 /**
+ * Driver lokal (tanpa penyedia) hanya sah di development: `log` mencetak
+ * kode OTP, `memory` menyimpannya di outbox yang bisa dibaca.
+ */
+const DEVELOPMENT_ONLY_DRIVERS: ReadonlySet<PhoneDriverName> = new Set([
+  "log",
+  "memory",
+]);
+
+/**
  * Aturan lintas var telepon. Pesan hanya memuat nama var, bukan nilainya.
- * TODO(B8): `E2E=true` mewajibkan `PHONE_DRIVER=memory`.
+ * TODO(B8): `E2E=true` mewajibkan `PHONE_DRIVER=memory` (dan menjadi satu-
+ * satunya pengecualian `memory` di luar development bila B8 memutuskannya).
  */
 export const assertPhoneEnv = (env: PhoneEnvShape): void => {
   if (env.APP_ENV === "production" && env.PHONE_DRIVER !== "twilio") {
     throw new Error("PHONE_DRIVER wajib twilio saat APP_ENV=production.");
+  }
+  if (
+    env.APP_ENV !== "development" &&
+    DEVELOPMENT_ONLY_DRIVERS.has(env.PHONE_DRIVER)
+  ) {
+    throw new Error(
+      `PHONE_DRIVER=${env.PHONE_DRIVER} hanya sah saat APP_ENV=development.`
+    );
   }
   const missing = (REQUIRED_BY_DRIVER[env.PHONE_DRIVER] ?? []).filter(
     (key) => env[key] === undefined

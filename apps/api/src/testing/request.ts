@@ -45,11 +45,27 @@ export const PRODUCTION_OVERRIDES = {
   TWILIO_WHATSAPP_OTP_CONTENT_SID: "HXtest",
 } as const;
 
-/** `BASE_ENV` untuk `APP_ENV` tertentu; production memakai penimpa di atas. */
-export const envForAppEnv = (appEnv: string): Record<string, string> =>
-  appEnv === "production"
-    ? { ...BASE_ENV, ...PRODUCTION_OVERRIDES }
-    : { ...BASE_ENV, APP_ENV: appEnv };
+/**
+ * Penimpa staging: driver telepon `memory`/`log` hanya sah di development,
+ * jadi staging memakai `twilio-test` (test credentials palsu, tanpa kirim).
+ */
+export const STAGING_OVERRIDES = {
+  APP_ENV: "staging",
+  PHONE_DRIVER: "twilio-test",
+  TWILIO_TEST_ACCOUNT_SID: "ACtest",
+  TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
+} as const;
+
+/** `BASE_ENV` untuk `APP_ENV` tertentu; staging/production memakai penimpa di atas. */
+export const envForAppEnv = (appEnv: string): Record<string, string> => {
+  if (appEnv === "production") {
+    return { ...BASE_ENV, ...PRODUCTION_OVERRIDES };
+  }
+  if (appEnv === "staging") {
+    return { ...BASE_ENV, ...STAGING_OVERRIDES };
+  }
+  return { ...BASE_ENV, APP_ENV: appEnv };
+};
 
 /**
  * ExecutionContext tiruan: menampung promise `waitUntil` agar bisa ditunggu

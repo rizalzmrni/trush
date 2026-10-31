@@ -10,7 +10,10 @@ const validEnv = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
-  PHONE_DRIVER: "memory",
+  // `memory`/`log` hanya sah di development; staging memakai test credentials.
+  PHONE_DRIVER: "twilio-test",
+  TWILIO_TEST_ACCOUNT_SID: "ACtest",
+  TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
 } as const;
 
 const productionEnv = {
