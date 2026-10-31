@@ -17,14 +17,14 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 - Sedang dikerjakan: —
 - Selesai terakhir: F4 `apps/app` (review); F3b HSTS web; F3a `toAbsoluteUrl`
-- Berikutnya: perbaikan bug dari Q2b bila ada; fase berikutnya belum dipecah
+- Berikutnya: pisahkan project vitest `apps/app` (node vs happy-dom, usulan Q2b); fase berikutnya belum dipecah
 - Blocker: —
 
 ### qa-tester
 
 - Sedang dikerjakan: —
-- Selesai terakhir: Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37); Q7 (db 21, env/db 15)
-- Berikutnya: Q2b guard `apps/app` (F4 siap; `apps/app` belum punya test)
+- Selesai terakhir: Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Berikutnya: Q3 e2e (setelah B8)
 - Blocker: —
 
 ## Backlog bootstrap
@@ -55,9 +55,9 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
 | F3c | `typegen` web deterministik (`wrangler types --env-file .dev.vars.example`; CI PR #4 merah karena `.dev.vars` lokal) | frontend-engineer | done (PR #4) | F3 |
 | B5a | `typegen` api memakai pola yang sama | backend-engineer | done (PR #4) | B5 |
-| F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | review (belum ada test; Q2b) | F1, B6 |
+| F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | review (diuji Q2b) | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
-| Q2 | Test alur auth (api) + guard (app) | qa-tester | wip (Q2a api/auth/core: done PR #9; Q2b guard app todo, F4 siap) | B6, F4 |
+| Q2 | Test alur auth (api) + guard (app) | qa-tester | done (Q2a PR #9; Q2b 163 test app, tanpa bug) | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
 | Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
@@ -79,6 +79,8 @@ Catatan lanjutan dari batch ini:
 - Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
 
 - B7 keputusan terbuka (user): (1) `/phone-number/send-otp` masih membedakan nomor terdaftar lewat waktu respons (panggilan Twilio sinkron vs langsung kembali); terima + dokumentasikan, atau beri jeda buatan. (2) Pengguna login bisa minta OTP ke nomor mana saja; rate limit hanya per IP, belum per pengguna/nomor tujuan.
+- `apps/app` vitest: happy-dom membuang header terlarang (`cookie`, `origin`, `user-agent`, `set-cookie`), jadi test modul server memakai `// @vitest-environment node` per file. Usulan Q2b: dua project vitest (node untuk `*.server.test.ts` + routes, happy-dom untuk komponen) dan perbarui "Lingkungan" di `apps/app/CLAUDE.md` (frontend-engineer).
+- Lint: autofix `bun run fix` mengubah `toHaveBeenCalled()` menjadi `toHaveBeenCalledWith()` (makna assert berubah); lead cek rule di `oxlint.config.mts`. Test entry.server (`onError` 500) belum ada.
 - B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
@@ -98,6 +100,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 ## Log (terbaru di atas)
 
 - 2026-11-01 — B7 dan F4 ke review di `feat/b7-f4-phone-app` (belum ada PR). Perbaikan B7 (`fix(auth)`): OTP dikirim sinkron tanpa `backgroundTasks`, sehingga error Twilio menjadi 4xx berkode domain / 502 `OTP_DELIVERY_FAILED`; nomor tak terdaftar tidak dikirimi OTP dan responsnya identik. Q8 done (test phone, env, auth). Catatan lanjutan selesai: host resmi bersama di `@trush/core`, `ErrorPage` di design-system. PR batch menunggu Q2b.
+- 2026-11-01 — Q2b done (`test(app)`): 163 test `apps/app` (guard sesi, `getSafeRedirect`, action auth, api-client, security headers, form), tanpa bug. Batch `feat/b7-f4-phone-app` siap PR.
 - 2026-10-31 — PR #9 di-merge (B6, Q2a). Batch `feat/b7-f4-phone-app`: B7 dan F4 wip paralel. Lead memasang dependensi `packages/phone` (`libphonenumber-js` langsung), `apps/app` (pola `apps/web` + `better-auth`, `@tanstack/react-query`, `@trush/api|auth|core`), dan `@trush/phone` di `packages/auth`.
 - 2026-10-31 — B6 + Q2a selesai di `feat/b6-auth`. Lead: override `no-inline-comments` untuk `schema/auth.ts` hasil CLI, `@types/node` dev di `apps/api` (hanya `tsconfig.node.json` test db), `docs/auth-plugins.md` (captcha `/sign-in/username`, `openAPI` `disableDefaultReference`). Secret staging/production (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `TURNSTILE_SECRET_KEY`) diisi manusia saat L3/L4.
 - 2026-10-31 — PR #8 di-merge (B4, B4a, Q7). Approval CODEOWNERS terbukti menahan merge walau `required_approving_review_count: 0`. Batch `feat/b6-auth`: B6 wip. Keputusan user: plugin `phoneNumber` masuk B7, `emailOTP` dan `polar` masuk fase email/payments (masing-masing migrasi auth tambahan); `requireEmailVerification: false` sampai `@trush/email` siap (wajib diaktifkan saat itu).
