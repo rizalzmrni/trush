@@ -1,0 +1,8 @@
+{
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    // fetch, btoa, URLSearchParams tanpa DOM; mendekati global workerd.
+    "lib": ["ES2024", "WebWorker"]
+  },
+  "include": ["src", "vitest.config.ts"]
+}
