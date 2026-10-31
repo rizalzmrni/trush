@@ -8,7 +8,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: B6 `packages/auth`
 - Selesai terakhir: B4a (bug URL `@trush/env/db`, tsconfig test db); B4 `packages/db`; B5 `apps/api`
 - Berikutnya: B6 `packages/auth` (tabel auth dari CLI ke `@trush/db`, `DATABASE_URL` di `createApiEnv`)
 - Blocker: —
@@ -41,10 +41,10 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
 | B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | done (PR #3) | B1 |
-| B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | review (infra saja: `createDb`, `createTransactionalDb`, `createTestDb`, baseline `0000_init`; tabel auth di B6) | B1 |
-| B4a | `@trush/env/db` menolak URL tak valid sebagai issue (bukan TypeError berisi nilai mentah); tsconfig test Node di db (bug Q7) | backend-engineer | review | B4, Q7 |
+| B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | done (PR #8; infra saja, tabel auth di B6) | B1 |
+| B4a | `@trush/env/db` menolak URL tak valid sebagai issue (bukan TypeError berisi nilai mentah); tsconfig test Node di db (bug Q7) | backend-engineer | done (PR #8) | B4, Q7 |
 | B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | done (PR #4) | B1, B3 |
-| B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | todo | B4, B5 |
+| B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | wip (tanpa `phoneNumber`→B7, `emailOTP`/`polar`→fase email/payments; verifikasi email belum wajib) | B4, B5 |
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
@@ -61,7 +61,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
 | Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
-| Q7 | Test `packages/db` (`newId`, `createTestDb`, `primaryId`/`timestamps`, klien) + `@trush/env/db` | qa-tester | review | B4 |
+| Q7 | Test `packages/db` (`newId`, `createTestDb`, `primaryId`/`timestamps`, klien) + `@trush/env/db` | qa-tester | done (PR #8) | B4 |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
 Catatan lanjutan dari batch ini:
@@ -91,6 +91,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — PR #8 di-merge (B4, B4a, Q7). Approval CODEOWNERS terbukti menahan merge walau `required_approving_review_count: 0`. Batch `feat/b6-auth`: B6 wip. Keputusan user: plugin `phoneNumber` masuk B7, `emailOTP` dan `polar` masuk fase email/payments (masing-masing migrasi auth tambahan); `requireEmailVerification: false` sampai `@trush/email` siap (wajib diaktifkan saat itu).
 - 2026-10-31 — Batch `feat/b4-db`: B4 (user memilih "infra saja": tanpa tabel aplikasi; tabel auth dari CLI di B6), Q7, B4a (bug Q7). Lead: task turbo `db:generate`/`db:migrate` (`passThroughEnv` `DATABASE_URL_UNPOOLED`), dependensi catalog `db`, `packages/db/drizzle/**` diabaikan oxfmt. Migrasi Neon diverifikasi lewat job `e2e` PR.
 - 2026-10-31 — PR #4 di-merge ke `main`. L1 done: git/gh agent kini memakai GitHub App `trush-app[bot]` (token lokal, di luar repo), jadi PR dibuat bot dan `rizalzmrni` dapat approve sebagai CODEOWNER. PR ini PR pertama dari bot.
 - 2026-10-31 — L5: `e2e` PR #5 gagal di langkah "Buat branch Neon sementara" karena branch parent `dev` tidak ada (hanya `production`). Branch Neon `dev` dibuat dari `production`.
