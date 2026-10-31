@@ -15,14 +15,14 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 
 ### frontend-engineer
 
-- Sedang dikerjakan: F3b HSTS web hanya di domain resmi
-- Selesai terakhir: F3a `toAbsoluteUrl` origin; F3 `apps/web` + `packages/seo`
+- Sedang dikerjakan: —
+- Selesai terakhir: F3b HSTS web; F3a `toAbsoluteUrl`; F3 `apps/web` + `packages/seo`
 - Berikutnya: F4 `apps/app` (menunggu B6)
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: reproduksi bug F3b (HSTS web)
+- Sedang dikerjakan: —
 - Selesai terakhir: Q6 (seo 54, web 29); Q1; Q5; Q4
 - Berikutnya: Q2 (setelah B6, F4)
 - Blocker: —
@@ -42,22 +42,22 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
 | B3 | `packages/observability`: logger LogTape + redaksi + sink BetterStack | backend-engineer | done (PR #3) | B1 |
 | B4 | `packages/db`: factory klien Neon, `newId()` UUIDv7, skema awal, migrasi pertama | backend-engineer | todo | B1 |
-| B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | done | B1, B3 |
+| B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | done (PR #4) | B1, B3 |
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | todo | B4, B5 |
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | todo | B1, B6 |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
 | F1a | Perbaiki `formatCurrency`: IDR + `minimumFractionDigits` > 0 melempar RangeError (bug dari Q4, `it.fails` di `format.test.ts`) | frontend-engineer | done (PR #3) | F1, Q4 |
-| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | done | F1, B1 |
-| F3a | `toAbsoluteUrl` menolak path yang berpindah origin (`/	/…`, `/\…`; bug Q6) | frontend-engineer | done | F3, Q6 |
-| F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | wip | F3, Q6 |
+| F3 | `apps/web`: kerangka SSR + `packages/seo` dasar | frontend-engineer | done (PR #4) | F1, B1 |
+| F3a | `toAbsoluteUrl` menolak path yang berpindah origin (`/	/…`, `/\…`; bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
+| F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | todo | F1, B6 |
-| Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL`; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
+| Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | todo | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
-| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done | F3 |
+| Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
 Catatan lanjutan dari batch ini:
@@ -67,6 +67,7 @@ Catatan lanjutan dari batch ini:
 - `@trush/seo`: sitemap + JSON-LD saat ada halaman marketing nyata.
 - Q3: blok `env.e2e` di `wrangler.jsonc` web (dan api di B8).
 - L3/L4: ganti placeholder `CORS_ORIGINS` di `apps/api/wrangler.jsonc`; sediakan `VITE_SITE_URL`/`VITE_APP_URL`/`VITE_APP_ENV` saat `CLOUDFLARE_ENV=… vite build`.
+- Regex `NON_OFFICIAL_HOST` kini disalin di `apps/api` dan `apps/web`; bila F4 butuh salinan ketiga, pindahkan ke paket bersama (usulan: `@trush/core`).
 - Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
@@ -85,6 +86,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — F3b done (`fix(web)`): HSTS web hanya production di domain resmi, test regresi per host. Batch `feat/fase0-api-web` ditutup: PR #4 (Draft).
 - 2026-10-31 — Q6 done (`test(web)`): 54 test seo + 29 test web; `@testing-library/react` + `/dom` (catalog:test) di apps/web. Bug Q6: F3a (`toAbsoluteUrl` keluar origin lewat tab/newline/backslash) done (`fix(seo)`); F3b (HSTS web tanpa cek host) wip.
 - 2026-10-31 — F3 done (`feat(web)`): SSR React Router 8.5.1 di Workers, CSP nonce per request, tanpa `isbot` (render penuh), `@trush/seo` `./meta` + `./robots`. `VITE_SITE_URL` di-commit bersama fixture (`feat(env)`). Q1 done: 53 test api (`test(api)`). Scalar di-pin 1.76.3 (`fix(api)`). Q6 wip.
 - 2026-10-31 — B5 done (`feat(api)`): `.meta({ id })` Zod 4 terbukti dibaca `@hono/zod-openapi` 1.6.3 (komponen ber-`$ref`); tipe `node:async_hooks` lewat deklarasi ambient minimal `apps/api/src/async-hooks.d.ts`; header `x-request-id`; `/docs` + `/openapi.json` 404 di luar development kecuali `API_DOCS_ENABLED`. `worker-configuration.d.ts` di-ignore (dibuat ulang oleh `typegen`). `CORS_ORIGINS` staging/production masih placeholder (L3/L4). Env web baru `VITE_SITE_URL` (wajib).
