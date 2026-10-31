@@ -6,7 +6,7 @@
       "dependsOn": ["^build"],
       "env": ["APP_ENV", "CLOUDFLARE_ENV", "VITE_*"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/**", "build/**", "storybook-static/**"]
     },
     "build:types": {
       "dependsOn": ["^build:types"],

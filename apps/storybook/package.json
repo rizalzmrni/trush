@@ -1,0 +1,30 @@
+{
+  "name": "@trush/storybook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "storybook build --output-dir storybook-static",
+    "check-types": "tsc --noEmit",
+    "dev": "storybook dev --port 6006 --no-open"
+  },
+  "dependencies": {
+    "@tabler/icons-react": "catalog:ui",
+    "@trush/design-system": "workspace:*",
+    "next-themes": "catalog:ui",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "catalog:storybook",
+    "@storybook/react-vite": "catalog:storybook",
+    "@tailwindcss/vite": "catalog:ui",
+    "@trush/typescript-config": "workspace:*",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "storybook": "catalog:storybook",
+    "tailwindcss": "catalog:ui",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

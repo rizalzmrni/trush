@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@trush/typescript-config/react.json",
+  "compilerOptions": {
+    // Impor CSS dan aset `?url` di-resolve Vite.
+    "types": ["vite/client"]
+  },
+  "include": [".storybook", "src"]
+}
