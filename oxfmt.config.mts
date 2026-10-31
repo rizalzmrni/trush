@@ -9,5 +9,8 @@ export default defineConfig({
     ".agents/skills/**",
     ".claude/skills/**",
     "packages/design-system/src/components/ui/**",
+    // Hasil drizzle-kit (SQL + snapshot JSON): diformat ulang akan memicu
+    // diff palsu setiap `db:generate`.
+    "packages/db/drizzle/**",
   ],
 });

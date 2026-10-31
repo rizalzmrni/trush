@@ -50,6 +50,7 @@ Boilerplate SaaS: Turborepo + bun, TypeScript strict; `apps/web`, `apps/app`, `a
   - `no-console` AKTIF di seluruh repo (preset Ultracite mematikannya, trush menyalakannya), kecuali `packages/observability/src/logger.ts` dan `logger.test.ts`. Di tempat lain pakai logger `@trush/observability` (server) atau pelaporan error `@trush/analytics` (klien).
   - `packages/design-system/src/components/ui/**` tidak di-lint dan tidak di-format (hasil `bunx shadcn@latest add`). Boleh disesuaikan, tanpa logika bisnis, dan wajib direview manual.
   - `.agents/skills/**` dan `.claude/skills/**` tidak di-format dan tidak di-lint.
+  - `packages/db/drizzle/**` (hasil `drizzle-kit`) tidak di-format, agar `db:generate` tidak memicu diff format.
 
 ## Struktur folder & pengelompokan
 
