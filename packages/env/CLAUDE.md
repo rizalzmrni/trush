@@ -6,7 +6,7 @@ Satu tempat mendefinisikan dan memvalidasi env trush dengan `@t3-oss/env-core`
 
 ## Batas & kepemilikan
 
-- **Isi:** factory `createWebEnv`, `createAppEnv`, `createApiEnv`, skema server/client, tipe hasil.
+- **Isi:** factory `createWebEnv`, `createAppEnv`, `createApiEnv`, `createDbToolingEnv` (tooling `@trush/db`: `DATABASE_URL_UNPOOLED`, host `-pooler` ditolak), skema server/client (termasuk `databaseUrlSchema` untuk `DATABASE_URL` app), tipe hasil.
 - **Dipakai oleh:** semua app dan paket yang butuh env.
 - **Tidak boleh:** nilai rahasia (hanya skema), I/O, membaca env saat impor.
 - **Pemilik (tim agent):** `backend-engineer`
