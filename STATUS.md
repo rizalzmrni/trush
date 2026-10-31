@@ -36,7 +36,7 @@ Terakhir diperbarui: 2026-10-31 · oleh lead · fase aktif: Fase 0
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
 | L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | todo | L3 |
-| L5 | Environment GitHub `e2e` (`NEON_API_KEY`, `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | todo | Q3 |
+| L5 | Environment GitHub `e2e` (secret `NEON_API_KEY`, variable `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | wip (secret diisi 2026-10-31; job tetap merah sampai B4 + Q3) | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
@@ -89,6 +89,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-10-31 — PR #4 siap merge (B5, B5a, F3, F3a, F3b, F3c, Q1 `/health`, Q6 done). CODEOWNERS diperbaiki ke `oxlint.config.mts`/`oxfmt.config.mts`. L5 wip: secret Neon diisi; `e2e` (bukan check wajib) tetap merah sampai `@trush/db` (B4), `e2e/scripts/write-dev-vars.ts`, dan test Q3 ada. PR #4 dibuat dari akun manusia, jadi approval CODEOWNERS tidak bisa diberikan author; akun bot agent (L1) masih belum ada.
 - 2026-10-31 — CI PR #4 merah: tipe `Env` dari `wrangler types` membaca `.dev.vars` lokal, berbeda dengan CI. F3c + B5a (`fix(web)`, `fix(api)`): typegen dari `.dev.vars.example`. Check `e2e` tetap merah sampai L5 (secret Neon).
 - 2026-10-31 — F3b done (`fix(web)`): HSTS web hanya production di domain resmi, test regresi per host. Batch `feat/fase0-api-web` ditutup: PR #4 (Draft).
 - 2026-10-31 — Q6 done (`test(web)`): 54 test seo + 29 test web; `@testing-library/react` + `/dom` (catalog:test) di apps/web. Bug Q6: F3a (`toAbsoluteUrl` keluar origin lewat tab/newline/backslash) done (`fix(seo)`); F3b (HSTS web tanpa cek host) wip.
