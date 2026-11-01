@@ -30,6 +30,21 @@ export const createPhoneSettingsPage = (page: Page) => {
   const verifyHeading = page.getByRole("heading", {
     name: "Masukkan kode verifikasi",
   });
+  /**
+   * Langkah 1: isi nomor, kanal, dan kata sandi saat ini lalu kirim kode.
+   * Tidak menunggu langkah verifikasi (kata sandi salah tetap di langkah 1).
+   */
+  const requestCode = async (
+    phoneNumber: string,
+    currentPassword: string,
+    channel = "WhatsApp"
+  ): Promise<void> => {
+    await expectCaptchaReady(page);
+    await page.getByLabel(/^Nomor telepon/u).fill(phoneNumber);
+    await page.getByRole("radio", { name: channel }).check();
+    await page.getByLabel("Kata sandi saat ini").fill(currentPassword);
+    await page.getByRole("button", { exact: true, name: "Kirim kode" }).click();
+  };
   return {
     /** Nomor tersimpan di akun tampil dengan status terverifikasi. */
     async expectVerified(e164: string): Promise<void> {
@@ -49,18 +64,20 @@ export const createPhoneSettingsPage = (page: Page) => {
     heading,
     /** Info sukses (`role="status"`): kode terkirim / nomor tersimpan. */
     notice: page.getByRole("status"),
-    async resendViaSms(): Promise<void> {
+    /** Kirim ulang lewat SMS; wajib kata sandi saat ini (step-up). */
+    async resendViaSms(currentPassword: string): Promise<void> {
       await expectCaptchaReady(page);
+      await page.getByLabel("Kata sandi saat ini").fill(currentPassword);
       await page.getByRole("button", { name: "Kirim ulang lewat SMS" }).click();
     },
-    /** Langkah 1: isi nomor, pilih kanal, kirim kode → langkah verifikasi. */
-    async sendCode(phoneNumber: string, channel = "WhatsApp"): Promise<void> {
-      await expectCaptchaReady(page);
-      await page.getByLabel(/^Nomor telepon/u).fill(phoneNumber);
-      await page.getByRole("radio", { name: channel }).check();
-      await page
-        .getByRole("button", { exact: true, name: "Kirim kode" })
-        .click();
+    requestCode,
+    /** `requestCode` lalu pastikan masuk langkah verifikasi. */
+    async sendCode(
+      phoneNumber: string,
+      currentPassword: string,
+      channel = "WhatsApp"
+    ): Promise<void> {
+      await requestCode(phoneNumber, currentPassword, channel);
       await expect(verifyHeading).toBeVisible();
     },
     /** Langkah 2: masukkan kode lalu verifikasi. */
