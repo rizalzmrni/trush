@@ -155,6 +155,29 @@ describe("dokumen /openapi.json untuk /api/me", () => {
     }
   );
 
+  it("skema MeUser memuat phoneNumber (E.164, nullable) dan phoneNumberVerified", async () => {
+    const response = await fetchWorker("/openapi.json");
+    const document = z
+      .looseObject({
+        components: z.looseObject({
+          schemas: z.record(
+            z.string(),
+            z.looseObject({
+              properties: z.record(z.string(), z.unknown()).optional(),
+            })
+          ),
+        }),
+      })
+      .parse(await response.json());
+    const properties = document.components.schemas.MeUser?.properties ?? {};
+
+    expect(properties.phoneNumber).toMatchObject({
+      pattern: expect.stringContaining("+"),
+    });
+    expect(JSON.stringify(properties.phoneNumber)).toContain("null");
+    expect(properties.phoneNumberVerified).toMatchObject({ type: "boolean" });
+  });
+
   it("security scheme sessionCookie menunjuk cookie __Secure-", async () => {
     const response = await fetchWorker("/openapi.json");
     const document = openApiSchema.parse(await response.json());

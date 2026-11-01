@@ -186,6 +186,50 @@ describe(toMeResponse, () => {
     expect(meResponseSchema.safeParse(response).success).toBeTruthy();
   });
 
+  it.each([
+    ["undefined", { phoneNumber: undefined, phoneNumberVerified: undefined }],
+    ["null", { phoneNumber: null, phoneNumberVerified: false }],
+  ])(
+    "telepon %s → phoneNumber null dan phoneNumberVerified false (selalu dikirim)",
+    (_label, phone) => {
+      const response = toMeResponse(makeAuthSession({ user: phone }));
+
+      expect(response.user).toHaveProperty("phoneNumber", null);
+      expect(response.user).toHaveProperty("phoneNumberVerified", false);
+      expect(meResponseSchema.safeParse(response).success).toBeTruthy();
+    }
+  );
+
+  it("nomor terverifikasi diteruskan dan lolos meResponseSchema", () => {
+    const response = toMeResponse(
+      makeAuthSession({
+        user: { phoneNumber: "+6281234567890", phoneNumberVerified: true },
+      })
+    );
+
+    expect(response.user).toMatchObject({
+      phoneNumber: "+6281234567890",
+      phoneNumberVerified: true,
+    });
+    expect(meResponseSchema.parse(response).user).toMatchObject({
+      phoneNumber: "+6281234567890",
+      phoneNumberVerified: true,
+    });
+  });
+
+  it("nomor belum terverifikasi tetap dilaporkan apa adanya", () => {
+    const response = toMeResponse(
+      makeAuthSession({
+        user: { phoneNumber: "+6281234567890", phoneNumberVerified: false },
+      })
+    );
+
+    expect(response.user).toMatchObject({
+      phoneNumber: "+6281234567890",
+      phoneNumberVerified: false,
+    });
+  });
+
   it("field plugin yang terisi diteruskan apa adanya", () => {
     const response = toMeResponse(
       makeAuthSession({

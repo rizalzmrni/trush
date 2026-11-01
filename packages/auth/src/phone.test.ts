@@ -21,6 +21,7 @@ const LOCAL_ID = "0812-3456-7890";
 const MY_NUMBER = "+60123456789";
 const PASSWORD = "kata-sandi-uji-yang-cukup-panjang-42";
 const PHONE_SEND_LIMIT = 3;
+const PHONE_VERIFY_LIMIT = 10;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const SIX_DIGITS = /^\d{6}$/u;
 
@@ -185,6 +186,42 @@ const failingSender =
       Promise.reject(
         new PhoneError(code, `detail internal ${E164_ID}`, 21_211)
       ),
+  });
+
+interface BurstResult {
+  last: Response | undefined;
+  statuses: number[];
+}
+
+const burstStep = async (
+  count: number,
+  send: () => Promise<Response>,
+  { last, statuses }: BurstResult
+): Promise<BurstResult> => {
+  if (statuses.length >= count) {
+    return { last, statuses };
+  }
+  const response = await send();
+  return burstStep(count, send, {
+    last: response,
+    statuses: [...statuses, response.status],
+  });
+};
+
+/** `count` request berurutan (deterministik); status dan response terakhir. */
+const burstFrom = (
+  count: number,
+  send: () => Promise<Response>
+): Promise<BurstResult> =>
+  burstStep(count, send, { last: undefined, statuses: [] });
+
+/** Verify kode salah dari satu IP (tanpa captcha: verify tidak memintanya). */
+const wrongVerify = (auth: TestAuth, ip: string, cookie?: string) => () =>
+  postTo(auth, "/phone-number/verify", {
+    body: { code: "000000", phoneNumber: E164_ID },
+    captcha: false,
+    cookie,
+    ip,
   });
 
 describe("plugin phoneNumber", () => {
@@ -582,6 +619,82 @@ describe("plugin phoneNumber", () => {
     expect(statuses.slice(0, PHONE_SEND_LIMIT)).toStrictEqual([200, 200, 200]);
     expect(statuses.at(-1)).toBe(HTTP_TOO_MANY_REQUESTS);
     expect(outbox.list()).toHaveLength(PHONE_SEND_LIMIT);
+  });
+
+  it("rate limit verify di staging: 10 percobaan per IP per menit, ke-11 → 429 + X-Retry-After", async () => {
+    const auth = makeAuth({ APP_ENV: "staging" });
+    const cookie = await signUp(auth);
+    const ip = nextIp();
+
+    const { last, statuses } = await burstFrom(
+      PHONE_VERIFY_LIMIT + 1,
+      wrongVerify(auth, ip, cookie)
+    );
+
+    expect(statuses.slice(0, PHONE_VERIFY_LIMIT)).not.toContain(
+      HTTP_TOO_MANY_REQUESTS
+    );
+    expect(statuses.at(-1)).toBe(HTTP_TOO_MANY_REQUESTS);
+    expect(Number(last?.headers.get("x-retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("rate limit verify di staging tidak memakai batas 3/menit /phone-number/*", async () => {
+    const auth = makeAuth({ APP_ENV: "staging" });
+    const ip = nextIp();
+
+    const { statuses } = await burstFrom(
+      PHONE_SEND_LIMIT + 1,
+      wrongVerify(auth, ip)
+    );
+
+    expect(statuses).not.toContain(HTTP_TOO_MANY_REQUESTS);
+  });
+
+  it("verify memakai hitungan sendiri: send-otp habis di IP yang sama tidak memblokir verify", async () => {
+    const auth = makeAuth({ APP_ENV: "staging" });
+    const cookie = await signUp(auth);
+    const ip = nextIp();
+
+    const sends = await burstFrom(PHONE_SEND_LIMIT + 1, () =>
+      sendOtp(auth, E164_ID, { cookie, ip })
+    );
+    const verify = await postTo(auth, "/phone-number/verify", {
+      body: {
+        code: outbox.latestFor(E164_ID)?.code,
+        phoneNumber: E164_ID,
+        updatePhoneNumber: true,
+      },
+      cookie,
+      ip,
+    });
+
+    expect(sends.statuses.at(-1)).toBe(HTTP_TOO_MANY_REQUESTS);
+    expect(verify.status).toBe(200);
+  });
+
+  it("send-otp tetap 3/menit per IP di staging (aturan verify tidak melonggarkannya)", async () => {
+    const auth = makeAuth({ APP_ENV: "staging" });
+    const cookie = await signUp(auth);
+    const ip = nextIp();
+
+    const { last, statuses } = await burstFrom(PHONE_SEND_LIMIT + 1, () =>
+      sendOtp(auth, OTHER_ID, { cookie, ip })
+    );
+
+    expect(statuses).toStrictEqual([200, 200, 200, HTTP_TOO_MANY_REQUESTS]);
+    expect(Number(last?.headers.get("x-retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("development: rate limit IP mati, verify ke-11 dari IP sama bukan 429", async () => {
+    const auth = makeAuth();
+    const ip = nextIp();
+
+    const { statuses } = await burstFrom(
+      PHONE_VERIFY_LIMIT + 1,
+      wrongVerify(auth, ip)
+    );
+
+    expect(statuses).not.toContain(HTTP_TOO_MANY_REQUESTS);
   });
 });
 

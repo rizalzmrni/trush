@@ -51,6 +51,57 @@ describe("skema MeResponse", () => {
     expect(meResponseSchema.safeParse(filled).success).toBeTruthy();
   });
 
+  it("menerima nomor telepon E.164 terverifikasi", () => {
+    const filled = {
+      ...validMe,
+      user: {
+        ...validMe.user,
+        phoneNumber: "+6281234567890",
+        phoneNumberVerified: true,
+      },
+    };
+
+    expect(meResponseSchema.parse(filled)).toStrictEqual(filled);
+  });
+
+  it("menerima nomor null dan tanpa field telepon (kompatibel)", () => {
+    const empty = {
+      ...validMe,
+      user: { ...validMe.user, phoneNumber: null, phoneNumberVerified: false },
+    };
+
+    expect(meResponseSchema.parse(empty)).toStrictEqual(empty);
+    expect(meResponseSchema.parse(validMe).user).not.toHaveProperty(
+      "phoneNumber"
+    );
+  });
+
+  it.each([
+    ["format lokal", "081234567890"],
+    ["tanpa plus", "6281234567890"],
+    ["diawali +0", "+0812345678"],
+    ["dengan spasi", "+62 812 3456 7890"],
+    ["terlalu pendek", "+123456"],
+    ["terlalu panjang", "+1234567890123456"],
+    ["kosong", ""],
+  ])("menolak phoneNumber %s", (_label, phoneNumber) => {
+    expect(
+      meResponseSchema.safeParse({
+        ...validMe,
+        user: { ...validMe.user, phoneNumber },
+      }).success
+    ).toBeFalsy();
+  });
+
+  it("menolak phoneNumberVerified bukan boolean", () => {
+    expect(
+      meResponseSchema.safeParse({
+        ...validMe,
+        user: { ...validMe.user, phoneNumberVerified: "true" },
+      }).success
+    ).toBeFalsy();
+  });
+
   it("membuang token sesi bila ikut terkirim", () => {
     const parsed = meResponseSchema.parse({
       ...validMe,
