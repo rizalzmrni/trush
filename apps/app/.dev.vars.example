@@ -1,4 +1,5 @@
 # Salin ke .dev.vars (tidak di-commit). Nilai di bawah palsu.
 # Skema server: createAppEnv di @trush/env (packages/env/src/app.ts).
 # Var VITE_* dibaca Vite saat build dari .env, lihat .env.example.
+# E2E (CLOUDFLARE_ENV=e2e): .dev.vars.e2e menggantikan file ini seluruhnya.
 APP_ENV=development

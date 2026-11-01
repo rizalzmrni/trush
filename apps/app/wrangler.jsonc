@@ -11,8 +11,22 @@
   },
   // Service Binding ke Worker api (docs/react-router.md). Saat dev, jalankan
   // `bun run dev` di apps/api juga; binding tersambung lewat dev registry.
+  // `wrangler dev` (api) dan @cloudflare/vite-plugin (app) memakai lokasi
+  // registry bawaan berbeda, jadi kedua proses wajib memakai
+  // CLOUDFLARE_DEV_REGISTRY_PATH (path absolut) yang sama.
   "services": [{ "binding": "API", "service": "trush-api" }],
   "env": {
+    // Lingkungan lokal Playwright (CLOUDFLARE_ENV=e2e), tidak pernah
+    // di-deploy. Secret di .dev.vars.e2e (menggantikan .dev.vars), VITE_* dari
+    // env proses (webServer Playwright). `API` tersambung ke `wrangler dev` api
+    // (CLOUDFLARE_ENV=e2e, Worker trush-api-e2e) lewat dev registry lokal.
+    "e2e": {
+      "name": "trush-app-e2e",
+      "services": [{ "binding": "API", "service": "trush-api-e2e" }],
+      "vars": {
+        "APP_ENV": "development",
+      },
+    },
     "staging": {
       "name": "trush-app-staging",
       "services": [{ "binding": "API", "service": "trush-api-staging" }],

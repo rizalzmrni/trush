@@ -10,6 +10,15 @@
     "enabled": true,
   },
   "env": {
+    // Lingkungan lokal Playwright (CLOUDFLARE_ENV=e2e), tidak pernah
+    // di-deploy. Secret di .dev.vars.e2e (menggantikan .dev.vars), VITE_* dari
+    // env proses (webServer Playwright).
+    "e2e": {
+      "name": "trush-web-e2e",
+      "vars": {
+        "APP_ENV": "development",
+      },
+    },
     "staging": {
       "name": "trush-web-staging",
       "vars": {
