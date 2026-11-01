@@ -60,6 +60,10 @@ const RATE_LIMIT_RULES = {
   "/sign-up/*": { max: 3, window: MINUTE_SECONDS },
   "/request-password-reset": { max: 3, window: MINUTE_SECONDS },
   "/two-factor/*": { max: 5, window: MINUTE_SECONDS },
+  // WAJIB sebelum `/phone-number/*`: better-auth memakai aturan PERTAMA yang
+  // cocok (urutan kunci objek). Verify lebih longgar agar salah ketik tidak
+  // langsung 429; tebakan kode tetap dibatasi plugin (3x per OTP).
+  "/phone-number/verify": { max: 10, window: MINUTE_SECONDS },
   "/phone-number/*": { max: 3, window: MINUTE_SECONDS },
   "/email-otp/*": { max: 3, window: MINUTE_SECONDS },
 };

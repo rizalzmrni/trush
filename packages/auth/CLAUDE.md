@@ -21,6 +21,7 @@ Konfigurasi better-auth server dan klien trush: sesi, akun, plugin, middleware u
 - Cookie `httpOnly` + `secure`; lintas subdomain lewat `advanced.crossSubDomainCookies` dengan domain dari env.
 - Instance dibuat per request lewat `createAuth(env)`; adapter `drizzleAdapter(db, { provider: "pg" })`.
 - Rate limit: `rateLimit: { enabled: APP_ENV !== "development", storage: "database" }` + `customRules` ketat untuk `/sign-in/*`, `/phone-number/*`, `/email-otp/*`, `/two-factor/*`. Penyimpanan default (memori) tidak berlaku lintas isolate Workers.
+- `customRules`: better-auth memakai aturan PERTAMA yang cocok menurut urutan kunci, jadi aturan spesifik ditulis sebelum wildcard-nya. `/phone-number/verify` 10/menit per IP (di atas `/phone-number/*` 3/menit untuk `send-otp` dan `request-password-reset`); tebakan kode tetap dibatasi plugin 3x per OTP.
 
 ## Jebakan
 
