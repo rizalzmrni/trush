@@ -22,7 +22,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
  * vite-plugin (app) memakai dev registry yang sama; lokasi bawaannya berbeda.
  */
 const SERVER_ENV = {
-  CLOUDFLARE_DEV_REGISTRY_PATH: path.join(ROOT, ".wrangler", "registry"),
+  CLOUDFLARE_DEV_REGISTRY_PATH: path.join(ROOT, ".wrangler", "dev-registry"),
   CLOUDFLARE_ENV: "e2e",
   // `VITE_*` app + web (gabungan; var ekstra tidak berpengaruh). Vite
   // mendahulukan env proses di atas `.env` developer; task turbo `dev` wajib
