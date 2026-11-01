@@ -87,8 +87,8 @@ const DEVELOPMENT_ONLY_DRIVERS: ReadonlySet<PhoneDriverName> = new Set([
 
 /**
  * Aturan lintas var telepon. Pesan hanya memuat nama var, bukan nilainya.
- * TODO(B8): `E2E=true` mewajibkan `PHONE_DRIVER=memory` (dan menjadi satu-
- * satunya pengecualian `memory` di luar development bila B8 memutuskannya).
+ * `E2E=true` → `PHONE_DRIVER=memory` ditegakkan `createApiEnv` (`api.ts`);
+ * karena E2E hanya development, `memory` tetap tidak punya pengecualian.
  */
 export const assertPhoneEnv = (env: PhoneEnvShape): void => {
   if (env.APP_ENV === "production" && env.PHONE_DRIVER !== "twilio") {

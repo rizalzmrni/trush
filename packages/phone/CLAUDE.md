@@ -28,7 +28,7 @@ Pengirim pesan telepon trush di atas Twilio Programmable Messaging, dipakai plug
 - Respons 201 dari Twilio berarti masuk antrean, bukan terkirim. Status akhir datang lewat status callback.
 - `sendOTP` di `@trush/auth` berjalan sinkron (tanpa `waitUntil`/`backgroundTasks`): `PhoneError` sampai ke pengguna sebagai 4xx berkode domain, atau 502 `OTP_DELIVERY_FAILED` untuk `PROVIDER_*`. Pesan ke klien diambil dari pemetaan per kode di `packages/auth/src/phone.ts`, bukan dari `error.message`, jadi kode `PhoneError` baru wajib ikut dipetakan di sana. Nomor/negara/allowlist tetap ditolak lebih awal oleh `canSendTo()` di `phoneNumberValidator`, sebelum OTP dibuat.
 - Test credentials Twilio tidak menerima API Key → driver `twilio-test` memakai `TWILIO_TEST_ACCOUNT_SID` + `TWILIO_TEST_AUTH_TOKEN` dan selalu SMS dari magic number.
-- Driver `memory` menulis ke `defaultOutbox` per isolate (dibaca `/__e2e/outbox`, B8); test sebaiknya memberi `createOutbox()` sendiri.
+- Driver `memory` menulis ke `defaultOutbox`, variabel modul per isolate (dibaca `/__e2e/outbox` api; satu bundel Worker = satu instance). Isinya hilang saat isolate diganti dan dibatasi 50 pesan; test sebaiknya memberi `createOutbox()` sendiri, e2e menyaring per nomor.
 
 ## Pengujian
 

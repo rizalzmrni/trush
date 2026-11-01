@@ -4,6 +4,9 @@ APP_ENV=development
 API_DOCS_ENABLED=true
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174
 LOG_LEVEL=debug
+# Lingkungan lokal Playwright saja (blok env.e2e + .dev.vars.e2e). true hanya
+# sah bila APP_ENV=development dan PHONE_DRIVER=memory; memasang /__e2e/outbox.
+E2E=false
 # BetterStack: kosongkan keduanya di development (log hanya ke console).
 BETTERSTACK_INGEST_URL=
 BETTERSTACK_SOURCE_TOKEN=
