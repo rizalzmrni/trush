@@ -16,7 +16,7 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
+- Selesai terakhir: F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
 - Berikutnya: F6 (UI telepon)
 - Blocker: —
 
@@ -68,6 +68,7 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | Q10 | Test B7b (respons reset password telepon tidak membedakan nomor) + B7c (rate limit per pengguna/nomor) | qa-tester | done (auth 95 test, tanpa bug) | B7b, B7c |
 | Q11 | Test api `/__e2e/outbox`: 404 di luar E2E, kontrak, filter `?to=`, tidak di `/openapi.json` | qa-tester | done (18 test, tanpa bug) | B8 |
 | B7d | Kuota OTP per pengguna tidak terpakai oleh nomor tak valid (hitung setelah validator; reset tetap untuk semua nomor valid) | backend-engineer | done (reset ke nomor tak valid tetap 200 identik: validator plugin tidak jalan di endpoint itu; tanpa kuota/kirim) | B7c, Q10 |
+| F7 | Halaman pertama tidak ter-hydrate saat cache Vite dingin (React Router 8 mengosongkan `optimizeDeps.entries`) → `optimizeDeps.entries` eksplisit di app + web | frontend-engineer | done | F5 |
 | B9 | Vitest `apps/api` tidak memuat `.dev.vars` lokal (tanpa `wrangler.configPath`; tanggal kompatibilitas dari `unstable_readConfig`) | backend-engineer | done | — |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
 | Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
@@ -113,6 +114,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-01 — F7: flaky e2e berakar di cold start Vite (dependensi klien ditemukan saat muat pertama → reload + 504 Outdated Optimize Dep). Setelah `optimizeDeps.entries` eksplisit, job `e2e` PR #11 12/12 lulus tanpa retry. PR #11 siap review.
 - 2026-11-01 — PR #11 (Draft) dibuka. Job CI `e2e` pertama kali hijau dengan test nyata (11 lulus, 1 flaky di setup karena cold start Vite → diperbaiki dengan pemanasan). Selesai di batch ini juga: B7d, B9, Q11. Keputusan: `request-password-reset` untuk nomor tak valid tetap 200 identik (aman, tanpa oracle).
 - 2026-11-01 — PR #10 di-merge (`dfd01f9`; B7, B7a, F4, F4a, Q2b, Q8, Q9). Branch lama (`feat/fase0-*`, `origin/feat/b4-db`) dihapus. Batch `feat/b8-q3-e2e`: B8, B7b, B7c, F5, Q3 wip; Q10 menunggu B7b/B7c. Login OTP sudah mati, jadi alur e2e "login + OTP" diganti tambah + verifikasi nomor telepon. Driver `memory` email ditunda ke fase email (`@trush/email` baru berisi CLAUDE.md).
 - 2026-11-01 — Pra-merge PR #10: B7 dan F4 done. Keputusan user: dua celah terbuka B7 menjadi task lanjutan B7b + B7c (tidak menahan merge). Lint `vitest/prefer-called-with` (preset Ultracite) dicek: autofix ke `toHaveBeenCalledWith()` justru memperketat assert dan gagal keras bila argumen tidak cocok, `.not.toHaveBeenCalled()` tetap diizinkan; config tidak diubah. qa-tester menghapus docblock `@vitest-environment node` redundan di 5 test `apps/app`. Judul PR #10 diganti (login OTP tidak lagi ada).
