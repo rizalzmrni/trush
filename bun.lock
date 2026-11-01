@@ -28,6 +28,7 @@
         "@trush/db": "workspace:*",
         "@trush/env": "workspace:*",
         "@trush/observability": "workspace:*",
+        "@trush/phone": "workspace:*",
         "hono": "catalog:api",
         "zod": "catalog:",
       },
@@ -134,6 +135,9 @@
       "version": "0.0.0",
       "devDependencies": {
         "@playwright/test": "catalog:test",
+        "@trush/typescript-config": "workspace:*",
+        "@types/node": "catalog:",
+        "typescript": "catalog:",
       },
     },
     "packages/auth": {

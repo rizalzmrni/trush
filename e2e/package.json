@@ -4,9 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check-types": "tsc --noEmit",
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "catalog:test"
+    "@playwright/test": "catalog:test",
+    "@trush/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
   }
 }
