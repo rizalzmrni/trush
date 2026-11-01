@@ -8,21 +8,21 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: B10 (batch `feat/f6-phone-ui`)
 - Selesai terakhir: B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: fase email (`@trush/email` + driver `memory` email untuk outbox e2e)
 - Blocker: —
 
 ### frontend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: F6 (menunggu kontrak B10)
 - Selesai terakhir: F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: F6 (UI telepon)
+- Berikutnya: —
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: Q12 (setelah B10 + F6)
 - Selesai terakhir: Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
@@ -51,7 +51,9 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | B7c | Rate limit permintaan OTP per pengguna dan per nomor tujuan (bukan hanya per IP) untuk pengguna yang sudah login | backend-engineer | done (tabel `otp_rate_limit`, migrasi 0003; per nomor 5/jam, per pengguna 10/jam, 429 `OTP_RATE_LIMITED`) | B7a |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; `E2E=true` hanya development + wajib `PHONE_DRIVER=memory`; route `/__e2e/outbox` (OTP telepon; email menyusul fase email); blok `env.e2e` api | backend-engineer | done (`E2E`, guard `LOG_LEVEL` production, `/__e2e/outbox`, `env.e2e` api + script `dev:e2e`; Polar sandbox menyusul fase payments) | B1, B7 |
 | F5 | Blok `env.e2e` di `wrangler.jsonc` `apps/app` (binding `API` ke api lokal) dan `apps/web` + `.dev.vars.e2e` di-gitignore/terdokumentasi | frontend-engineer | done (`trush-app-e2e`/`trush-web-e2e`; VITE_* dari env proses; `CLOUDFLARE_DEV_REGISTRY_PATH` bersama) | F4 |
-| F6 | UI telepon `apps/app`: halaman pengaturan nomor, form kirim + verifikasi OTP (Turnstile, kanal SMS/WhatsApp), pesan 429 dengan `Retry-After`; e2e Q3 lalu memakai UI ini | frontend-engineer | todo | B7c |
+| F6 | UI telepon `apps/app`: halaman pengaturan nomor, form kirim + verifikasi OTP (Turnstile, kanal SMS/WhatsApp), pesan 429 dengan `Retry-After`; e2e Q3 lalu memakai UI ini | frontend-engineer | wip | B7c, B10 |
+| B10 | Kontrak telepon: `meUserSchema` + `phoneNumber`/`phoneNumberVerified`, `/api/me` mengisinya; skema form kirim/verifikasi OTP di `@trush/core/schemas/auth` | backend-engineer | wip | B7c |
+| Q12 | Test F6 (action, form, pesan error 400/429/502) + test `/api/me` field telepon + e2e telepon lewat UI (ganti jalur API di Q3) | qa-tester | todo | B10, F6 |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
@@ -114,6 +116,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-01 — PR #11 di-merge (`f717d38`; B8, B7b, B7c, B7d, B9, F5, F7, Q3, Q10, Q11). Batch `feat/f6-phone-ui`: B10 (kontrak telepon, memblokir F6), F6 wip, Q12 todo.
 - 2026-11-01 — F7: flaky e2e berakar di cold start Vite (dependensi klien ditemukan saat muat pertama → reload + 504 Outdated Optimize Dep). Setelah `optimizeDeps.entries` eksplisit, job `e2e` PR #11 12/12 lulus tanpa retry. PR #11 siap review.
 - 2026-11-01 — PR #11 (Draft) dibuka. Job CI `e2e` pertama kali hijau dengan test nyata (11 lulus, 1 flaky di setup karena cold start Vite → diperbaiki dengan pemanasan). Selesai di batch ini juga: B7d, B9, Q11. Keputusan: `request-password-reset` untuk nomor tak valid tetap 200 identik (aman, tanpa oracle).
 - 2026-11-01 — PR #10 di-merge (`dfd01f9`; B7, B7a, F4, F4a, Q2b, Q8, Q9). Branch lama (`feat/fase0-*`, `origin/feat/b4-db`) dihapus. Batch `feat/b8-q3-e2e`: B8, B7b, B7c, F5, Q3 wip; Q10 menunggu B7b/B7c. Login OTP sudah mati, jadi alur e2e "login + OTP" diganti tambah + verifikasi nomor telepon. Driver `memory` email ditunda ke fase email (`@trush/email` baru berisi CLAUDE.md).
