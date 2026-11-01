@@ -40,7 +40,7 @@
     },
     "dev": {
       "cache": false,
-      "passThroughEnv": ["CLOUDFLARE_ENV"],
+      "passThroughEnv": ["CLOUDFLARE_ENV", "VITE_*"],
       "persistent": true
     }
   }
