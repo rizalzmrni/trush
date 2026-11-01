@@ -1,0 +1,10 @@
+{
+  // Tooling Node (Playwright runner + script): bukan kode Worker/browser,
+  // jadi @types/node boleh di sini. Kode di page.evaluate memakai lib DOM.
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["playwright.config.ts", "fixtures", "scripts", "tests"]
+}
