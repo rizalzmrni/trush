@@ -152,6 +152,12 @@ const sendOtp = (auth: TestAuth, phoneNumber: string, cookie?: string) => () =>
 const requestReset = (auth: TestAuth, phoneNumber: string) => () =>
   post(auth, RESET, { phoneNumber });
 
+/** Status + body untuk membandingkan dua respons secara utuh. */
+const snapshot = async (response: Response) => ({
+  body: await response.text(),
+  status: response.status,
+});
+
 describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
   let handle: Awaited<ReturnType<typeof createTestDb>>;
   let outbox: Outbox;
@@ -417,31 +423,36 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
     ]);
   });
 
-  it("reset ke nomor tidak valid → respons seragam tanpa menghitung kuota (B7d)", async () => {
+  // Validator plugin tidak berjalan di request-password-reset, jadi nomor
+  // tidak valid juga 200 `{status:true}`: identik dengan nomor valid tak
+  // terdaftar (tanpa oracle), tanpa kuota dan tanpa pengiriman.
+  it("reset ke nomor tidak valid → respons sama dengan nomor valid, tanpa kuota (B7d)", async () => {
     const auth = makeAuth();
 
-    const responses = await sequential(
-      repeat(USER_MAX, (index) =>
-        requestReset(
-          auth,
-          INVALID_NUMBERS[index % INVALID_NUMBERS.length] ?? ""
-        )
+    const invalid = await sequential(
+      repeat(
+        USER_MAX,
+        (index) => async () =>
+          snapshot(
+            await requestReset(
+              auth,
+              INVALID_NUMBERS[index % INVALID_NUMBERS.length] ?? ""
+            )()
+          )
       )
     );
-    const bodies = await Promise.all(
-      responses.map(async (response) => ({
-        body: await response.text(),
-        status: response.status,
-      }))
-    );
     const rowsAfterInvalid = await quotaRows();
+    const validUnregistered = await snapshot(
+      await requestReset(auth, phoneAt(9))()
+    );
     const valid = await statusesOf(
       repeat(PHONE_MAX + 1, () => requestReset(auth, TARGET))
     );
 
-    expect(new Set(bodies.map((entry) => JSON.stringify(entry))).size).toBe(1);
-    expect(bodies[0]?.status).toBe(HTTP_BAD_REQUEST);
+    expect(invalid).toStrictEqual(repeat(USER_MAX, () => validUnregistered));
+    expect(validUnregistered.status).toBe(HTTP_OK);
     expect(rowsAfterInvalid).toBe(0);
+    expect(outbox.list()).toStrictEqual([]);
     expect(valid).toStrictEqual([
       ...repeat(PHONE_MAX, () => HTTP_OK),
       HTTP_TOO_MANY_REQUESTS,
