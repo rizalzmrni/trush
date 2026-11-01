@@ -17,13 +17,13 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 - Sedang dikerjakan: —
 - Selesai terakhir: F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: —
+- Berikutnya: F6b
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: Q12 (wip)
-- Selesai terakhir: Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Sedang dikerjakan: —
+- Selesai terakhir: Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -55,7 +55,8 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | B10 | Kontrak telepon: `meUserSchema` + `phoneNumber`/`phoneNumberVerified`, `/api/me` mengisinya; skema form kirim/verifikasi OTP di `@trush/core/schemas/auth` | backend-engineer | done (`afb5602`) | B7c |
 | B10a | Rate limit IP `/phone-number/verify` 10/menit (aturan spesifik sebelum `/phone-number/*`; better-auth memakai `customRules` pertama yang cocok, dicek di 1.7.14) | backend-engineer | done (`7a991ee`; belum ada test → Q12) | B7c |
 | F6a | Pesan 429 di langkah verifikasi menyebut "percobaan kode", bukan "permintaan kode" (`apps/app/src/features/phone/errors.server.ts`) | frontend-engineer | done (`eaec0b3`; `phoneErrorMessage(response, kind, now)`) | F6 |
-| Q12 | Test F6 (action, form, pesan error 400/429/502) + test `/api/me` field telepon + test `/phone-number/verify` memakai batas 10/menit (B10a) + e2e telepon lewat UI (ganti jalur API di Q3) | qa-tester | wip | B10, B10a, F6, F6a |
+| Q12 | Test F6 (action, form, pesan error 400/429/502) + test `/api/me` field telepon + test `/phone-number/verify` memakai batas 10/menit (B10a) + e2e telepon lewat UI (ganti jalur API di Q3) | qa-tester | done (`e57f257`, `4bd64e6`; app 275, api 99, core 120, auth 103; e2e diuji di CI, `.dev.vars.e2e` lokal memakai DB palsu) | B10, B10a, F6, F6a |
+| F6b | Catatan Q12 (bukan bug UI): form kirim tanpa field `channel` → error, padahal skema core default `whatsapp` (`parseAuthForm` mengubah field hilang jadi `""`); `retryAfterSeconds`: `Retry-After` tak valid menutupi `X-Retry-After` valid | frontend-engineer | todo | Q12 |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
@@ -118,6 +119,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-01 — Q12 done: test telepon app (+91), api (+5), core (+38), auth (+5, verify 10/menit); e2e telepon lewat UI `/settings/phone`. Tanpa bug; dua catatan kecil → F6b. PR batch `feat/f6-phone-ui` siap dibuka.
 - 2026-11-01 — F6 done (laporan frontend; daftar periksa `DESIGN.md` 11/11 tanpa perubahan kode) dan F6a done (`eaec0b3`, teks 429 verifikasi "percobaan kode"; app 185 test). Q12 wip.
 - 2026-11-01 — Review lead batch `feat/f6-phone-ui`: B10 done (`afb5602`), F6 ke review (`ca87f4f`, `RadioGroupField` `6074749`), B10a (`7a991ee`, perubahan backend tanpa task sebelumnya, kini tercatat), `chore(repo)` lint-staged `--no-error-on-unmatched-pattern` (`0765793`). check-types, check, test app/auth/design-system/storybook hijau. Tambahan: F6a (teks 429 verifikasi), Q12 diperluas dengan test B10a. PR batch menunggu Q12.
 - 2026-11-01 — PR #11 di-merge (`f717d38`; B8, B7b, B7c, B7d, B9, F5, F7, Q3, Q10, Q11). Batch `feat/f6-phone-ui`: B10 (kontrak telepon, memblokir F6), F6 wip, Q12 wip.
