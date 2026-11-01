@@ -1,4 +1,7 @@
+import { IconDeviceMobile } from "@tabler/icons-react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { buttonVariants } from "@trush/design-system/components/ui/button";
+import { Link } from "react-router";
 
 import { OrganizationList } from "../features/account/organization-list";
 import { ProfileCard } from "../features/account/profile-card";
@@ -6,6 +9,7 @@ import { organizationsQueryOptions } from "../features/account/queries";
 import { accountKeys } from "../features/account/query-keys";
 import { SignOutButton } from "../features/auth/forms/sign-out-button";
 import { requireSession } from "../features/auth/session.server";
+import { PHONE_SETTINGS_PATH } from "../features/phone/form-schema";
 import { serverApiClient } from "../lib/api.server";
 import { createQueryClient } from "../lib/query-client";
 import type { Route } from "./+types/home";
@@ -36,6 +40,16 @@ const Home = ({ loaderData }: Route.ComponentProps) => (
         </h1>
         <section aria-label="Profil" className="flex flex-col gap-3">
           <ProfileCard />
+          <Link
+            className={buttonVariants({
+              className: "self-start",
+              variant: "outline",
+            })}
+            to={PHONE_SETTINGS_PATH}
+          >
+            <IconDeviceMobile aria-hidden="true" data-icon="inline-start" />
+            Kelola nomor telepon
+          </Link>
         </section>
         <section
           aria-labelledby="organizations-heading"

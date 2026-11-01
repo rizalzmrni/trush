@@ -5,6 +5,8 @@ import type { RequestScope } from "../../lib/api.server";
 
 /** Endpoint better-auth yang dipanggil action app lewat Service Binding. */
 export const AUTH_ENDPOINTS = {
+  phoneSendOtp: "/api/auth/phone-number/send-otp",
+  phoneVerify: "/api/auth/phone-number/verify",
   signIn: "/api/auth/sign-in/email",
   signOut: "/api/auth/sign-out",
   signUp: "/api/auth/sign-up/email",
@@ -17,6 +19,8 @@ interface AuthRequest {
   /** Token Turnstile; wajib untuk endpoint ber-captcha. */
   readonly captchaToken?: string;
   readonly endpoint: AuthEndpoint;
+  /** Header tambahan, mis. `x-otp-channel` untuk kirim OTP telepon. */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -26,9 +30,12 @@ interface AuthRequest {
  */
 export const postAuth = (
   scope: RequestScope,
-  { body, captchaToken, endpoint }: AuthRequest
+  { body, captchaToken, endpoint, headers: extraHeaders }: AuthRequest
 ): Promise<Response> => {
-  const headers = new Headers({ "content-type": "application/json" });
+  const headers = new Headers({
+    ...extraHeaders,
+    "content-type": "application/json",
+  });
   if (captchaToken) {
     headers.set(CAPTCHA_HEADER, captchaToken);
   }
@@ -55,7 +62,7 @@ export const forwardSetCookies = (
 
 const HTTP_TOO_MANY_REQUESTS = 429;
 
-const MESSAGES: Record<string, string> = {
+export const AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_EMAIL_OR_PASSWORD: "Email atau kata sandi salah.",
   MISSING_RESPONSE: "Selesaikan verifikasi keamanan terlebih dahulu.",
   PASSWORD_COMPROMISED:
@@ -70,11 +77,14 @@ const MESSAGES: Record<string, string> = {
   VERIFICATION_FAILED: "Verifikasi keamanan gagal. Coba lagi.",
 };
 
-const FALLBACK_MESSAGE = "Terjadi kesalahan. Coba lagi beberapa saat lagi.";
+export const FALLBACK_MESSAGE =
+  "Terjadi kesalahan. Coba lagi beberapa saat lagi.";
 const RATE_LIMIT_MESSAGE =
   "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.";
 
-const readCode = async (response: Response): Promise<string | undefined> => {
+export const readCode = async (
+  response: Response
+): Promise<string | undefined> => {
   try {
     const body: unknown = await response.json();
     if (typeof body === "object" && body !== null && "code" in body) {
@@ -92,7 +102,7 @@ export const authErrorMessage = async (response: Response): Promise<string> => {
     return RATE_LIMIT_MESSAGE;
   }
   const code = await readCode(response);
-  return (code ? MESSAGES[code] : undefined) ?? FALLBACK_MESSAGE;
+  return (code ? AUTH_ERROR_MESSAGES[code] : undefined) ?? FALLBACK_MESSAGE;
 };
 
 /** Response sukses sign-in yang meminta verifikasi 2FA (belum ada halamannya). */
