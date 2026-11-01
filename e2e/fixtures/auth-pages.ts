@@ -5,13 +5,21 @@ import { TURNSTILE_DUMMY_TOKEN } from "./turnstile";
 import type { TestUser } from "./users";
 
 /**
+ * Batas tunggu hydration. Kunjungan pertama ke dev server Vite yang baru
+ * menyala (CI) mentransformasi modul klien saat diminta, jadi hydration bisa
+ * jauh lebih lambat dari timeout assertion bawaan (5 detik).
+ */
+const HYDRATION_TIMEOUT_MS = 20_000;
+
+/**
  * Token Turnstile baru disisipkan setelah hydration; submit sebelum itu
  * dikirim tanpa token dan ditolak. Input tersembunyi tidak punya peran ARIA,
  * jadi dicari lewat `name` (nama field dari widget, bukan detail styling).
  */
-const expectCaptchaReady = async (page: Page): Promise<void> => {
+export const expectCaptchaReady = async (page: Page): Promise<void> => {
   await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(
-    TURNSTILE_DUMMY_TOKEN
+    TURNSTILE_DUMMY_TOKEN,
+    { timeout: HYDRATION_TIMEOUT_MS }
   );
 };
 
