@@ -22,8 +22,8 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 ### qa-tester
 
-- Sedang dikerjakan: Q13
-- Selesai terakhir: Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Sedang dikerjakan: —
+- Selesai terakhir: Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -58,7 +58,7 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | Q12 | Test F6 (action, form, pesan error 400/429/502) + test `/api/me` field telepon + test `/phone-number/verify` memakai batas 10/menit (B10a) + e2e telepon lewat UI (ganti jalur API di Q3) | qa-tester | done (`e57f257`, `4bd64e6`; app 275, api 99, core 120, auth 103; e2e diuji di CI, `.dev.vars.e2e` lokal memakai DB palsu) | B10, B10a, F6, F6a |
 | B11 | Step-up telepon (review keamanan PR #12, Medium): setiap `send-otp` dengan sesi (tambah, ganti, kirim ulang) wajib `currentPassword` → grant (pengguna, nomor) 300 dtk yang wajib di `verify`; kuota step-up 10/jam per pengguna; `/change-password` 5/menit; `allowedAttempts`/`otpLength`/`expiresIn` eksplisit; `@trush/core` jadi dependensi `@trush/auth` | backend-engineer | done (`65ab314`) | Q12 |
 | F6c | UI step-up: field kata sandi saat ini selalu ada di form kirim dan kirim ulang (bukan di form kode); 403 `PASSWORD_REQUIRED` saat verify → kembali ke langkah kirim; `postAuth` `headers` hanya `x-otp-channel` (review #4) | frontend-engineer | done (`2783c22`) | B11 |
-| Q13 | Test B11 + F6c: tambah nomor pertama tanpa password, ganti nomor tanpa/salah password ditolak tanpa OTP terkirim, password benar lolos; e2e ganti nomor | qa-tester | wip | B11, F6c |
+| Q13 | Test B11 + F6c: step-up (tanpa/salah password, kuota 10/jam, grant terikat nomor, akun kedua, grant kedaluwarsa, kode salah tidak menghapus grant, password tidak bocor), `/change-password` 5/menit, UI field kata sandi, e2e tambah + ganti nomor dengan password | qa-tester | done (app 310, core 126, auth 128, api 99; e2e lewat CI) | B11, F6c |
 | F6b | Catatan Q12 (bukan bug UI): form kirim tanpa field `channel` → error, padahal skema core default `whatsapp` (`parseAuthForm` mengubah field hilang jadi `""`); `retryAfterSeconds`: `Retry-After` tak valid menutupi `X-Retry-After` valid | frontend-engineer | todo | Q12 |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
@@ -124,6 +124,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-02 — Q13 done (tanpa bug). Catatan: kuota OTP per pengguna kini lapisan cadangan di belakang kuota step-up (disengaja, dicatat di `docs/auth-plugins.md`); grant dibuat sebelum pengiriman OTP, jadi bisa tersisa tanpa OTP bila kirim gagal (tidak berbahaya, verify tetap butuh kode).
 - 2026-11-01 — B11 done (`65ab314`, desain grant usulan backend: password di `send-otp`, bukan di `verify`, agar verify tanpa captcha tidak jadi oracle password dan OTP dari akun kedua tidak bisa dipakai). Keputusan user: step-up juga untuk nomor pertama (akun tanpa nomor tidak bisa diambil alih lewat reset telepon). F6c done (`2783c22`). `docs/auth-plugins.md` diperbarui (`43fd964`). Q13 wip: test auth merah sampai helper test mengirim `currentPassword`.
 - 2026-11-01 — PR #12 (Draft) dibuka; CI `checks`, `e2e`, `pr-title` hijau. Review keamanan subagent (komentar PR): Medium ganti nomor tanpa step-up → keputusan user: step-up password di PR ini (B11, F6c, Q13). Follow-up: OTP tidak terikat `userId` (Low, risiko diterima sementara), notifikasi perubahan nomor + cabut sesi lain (fase email).
 - 2026-11-01 — Q12 done: test telepon app (+91), api (+5), core (+38), auth (+5, verify 10/menit); e2e telepon lewat UI `/settings/phone`. Tanpa bug; dua catatan kecil → F6b. PR batch `feat/f6-phone-ui` siap dibuka.
