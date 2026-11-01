@@ -88,7 +88,7 @@ const sendOtp = async (
   });
   if (!response.ok) {
     return failure(
-      { formError: await phoneErrorMessage(response) },
+      { formError: await phoneErrorMessage(response, "send") },
       response.status
     );
   }
@@ -138,7 +138,7 @@ const verifyOtp = async (scope: RequestScope, formData: FormData) => {
     return reply(
       {
         channel,
-        formError: await phoneErrorMessage(response),
+        formError: await phoneErrorMessage(response, "verify"),
         phoneNumber,
         step: "verify",
       },

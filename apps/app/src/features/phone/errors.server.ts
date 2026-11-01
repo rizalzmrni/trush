@@ -47,23 +47,43 @@ export const retryAfterSeconds = (response: Response): number | undefined => {
   return seconds > 0 ? seconds : undefined;
 };
 
-/** Mis. "Terlalu banyak permintaan kode. Coba lagi dalam 12 menit." */
-const rateLimitMessage = (response: Response, now: Date): string => {
-  const seconds = retryAfterSeconds(response);
-  if (seconds === undefined) {
-    return "Terlalu banyak permintaan kode. Tunggu sebentar lalu coba lagi.";
-  }
-  const retryAt = new Date(now.getTime() + seconds * MS_PER_SECOND);
-  return `Terlalu banyak permintaan kode. Coba lagi ${formatRelativeTime(retryAt, { now })}.`;
+/**
+ * Langkah yang gagal: `send` (kirim/kirim ulang OTP, kuota permintaan) atau
+ * `verify` (cek kode, rate limit IP `/phone-number/verify`).
+ */
+export type PhoneErrorKind = "send" | "verify";
+
+const RATE_LIMIT_SUBJECT: Readonly<Record<PhoneErrorKind, string>> = {
+  send: "Terlalu banyak permintaan kode.",
+  verify: "Terlalu banyak percobaan kode.",
 };
 
-/** Pesan Indonesia untuk response gagal kirim/verifikasi OTP telepon. */
+/** Mis. "Terlalu banyak permintaan kode. Coba lagi dalam 12 menit." */
+const rateLimitMessage = (
+  response: Response,
+  kind: PhoneErrorKind,
+  now: Date
+): string => {
+  const subject = RATE_LIMIT_SUBJECT[kind];
+  const seconds = retryAfterSeconds(response);
+  if (seconds === undefined) {
+    return `${subject} Tunggu sebentar lalu coba lagi.`;
+  }
+  const retryAt = new Date(now.getTime() + seconds * MS_PER_SECOND);
+  return `${subject} Coba lagi ${formatRelativeTime(retryAt, { now })}.`;
+};
+
+/**
+ * Pesan Indonesia untuk response gagal kirim/verifikasi OTP telepon.
+ * `kind` hanya memengaruhi teks 429.
+ */
 export const phoneErrorMessage = async (
   response: Response,
+  kind: PhoneErrorKind = "send",
   now: Date = new Date()
 ): Promise<string> => {
   if (response.status === HTTP_TOO_MANY_REQUESTS) {
-    return rateLimitMessage(response, now);
+    return rateLimitMessage(response, kind, now);
   }
   const code = await readCode(response);
   if (code === undefined) {
