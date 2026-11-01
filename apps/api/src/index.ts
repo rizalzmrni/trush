@@ -19,6 +19,7 @@ import {
   SESSION_SECURITY_SCHEME,
   SESSION_SECURITY_SCHEME_OBJECT,
 } from "./openapi";
+import { e2eRoutes } from "./routes/e2e";
 import { healthRoutes } from "./routes/health";
 import { meRoutes } from "./routes/me";
 
@@ -55,6 +56,10 @@ app.on(["GET", "POST"], `${AUTH_BASE_PATH}/*`, (c) =>
 
 /** Route API dirangkai berantai agar tipe RPC (`AppType`) terbentuk. */
 const routes = app.route("/", healthRoutes).route("/", meRoutes);
+
+// `/__e2e/outbox`: 404 kecuali `E2E=true` (hanya development). Sengaja di
+// luar rantai `routes`, jadi tidak masuk `AppType` klien.
+app.route("/", e2eRoutes);
 
 app.openAPIRegistry.registerComponent(
   "securitySchemes",

@@ -12,6 +12,24 @@
   // Secret per lingkungan (DATABASE_URL, BETTER_AUTH_SECRET,
   // TURNSTILE_SECRET_KEY, TWILIO_*) diset manusia lewat `wrangler secret put`.
   "env": {
+    // Lingkungan lokal Playwright (CLOUDFLARE_ENV=e2e `wrangler dev`), tidak
+    // pernah di-deploy. Nama Worker = service binding `API` blok e2e
+    // apps/app (dev registry lokal). Secret (DATABASE_URL,
+    // BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) di .dev.vars.e2e, yang
+    // menggantikan .dev.vars sepenuhnya. OTP dibaca lewat GET /__e2e/outbox.
+    "e2e": {
+      "name": "trush-api-e2e",
+      "vars": {
+        "APP_ENV": "development",
+        "E2E": true,
+        "API_DOCS_ENABLED": true,
+        "LOG_LEVEL": "info",
+        "CORS_ORIGINS": "http://localhost:5174,http://localhost:5173",
+        "BETTER_AUTH_URL": "http://localhost:8787",
+        "PHONE_DRIVER": "memory",
+        "PHONE_ALLOWED_COUNTRIES": "ID",
+      },
+    },
     "staging": {
       "name": "trush-api-staging",
       "vars": {

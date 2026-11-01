@@ -29,6 +29,7 @@ Server HTTP trush (Worker `api`): Hono + `@hono/zod-openapi`, dokumen OpenAPI di
 - Klien DB/auth di scope modul → env belum ada. Buat per request dari `c.env`, simpan di `c.var`.
 - Hitungan rate limit di variabel modul → tidak berlaku lintas isolate. Pakai binding Rate Limiting.
 - Mengubah route tanpa `bun run build:types` → editor app memakai tipe lama.
+- `/__e2e/outbox` (`src/routes/e2e.ts`, kontrak `@trush/core/schemas/e2e`) dijaga `e2eGuard` (`E2E=true` + development, selain itu 404), `hide: true` di OpenAPI, dan sengaja di luar rantai `AppType`.
 
 ## Pengujian
 

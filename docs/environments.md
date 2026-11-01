@@ -32,7 +32,7 @@ Satu-satunya penanda lingkungan adalah `APP_ENV` (`development | staging | produ
 ## Aturan
 
 - `APP_ENV` wajib di setiap Worker (`vars` di blok `env.<nama>` pada `wrangler.jsonc`) dan di `.dev.vars`, tanpa nilai default.
-- Lingkungan Cloudflare dipilih dengan `CLOUDFLARE_ENV`, bukan flag `--env`, agar seragam untuk Wrangler dan Vite.
+- Lingkungan Cloudflare dipilih dengan `CLOUDFLARE_ENV`, bukan flag `--env`, agar seragam untuk Wrangler dan Vite. Satu pengecualian: `wrangler dev` (4.156) hanya membaca `.dev.vars.<env>` bila flag `--env` dipakai, jadi api lingkungan e2e dijalankan lewat script `dev:e2e` (`wrangler dev --env e2e`), bukan `CLOUDFLARE_ENV=e2e wrangler dev`.
 - `apps/app` dan `apps/web` (Vite) menetapkan lingkungan **saat build**: `CLOUDFLARE_ENV=staging vite build`, lalu `wrangler deploy` memakai config hasil build (`CLOUDFLARE_ENV` saat deploy tidak berpengaruh). Nilai `VITE_*` juga dibakar saat build, jadi app di-build ulang per lingkungan; tidak ada pola "build sekali lalu dipromosikan". `apps/api` cukup `CLOUDFLARE_ENV=staging wrangler deploy`.
 - Lingkungan lokal `e2e` (blok `env.e2e`: `APP_ENV=development`, `E2E=true`) hanya dipakai Playwright dan tidak pernah di-deploy. Secret-nya di `.dev.vars.e2e`; bila file itu ada, `.dev.vars` umum diabaikan, jadi semua secret wajib ada di dalamnya.
 - Klien membaca lingkungan dari `VITE_APP_ENV`, yang wajib sama dengan `APP_ENV`; factory server menolak bila berbeda.

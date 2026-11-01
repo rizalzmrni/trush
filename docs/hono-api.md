@@ -45,6 +45,7 @@ Diimpor oleh `apps/api/CLAUDE.md`.
 ## Rate limiting
 
 - Pakai binding **Rate Limiting** Workers (dideklarasikan di `wrangler.jsonc`), dibungkus di `src/middleware/rate-limit.ts`. Jangan menyimpan hitungan di variabel modul: setiap isolate punya memori sendiri, jadi hasilnya tidak berlaku.
+- Pengecualian: kuota dengan jendela lebih dari 60 detik atau berkunci selain IP (mis. kuota OTP per nomor/pengguna, `packages/auth/src/otp-rate-limit.ts`) disimpan di Postgres dengan upsert atomik, karena binding Rate Limiting hanya mendukung periode 10/60 detik dan tabel `rate_limit` better-auth hanya per IP + path.
 - Webhook Polar (di bawah `/api/auth/*`) dikecualikan dari rate limit per IP.
 - Endpoint pengiriman OTP (`/api/auth/phone-number/*`, `/api/auth/email-otp/*`) dibatasi lebih ketat: per nomor/email dan per IP, untuk mencegah SMS pumping.
 - Cek sintaks konfigurasi di dokumentasi resmi Cloudflare sebelum menulisnya.

@@ -48,14 +48,51 @@ const cookieDomainSchema = z
   .string()
   .regex(DOMAIN_NAME, "harus nama domain, mis. example.com");
 
-/** Kombinasi berbahaya saat production (lihat `docs/environments.md`). */
+/** Level log yang terlalu rinci untuk production (bisa memuat data sensitif). */
+const PRODUCTION_FORBIDDEN_LOG_LEVELS: ReadonlySet<string> = new Set([
+  "trace",
+  "debug",
+]);
+
+/**
+ * `E2E=true` (lingkungan lokal Playwright, blok `env.e2e`) hanya sah di
+ * development dan wajib memakai driver telepon `memory`, agar OTP terbaca
+ * lewat `/__e2e/outbox` dan tidak pernah sampai ke penyedia nyata.
+ */
+const assertE2eEnv = (env: {
+  APP_ENV: string;
+  E2E: boolean;
+  PHONE_DRIVER: string;
+}): void => {
+  if (!env.E2E) {
+    return;
+  }
+  if (env.APP_ENV !== "development") {
+    throw new Error("E2E=true hanya sah saat APP_ENV=development.");
+  }
+  if (env.PHONE_DRIVER !== "memory") {
+    throw new Error("E2E=true mewajibkan PHONE_DRIVER=memory.");
+  }
+};
+
+/**
+ * Kombinasi berbahaya saat production (lihat `docs/environments.md`).
+ * `PHONE_DRIVER` selain `twilio` ditolak `assertPhoneEnv`, `E2E=true` oleh
+ * `assertE2eEnv`. Polar `sandbox` ditambahkan bersama env Polar (fase payments).
+ */
 const assertProductionSafe = (env: {
   APP_ENV: string;
   BETTER_AUTH_URL: string;
+  LOG_LEVEL: string;
   TURNSTILE_SECRET_KEY: string;
 }): void => {
   if (env.APP_ENV !== "production") {
     return;
+  }
+  if (PRODUCTION_FORBIDDEN_LOG_LEVELS.has(env.LOG_LEVEL)) {
+    throw new Error(
+      `LOG_LEVEL=${env.LOG_LEVEL} dilarang saat APP_ENV=production.`
+    );
   }
   if (TURNSTILE_TEST_SECRET.test(env.TURNSTILE_SECRET_KEY)) {
     throw new Error(
@@ -82,6 +119,11 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       API_DOCS_ENABLED: booleanFlagSchema.default(false),
       CORS_ORIGINS: originListSchema,
       LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
+      /**
+       * Lingkungan lokal Playwright (`CLOUDFLARE_ENV=e2e`). Hanya development,
+       * wajib `PHONE_DRIVER=memory`; memasang route `/__e2e/*` di api.
+       */
+      E2E: booleanFlagSchema.default(false),
       /** URL ingest source BetterStack. Kosong: log hanya ke console. */
       BETTERSTACK_INGEST_URL: z.url().optional(),
       /** Secret. Wajib bila `BETTERSTACK_INGEST_URL` diisi. */
@@ -115,6 +157,7 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
     );
   }
   assertProductionSafe(env);
+  assertE2eEnv(env);
   assertPhoneEnv(env);
   return env;
 };

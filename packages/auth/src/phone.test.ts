@@ -585,6 +585,188 @@ describe("plugin phoneNumber", () => {
   });
 });
 
+/** Respons dibaca utuh agar status, header relevan, dan body bisa dibandingkan. */
+const snapshotResponse = async (response: Response) => ({
+  body: await response.text(),
+  contentType: response.headers.get("content-type"),
+  setsCookie: response.headers.getSetCookie().length > 0,
+  status: response.status,
+});
+
+const requestReset = (auth: TestAuth, phoneNumber: string) =>
+  postTo(auth, "/phone-number/request-password-reset", {
+    body: { phoneNumber },
+  });
+
+/** Pengirim yang menahan `sendOtp` sampai `release()` dipanggil. */
+const gatedSender = () => {
+  const gate = Promise.withResolvers<undefined>();
+  const calls = vi.fn<PhoneSender["sendOtp"]>();
+  const wrap = (sender: PhoneSender): PhoneSender => ({
+    ...sender,
+    sendOtp: async (input) => {
+      calls(input);
+      await gate.promise;
+      await sender.sendOtp(input);
+    },
+  });
+  return { calls, release: () => gate.resolve(undefined), wrap };
+};
+
+describe("request-password-reset telepon tanpa oracle nomor (B7b)", () => {
+  let handle: Awaited<ReturnType<typeof createTestDb>>;
+  let outbox: Outbox;
+
+  const makeAuth = (
+    options: Pick<
+      Parameters<typeof createAuth>[0],
+      "onPasswordResetOtpError" | "waitUntil"
+    > = {},
+    wrapSender: (sender: PhoneSender) => PhoneSender = (sender) => sender
+  ) =>
+    createAuth({
+      db: handle.db,
+      env: BASE_ENV,
+      phoneSender: wrapSender(createPhoneSender({ env: BASE_ENV, outbox })),
+      ...options,
+    });
+
+  /** Daftarkan + verifikasi nomor lewat OTP; outbox dikosongkan sesudahnya. */
+  const registerPhone = async (auth: TestAuth, phone: string) => {
+    const cookie = await signUp(auth);
+    await sendOtp(auth, phone, { cookie });
+    const response = await postTo(auth, "/phone-number/verify", {
+      body: {
+        code: outbox.latestFor(phone)?.code,
+        phoneNumber: phone,
+        updatePhoneNumber: true,
+      },
+      cookie,
+    });
+    if (response.status !== 200) {
+      throw new Error(`verifikasi nomor gagal: HTTP ${response.status}`);
+    }
+    outbox.clear();
+  };
+
+  beforeEach(async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(fakeFetch);
+    handle = await createTestDb();
+    outbox = createOutbox();
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await handle.close();
+  });
+
+  it("nomor terdaftar dan tidak terdaftar → status, body, dan header identik", async () => {
+    const pending: Promise<unknown>[] = [];
+    const auth = makeAuth({ waitUntil: (promise) => pending.push(promise) });
+    await registerPhone(auth, E164_ID);
+
+    const registered = await snapshotResponse(
+      await requestReset(auth, E164_ID)
+    );
+    const unregistered = await snapshotResponse(
+      await requestReset(auth, OTHER_ID)
+    );
+
+    expect(registered).toStrictEqual(unregistered);
+    expect(registered).toMatchObject({ setsCookie: false, status: 200 });
+    expect(JSON.parse(registered.body)).toStrictEqual({ status: true });
+    await Promise.all(pending);
+    expect(outbox.list().map((entry) => entry.to)).toStrictEqual([E164_ID]);
+  });
+
+  it("respons nomor terdaftar tidak menunggu pengiriman (dijadwalkan lewat waitUntil)", async () => {
+    const pending: Promise<unknown>[] = [];
+    const gated = gatedSender();
+    await registerPhone(makeAuth(), E164_ID);
+    const auth = makeAuth(
+      { waitUntil: (promise) => pending.push(promise) },
+      gated.wrap
+    );
+
+    // Pengiriman masih tertahan saat respons sudah selesai.
+    const response = await requestReset(auth, E164_ID);
+
+    expect(response.status).toBe(200);
+    expect(gated.calls).toHaveBeenCalledOnce();
+    expect(pending).toHaveLength(1);
+    expect(outbox.list()).toStrictEqual([]);
+
+    gated.release();
+    await Promise.all(pending);
+
+    expect(outbox.latestFor(E164_ID)?.code).toMatch(SIX_DIGITS);
+  });
+
+  it("nomor tidak terdaftar tidak pernah memanggil penyedia", async () => {
+    const pending: Promise<unknown>[] = [];
+    const gated = gatedSender();
+    const auth = makeAuth(
+      { waitUntil: (promise) => pending.push(promise) },
+      gated.wrap
+    );
+
+    const response = await requestReset(auth, OTHER_ID);
+
+    expect(response.status).toBe(200);
+    gated.release();
+    await Promise.all(pending);
+    expect(gated.calls).not.toHaveBeenCalled();
+    expect(outbox.list()).toStrictEqual([]);
+  });
+
+  it.each(PHONE_ERROR_CASES.map(([phoneCode]) => phoneCode))(
+    "PhoneError %s saat kirim (tanpa waitUntil) → tetap 200 identik + callback error",
+    async (phoneCode) => {
+      const onPasswordResetOtpError = vi.fn<(error: unknown) => void>();
+      const auth = makeAuth({ onPasswordResetOtpError });
+      await registerPhone(auth, E164_ID);
+      const failing = makeAuth(
+        { onPasswordResetOtpError },
+        failingSender(phoneCode)
+      );
+
+      const registered = await snapshotResponse(
+        await requestReset(failing, E164_ID)
+      );
+      const unregistered = await snapshotResponse(
+        await requestReset(failing, OTHER_ID)
+      );
+
+      expect(registered).toStrictEqual(unregistered);
+      expect(registered.status).toBe(200);
+      expect(registered.body).not.toContain("21211");
+      expect(onPasswordResetOtpError).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ code: phoneCode })
+      );
+    }
+  );
+
+  it("pengiriman latar yang gagal tidak menolak promise waitUntil", async () => {
+    const pending: Promise<unknown>[] = [];
+    const onPasswordResetOtpError = vi.fn<(error: unknown) => void>();
+    const auth = makeAuth();
+    await registerPhone(auth, E164_ID);
+    const failing = makeAuth(
+      {
+        onPasswordResetOtpError,
+        waitUntil: (promise) => pending.push(promise),
+      },
+      failingSender("PROVIDER_ERROR")
+    );
+
+    const response = await requestReset(failing, E164_ID);
+
+    expect(response.status).toBe(200);
+    await expect(Promise.all(pending)).resolves.toBeDefined();
+    expect(onPasswordResetOtpError).toHaveBeenCalledOnce();
+  });
+});
+
 describe(otpChannelFrom, () => {
   it.each([
     [{ headers: new Headers({ [OTP_CHANNEL_HEADER]: "sms" }) }, "sms"],

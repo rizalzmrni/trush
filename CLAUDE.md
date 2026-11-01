@@ -7,7 +7,7 @@ Boilerplate SaaS: Turborepo + bun, TypeScript strict; `apps/web`, `apps/app`, `a
 ## Urutan bootstrap (lead)
 
 - Sebelum teammate di-spawn untuk task apa pun, lead menyelesaikan L0: `turbo.json`, `packages/typescript-config`, workspaces (`apps/*`, `packages/*`, `e2e`) di `package.json` root, konfigurasi Ultracite, Husky + commitlint. Alasan: semua paket bergantung pada pipeline dan preset tsconfig ini.
-- `turbo.json`: task `build`, `dev` (`persistent: true`, `cache: false`), `check-types`, `check`, `test`, `test:e2e` (`cache: false`, terpisah dari `test`), `typegen`, `build:types`. `check-types` bergantung pada `typegen` dan `^build:types`; `outputs` eksplisit; env yang memengaruhi build (termasuk `CLOUDFLARE_ENV` dan `VITE_*`) didaftarkan di `env`; task `dev` meneruskan `CLOUDFLARE_ENV` lewat `passThroughEnv`.
+- `turbo.json`: task `build`, `dev` (`persistent: true`, `cache: false`), `check-types`, `check`, `test`, `test:e2e` (`cache: false`, terpisah dari `test`), `typegen`, `build:types`. `check-types` bergantung pada `typegen` dan `^build:types`; `outputs` eksplisit; env yang memengaruhi build (termasuk `CLOUDFLARE_ENV` dan `VITE_*`) didaftarkan di `env`; task `dev` meneruskan `CLOUDFLARE_ENV`, `CLOUDFLARE_DEV_REGISTRY_PATH`, dan `VITE_*` lewat `passThroughEnv` (e2e mengisi `VITE_*` dari `webServer` Playwright).
 - `packages/typescript-config`: `base.json` (`strict`, `moduleResolution: "bundler"`, `noUncheckedIndexedAccess`) dan `react.json` (extends base + JSX).
 
 ## Package manager & monorepo

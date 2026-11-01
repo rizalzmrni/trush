@@ -19,11 +19,14 @@ import {
   username,
 } from "better-auth/plugins";
 
+import { createOtpRateLimiter } from "./otp-rate-limit";
+import type { OtpRateLimiter } from "./otp-rate-limit";
 import {
   createSendOtp,
   createSendPasswordResetOtp,
   phoneBeforeHook,
 } from "./phone";
+import type { WaitUntil } from "./phone";
 
 /** Path handler better-auth di `apps/api`. */
 export const AUTH_BASE_PATH = "/api/auth";
@@ -81,6 +84,18 @@ export interface CreateAuthOptions {
   phoneLogger?: PhoneLogger | undefined;
   /** Pengganti pengirim OTP (test); default `createPhoneSender` dari env. */
   phoneSender?: PhoneSender | undefined;
+  /**
+   * `executionCtx.waitUntil` api: pengiriman OTP reset password berjalan
+   * setelah respons (B7b). Tanpa nilai: ditunggu (test, CLI).
+   */
+  waitUntil?: WaitUntil | undefined;
+  /** Error pengiriman OTP reset password di latar (untuk log, tanpa PII). */
+  onPasswordResetOtpError?: ((error: unknown) => void) | undefined;
+  /**
+   * Kuota OTP per pengguna/nomor (B7c). Default: tabel `otp_rate_limit` di
+   * `db`, aktif bila `APP_ENV` bukan development (sama dengan rate limit IP).
+   */
+  otpRateLimiter?: OtpRateLimiter | undefined;
 }
 
 /**
@@ -91,8 +106,13 @@ export interface CreateAuthOptions {
 export const createAuth = ({
   db,
   env,
+  onPasswordResetOtpError,
+  otpRateLimiter = env.APP_ENV === "development"
+    ? undefined
+    : createOtpRateLimiter(db),
   phoneLogger,
   phoneSender = createPhoneSender({ env, logger: phoneLogger }),
+  waitUntil,
 }: CreateAuthOptions) => {
   const phonePlugin = phoneNumber({
     // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
@@ -101,7 +121,11 @@ export const createAuth = ({
     // Sinkron: error Twilio → 4xx kode domain / 502 OTP_DELIVERY_FAILED.
     // Hanya untuk pengguna login (menambah nomor); login OTP mati.
     sendOTP: createSendOtp(phoneSender),
-    sendPasswordResetOTP: createSendPasswordResetOtp(phoneSender),
+    // Di latar (waitUntil): respons nomor terdaftar/tidak identik (B7b).
+    sendPasswordResetOTP: createSendPasswordResetOtp(phoneSender, {
+      onDeliveryError: onPasswordResetOtpError,
+      waitUntil,
+    }),
   });
   return betterAuth({
     advanced: {
@@ -130,6 +154,7 @@ export const createAuth = ({
     hooks: {
       before: phoneBeforeHook({
         errors: phonePlugin.$ERROR_CODES,
+        otpRateLimiter,
         phoneSender,
       }),
     },

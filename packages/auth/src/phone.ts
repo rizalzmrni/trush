@@ -7,6 +7,9 @@ import {
   getSessionFromCtx,
 } from "better-auth/api";
 
+import { OTP_RATE_RULES, otpPhoneKey, otpUserKey } from "./otp-rate-limit";
+import type { OtpRateLimiter } from "./otp-rate-limit";
+
 /** Header pilihan kanal OTP: `sms` untuk "kirim ulang via SMS", default WhatsApp. */
 export const OTP_CHANNEL_HEADER = "x-otp-channel";
 
@@ -120,18 +123,60 @@ export const createSendOtp =
     await deliverOtp(phoneSender, data, ctx);
   };
 
+/** Penjadwal kerja setelah respons (`ctx.waitUntil` Worker). */
+export type WaitUntil = (promise: Promise<unknown>) => void;
+
+export interface PasswordResetOtpOptions {
+  /**
+   * `executionCtx.waitUntil` dari api. Tanpa nilai (test, CLI) pengiriman
+   * ditunggu, tetapi errornya tetap ditelan agar respons sama.
+   */
+  waitUntil?: WaitUntil | undefined;
+  /** Dipanggil saat pengiriman di latar gagal (log tanpa nomor/kode). */
+  onDeliveryError?: ((error: unknown) => void) | undefined;
+}
+
 /**
- * `sendPasswordResetOTP`: plugin hanya memanggilnya untuk nomor terdaftar.
- * Nomor tak terdaftar tetap 200 `{ status: true }`, tetapi waktunya lebih
- * singkat (tanpa panggilan penyedia); lihat `packages/auth/CLAUDE.md`.
+ * `sendPasswordResetOTP` (B7b): plugin hanya memanggilnya untuk nomor
+ * terdaftar, setelah kerja yang sama untuk semua nomor (cari user, simpan
+ * OTP). Pengiriman dipindah ke `waitUntil` sehingga respons nomor terdaftar
+ * dan tidak terdaftar sama persis (200 `{ status: true }`) dan waktunya
+ * setara: panggilan penyedia tidak lagi ada di jalur respons.
+ *
+ * Trade-off dengan `sendOTP` (sinkron): error penyedia untuk reset password
+ * TIDAK sampai ke pengguna (hanya ke log lewat `onDeliveryError`), karena
+ * error yang hanya muncul untuk nomor terdaftar adalah oracle keberadaan
+ * akun. Pengguna yang tidak menerima kode cukup meminta ulang / via SMS.
  */
 export const createSendPasswordResetOtp =
-  (phoneSender: PhoneSender) =>
   (
+    phoneSender: PhoneSender,
+    { onDeliveryError, waitUntil }: PasswordResetOtpOptions = {}
+  ) =>
+  async (
     data: { code: string; phoneNumber: string },
     ctx?: GenericEndpointContext
-  ): Promise<void> =>
-    deliverOtp(phoneSender, data, ctx);
+  ): Promise<void> => {
+    const channel = otpChannelFrom(ctx);
+    // `PhoneError` mentah (kodenya untuk log), bukan `APIError` seperti sendOTP.
+    const deliver = async (): Promise<void> => {
+      try {
+        await phoneSender.sendOtp({
+          channel,
+          code: data.code,
+          phone: data.phoneNumber,
+        });
+      } catch (error) {
+        onDeliveryError?.(error);
+      }
+    };
+    const delivery = deliver();
+    if (waitUntil) {
+      waitUntil(delivery);
+      return;
+    }
+    await delivery;
+  };
 
 const isRecord = (body: unknown): body is Record<string, unknown> =>
   typeof body === "object" && body !== null;
@@ -162,7 +207,49 @@ type BodyOverride = { context: { body: Record<string, unknown> } } | undefined;
 interface PhoneBeforeHookOptions {
   errors: PhoneErrorCodes;
   phoneSender: PhoneSender;
+  /** Batas OTP per pengguna/nomor (B7c); tanpa nilai = tidak dibatasi. */
+  otpRateLimiter?: OtpRateLimiter | undefined;
 }
+
+/**
+ * B7c: kuota OTP per nomor tujuan (dan per pengguna untuk `send-otp`),
+ * dihitung setelah captcha + rate limit IP (`onRequest`) dan sebelum OTP
+ * dibuat. `request-password-reset` dihitung untuk SEMUA nomor yang valid,
+ * terdaftar atau tidak, jadi 429 tidak membocorkan keberadaan akun.
+ * `send-otp` tanpa sesi tidak dihitung (tidak pernah mengirim), agar orang
+ * lain tidak bisa menghabiskan kuota nomor korban tanpa akun.
+ * Nomor yang gagal normalisasi atau `canSendTo` (negara/allowlist) tidak
+ * dihitung sama sekali: `phoneNumberValidator` menolaknya 400 tanpa OTP,
+ * sama untuk nomor terdaftar maupun tidak, jadi tetap tanpa oracle (B7d).
+ */
+const consumeOtpQuota = async (
+  ctx: GenericEndpointContext,
+  phoneNumber: string | undefined,
+  limiter: OtpRateLimiter,
+  phoneSender: PhoneSender
+): Promise<void> => {
+  if (phoneNumber === undefined || !phoneSender.canSendTo(phoneNumber)) {
+    return;
+  }
+  const phoneQuota = [
+    { key: otpPhoneKey(phoneNumber), rule: OTP_RATE_RULES.phone },
+  ];
+  if (ctx.path === "/phone-number/request-password-reset") {
+    await limiter.consume(phoneQuota);
+    return;
+  }
+  if (ctx.path !== "/phone-number/send-otp") {
+    return;
+  }
+  const session = await getSessionFromCtx(ctx);
+  if (session === null) {
+    return;
+  }
+  await limiter.consume([
+    { key: otpUserKey(session.user.id), rule: OTP_RATE_RULES.user },
+    ...phoneQuota,
+  ]);
+};
 
 /**
  * `/phone-number/verify` hanya untuk menambah nomor ke akun yang login.
@@ -191,12 +278,14 @@ const assertVerifyAddsPhone = async (
  * 2. `/phone-number/verify` lihat `assertVerifyAddsPhone`.
  * 3. `phoneNumber` diganti E.164, jadi OTP, kolom `user.phone_number`, dan
  *    pencarian login memakai satu bentuk.
- * 4. `/sign-in/phone-number` untuk nomor tak terdaftar atau belum
+ * 4. Kuota OTP per pengguna/nomor, lihat `consumeOtpQuota`.
+ * 5. `/sign-in/phone-number` untuk nomor tak terdaftar atau belum
  *    terverifikasi: password tetap di-hash (waktu setara) lalu 401 yang sama
  *    persis dengan password salah.
  */
 export const phoneBeforeHook = ({
   errors,
+  otpRateLimiter,
   phoneSender,
 }: PhoneBeforeHookOptions) =>
   createAuthMiddleware(async (ctx): Promise<BodyOverride> => {
@@ -217,8 +306,11 @@ export const phoneBeforeHook = ({
     if (!hasPhoneNumber(body)) {
       return undefined;
     }
-    const phoneNumber =
-      phoneSender.normalize(body.phoneNumber) ?? body.phoneNumber;
+    const normalized = phoneSender.normalize(body.phoneNumber);
+    const phoneNumber = normalized ?? body.phoneNumber;
+    if (otpRateLimiter) {
+      await consumeOtpQuota(ctx, normalized, otpRateLimiter, phoneSender);
+    }
     if (
       ctx.path === "/sign-in/phone-number" &&
       !(await hasVerifiedPhone(ctx, phoneNumber))
