@@ -218,16 +218,22 @@ interface PhoneBeforeHookOptions {
  * terdaftar atau tidak, jadi 429 tidak membocorkan keberadaan akun.
  * `send-otp` tanpa sesi tidak dihitung (tidak pernah mengirim), agar orang
  * lain tidak bisa menghabiskan kuota nomor korban tanpa akun.
+ * Nomor yang gagal normalisasi atau `canSendTo` (negara/allowlist) tidak
+ * dihitung sama sekali: `phoneNumberValidator` menolaknya 400 tanpa OTP,
+ * sama untuk nomor terdaftar maupun tidak, jadi tetap tanpa oracle (B7d).
  */
 const consumeOtpQuota = async (
   ctx: GenericEndpointContext,
   phoneNumber: string | undefined,
-  limiter: OtpRateLimiter
+  limiter: OtpRateLimiter,
+  phoneSender: PhoneSender
 ): Promise<void> => {
-  const phoneQuota =
-    phoneNumber === undefined
-      ? []
-      : [{ key: otpPhoneKey(phoneNumber), rule: OTP_RATE_RULES.phone }];
+  if (phoneNumber === undefined || !phoneSender.canSendTo(phoneNumber)) {
+    return;
+  }
+  const phoneQuota = [
+    { key: otpPhoneKey(phoneNumber), rule: OTP_RATE_RULES.phone },
+  ];
   if (ctx.path === "/phone-number/request-password-reset") {
     await limiter.consume(phoneQuota);
     return;
@@ -303,7 +309,7 @@ export const phoneBeforeHook = ({
     const normalized = phoneSender.normalize(body.phoneNumber);
     const phoneNumber = normalized ?? body.phoneNumber;
     if (otpRateLimiter) {
-      await consumeOtpQuota(ctx, normalized, otpRateLimiter);
+      await consumeOtpQuota(ctx, normalized, otpRateLimiter, phoneSender);
     }
     if (
       ctx.path === "/sign-in/phone-number" &&

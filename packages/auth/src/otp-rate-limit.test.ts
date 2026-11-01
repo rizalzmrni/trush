@@ -18,6 +18,8 @@ const SESSION_COOKIE = "__Secure-better-auth.session_token";
 const PASSWORD = "kata-sandi-uji-yang-cukup-panjang-42";
 const TARGET = "+6281234567890";
 const TARGET_LOCAL = "0812-3456-7890";
+/** Ditolak validator: bukan nomor, terlalu pendek, negara di luar `ID`. */
+const INVALID_NUMBERS = ["abc", "0812", "+60123456789"] as const;
 const HTTP_OK = 200;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -355,6 +357,59 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
       repeat(PHONE_MAX + 1, () => HTTP_BAD_REQUEST)
     );
     expect(response.status).toBe(HTTP_OK);
+  });
+
+  /** Jumlah baris kuota yang tercatat (semua kunci). */
+  const quotaRows = async (): Promise<number> => {
+    const result = await handle.db.execute<{ total: number }>(
+      sql`select count(*)::int as total from "otp_rate_limit"`
+    );
+    return result.rows[0]?.total ?? 0;
+  };
+
+  it("staging: send-otp ke nomor tidak valid tidak memakan kuota pengguna (B7d)", async () => {
+    const auth = makeAuth({ APP_ENV: "staging" }, "default");
+    const cookie = await signUp(auth);
+
+    const rejected = await statusesOf(
+      repeat(USER_MAX + 1, (index) =>
+        sendOtp(
+          auth,
+          INVALID_NUMBERS[index % INVALID_NUMBERS.length] ?? "",
+          cookie
+        )
+      )
+    );
+    const rowsAfterRejected = await quotaRows();
+    const valid = await sendOtp(auth, TARGET, cookie)();
+
+    expect(rejected).toStrictEqual(
+      repeat(USER_MAX + 1, () => HTTP_BAD_REQUEST)
+    );
+    expect(rowsAfterRejected).toBe(0);
+    expect(valid.status).toBe(HTTP_OK);
+  });
+
+  it("reset ke nomor di luar allowlist → 400 tanpa menghitung kuota (B7d)", async () => {
+    const auth = makeAuth({ PHONE_ALLOWLIST: [TARGET] });
+    const outside = phoneAt(7);
+
+    const rejected = await statusesOf(
+      repeat(PHONE_MAX + 1, () => requestReset(auth, outside))
+    );
+    const rowsAfterRejected = await quotaRows();
+    const allowed = await statusesOf(
+      repeat(PHONE_MAX + 1, () => requestReset(auth, TARGET))
+    );
+
+    expect(rejected).toStrictEqual(
+      repeat(PHONE_MAX + 1, () => HTTP_BAD_REQUEST)
+    );
+    expect(rowsAfterRejected).toBe(0);
+    expect(allowed).toStrictEqual([
+      ...repeat(PHONE_MAX, () => HTTP_OK),
+      HTTP_TOO_MANY_REQUESTS,
+    ]);
   });
 
   it("jendela kedaluwarsa → kuota nomor pulih", async () => {
