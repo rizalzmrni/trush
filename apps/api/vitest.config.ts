@@ -1,5 +1,6 @@
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
+import { unstable_readConfig } from "wrangler";
 
 /**
  * Binding uji: nilai palsu, tidak pernah dari `.dev.vars`. BetterStack
@@ -22,6 +23,15 @@ const TEST_BINDINGS = {
 
 const DB_TEST_GLOB = "src/**/*.db.test.ts";
 
+/**
+ * Hanya tanggal + flag kompatibilitas yang diambil dari `wrangler.jsonc`.
+ * Konfigurasi itu sengaja TIDAK diberikan ke plugin (`wrangler.configPath`):
+ * plugin lalu memanggil `getVarsForDev` wrangler, yang selalu memuat
+ * `.dev.vars` lokal developer (secret asli) di samping config dan tidak bisa
+ * dimatikan dari opsi plugin. Binding uji murni dari `TEST_BINDINGS`.
+ */
+const wranglerConfig = unstable_readConfig({ config: "./wrangler.jsonc" });
+
 // `createTestDb()` (PGlite) memuat WASM + migrasi; default 5 detik terlalu ketat.
 const PGLITE_TIMEOUT_MS = 30_000;
 
@@ -32,8 +42,12 @@ export default defineConfig({
         // Handler & middleware di workerd asli.
         plugins: [
           cloudflareTest({
-            miniflare: { bindings: TEST_BINDINGS },
-            wrangler: { configPath: "./wrangler.jsonc" },
+            main: "./src/index.ts",
+            miniflare: {
+              bindings: TEST_BINDINGS,
+              compatibilityDate: wranglerConfig.compatibility_date,
+              compatibilityFlags: wranglerConfig.compatibility_flags,
+            },
           }),
         ],
         test: {
