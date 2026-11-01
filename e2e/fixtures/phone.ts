@@ -3,7 +3,7 @@ import { randomInt } from "node:crypto";
 import { expect, request } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-import { TURNSTILE_DUMMY_TOKEN } from "./turnstile";
+import { expectCaptchaReady } from "./auth-pages";
 import { API_URL } from "./urls";
 
 const NATIONAL_SUFFIX_DIGITS = 8;
@@ -17,65 +17,62 @@ const NATIONAL_SUFFIX_MAX = 10 ** NATIONAL_SUFFIX_DIGITS;
 export const uniquePhoneNumber = (): string =>
   `+62812${String(randomInt(NATIONAL_SUFFIX_MAX)).padStart(NATIONAL_SUFFIX_DIGITS, "0")}`;
 
-export interface BrowserApiResponse {
-  readonly body: unknown;
-  readonly status: number;
-}
+/** `+62812…` → `0812…`: format lokal yang diketik pengguna Indonesia. */
+export const toLocalFormat = (e164: string): string =>
+  e164.replace(/^\+62/u, "0");
 
-/**
- * `fetch` ke api dari halaman app, seperti klien browser (`VITE_API_URL`,
- * `credentials: "include"`): cookie sesi dan origin app ikut terkirim,
- * CORS api ikut diuji.
- */
-export const browserApiFetch = (
-  page: Page,
-  path: string,
-  {
-    body,
-    headers = {},
-  }: { body?: unknown; headers?: Record<string, string> } = {}
-): Promise<BrowserApiResponse> =>
-  page.evaluate(
-    async ({ apiUrl, init, url }) => {
-      const response = await fetch(`${apiUrl}${url}`, {
-        ...init,
-        credentials: "include",
-      });
-      const text = await response.text();
-      let parsed: unknown = text;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        // Bukan JSON: kembalikan teks mentah.
-      }
-      return { body: parsed, status: response.status };
+/** Halaman `/settings/phone` `apps/app` (tambah/ganti + verifikasi nomor). */
+export const createPhoneSettingsPage = (page: Page) => {
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: "Nomor telepon",
+  });
+  const verifyHeading = page.getByRole("heading", {
+    name: "Masukkan kode verifikasi",
+  });
+  return {
+    /** Nomor tersimpan di akun tampil dengan status terverifikasi. */
+    async expectVerified(e164: string): Promise<void> {
+      await expect(page.getByText(e164, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText("Terverifikasi", { exact: true })
+      ).toBeVisible();
     },
-    {
-      apiUrl: API_URL,
-      init:
-        body === undefined
-          ? { headers, method: "GET" }
-          : {
-              body: JSON.stringify(body),
-              headers: { "content-type": "application/json", ...headers },
-              method: "POST",
-            },
-      url: path,
-    }
-  );
+    async expectNoPhone(): Promise<void> {
+      await expect(page.getByText("Belum ada nomor telepon")).toBeVisible();
+    },
+    formError: page.getByRole("alert"),
+    async goto(): Promise<void> {
+      await page.goto("/settings/phone");
+      await expect(heading).toBeVisible();
+    },
+    heading,
+    /** Info sukses (`role="status"`): kode terkirim / nomor tersimpan. */
+    notice: page.getByRole("status"),
+    async resendViaSms(): Promise<void> {
+      await expectCaptchaReady(page);
+      await page.getByRole("button", { name: "Kirim ulang lewat SMS" }).click();
+    },
+    /** Langkah 1: isi nomor, pilih kanal, kirim kode → langkah verifikasi. */
+    async sendCode(phoneNumber: string, channel = "WhatsApp"): Promise<void> {
+      await expectCaptchaReady(page);
+      await page.getByLabel(/^Nomor telepon/u).fill(phoneNumber);
+      await page.getByRole("radio", { name: channel }).check();
+      await page
+        .getByRole("button", { exact: true, name: "Kirim kode" })
+        .click();
+      await expect(verifyHeading).toBeVisible();
+    },
+    /** Langkah 2: masukkan kode lalu verifikasi. */
+    async submitCode(code: string): Promise<void> {
+      await page.getByLabel("Kode verifikasi").fill(code);
+      await page.getByRole("button", { name: "Verifikasi nomor" }).click();
+    },
+    verifyHeading,
+  };
+};
 
-/** `POST /api/auth/phone-number/send-otp` dengan token Turnstile dummy. */
-export const requestPhoneOtp = (page: Page, phoneNumber: string) =>
-  browserApiFetch(page, "/api/auth/phone-number/send-otp", {
-    body: { phoneNumber },
-    headers: { "x-captcha-response": TURNSTILE_DUMMY_TOKEN },
-  });
-
-/** `POST /api/auth/phone-number/verify` untuk menambah nomor ke akun login. */
-export const verifyPhoneOtp = (page: Page, phoneNumber: string, code: string) =>
-  browserApiFetch(page, "/api/auth/phone-number/verify", {
-    body: { code, phoneNumber, updatePhoneNumber: true },
-  });
+export type PhoneSettingsPage = ReturnType<typeof createPhoneSettingsPage>;
 
 /** Bagian kontrak `E2eOutboxMessage` (`@trush/core/schemas/e2e`) yang dipakai. */
 interface OutboxMessage {

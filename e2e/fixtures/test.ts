@@ -6,10 +6,13 @@ import {
   createSignUpPage,
 } from "./auth-pages";
 import type { HomePage, SignInPage, SignUpPage } from "./auth-pages";
+import { createPhoneSettingsPage } from "./phone";
+import type { PhoneSettingsPage } from "./phone";
 import { stubTurnstile } from "./turnstile";
 
 interface AuthPages {
   homePage: HomePage;
+  phoneSettings: PhoneSettingsPage;
   signInPage: SignInPage;
   signUpPage: SignUpPage;
 }
@@ -26,6 +29,9 @@ export const test = base.extend<AuthPages>({
   },
   homePage: async ({ page }, provide) => {
     await provide(createHomePage(page));
+  },
+  phoneSettings: async ({ page }, provide) => {
+    await provide(createPhoneSettingsPage(page));
   },
   signInPage: async ({ page }, provide) => {
     await provide(createSignInPage(page));
