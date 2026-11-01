@@ -16,6 +16,7 @@ import {
   PHONE_SETTINGS_PATH,
 } from "../form-schema";
 import type { VerifyStepResult } from "../form-schema";
+import { CurrentPasswordField } from "./current-password";
 import { usePhoneSubmitting } from "./submitting";
 
 interface VerifyOtpFormProps {
@@ -25,7 +26,8 @@ interface VerifyOtpFormProps {
 
 /**
  * Langkah 2: masukkan kode 6 digit. Kirim ulang selalu lewat SMS (kanal
- * cadangan bila WhatsApp tidak sampai) dan butuh Turnstile baru.
+ * cadangan bila WhatsApp tidak sampai) dan butuh Turnstile baru serta kata
+ * sandi saat ini (setiap kirim kode membuat grant step-up baru).
  */
 export const VerifyOtpForm = ({
   result,
@@ -74,6 +76,10 @@ export const VerifyOtpForm = ({
         <input name={INTENT_FIELD} type="hidden" value={PHONE_INTENTS.resend} />
         <input name="phoneNumber" type="hidden" value={phoneNumber} />
         <input name="channel" type="hidden" value="sms" />
+        <CurrentPasswordField
+          error={result.fieldErrors?.currentPassword}
+          resetKey={result}
+        />
         <Turnstile resetKey={result} siteKey={turnstileSiteKey} />
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button

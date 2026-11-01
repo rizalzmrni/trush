@@ -1,4 +1,5 @@
-import { CAPTCHA_HEADER } from "@trush/auth/client";
+import { CAPTCHA_HEADER, OTP_CHANNEL_HEADER } from "@trush/auth/client";
+import type { PhoneOtpChannel } from "@trush/core/schemas/auth";
 
 import { serverApiFetch } from "../../lib/api.server";
 import type { RequestScope } from "../../lib/api.server";
@@ -19,8 +20,16 @@ interface AuthRequest {
   /** Token Turnstile; wajib untuk endpoint ber-captcha. */
   readonly captchaToken?: string;
   readonly endpoint: AuthEndpoint;
-  /** Header tambahan, mis. `x-otp-channel` untuk kirim OTP telepon. */
-  readonly headers?: Readonly<Record<string, string>>;
+  /**
+   * Header tambahan yang diizinkan: hanya `x-otp-channel` (kirim OTP telepon).
+   * Sengaja bukan `Record<string, string>`, agar pemanggil tidak bisa menimpa
+   * `cookie`, `origin`, atau `cf-connecting-ip` yang diteruskan api-client.
+   */
+  readonly headers?: AuthExtraHeaders;
+}
+
+interface AuthExtraHeaders {
+  readonly [OTP_CHANNEL_HEADER]?: PhoneOtpChannel;
 }
 
 /**
@@ -32,10 +41,13 @@ export const postAuth = (
   scope: RequestScope,
   { body, captchaToken, endpoint, headers: extraHeaders }: AuthRequest
 ): Promise<Response> => {
-  const headers = new Headers({
-    ...extraHeaders,
-    "content-type": "application/json",
-  });
+  const headers = new Headers({ "content-type": "application/json" });
+  // Disalin per nama (bukan spread) supaya objek berisi kunci lain tetap tidak
+  // menambah header, meski lolos dari cek tipe.
+  const otpChannel = extraHeaders?.[OTP_CHANNEL_HEADER];
+  if (otpChannel) {
+    headers.set(OTP_CHANNEL_HEADER, otpChannel);
+  }
   if (captchaToken) {
     headers.set(CAPTCHA_HEADER, captchaToken);
   }

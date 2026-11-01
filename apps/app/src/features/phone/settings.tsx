@@ -61,7 +61,7 @@ export const PhoneSettings = ({
           <CardDescription>
             {verifying
               ? "Nomor baru tersimpan setelah kode benar."
-              : `Kami mengirim kode ${PHONE_OTP_LENGTH} digit untuk memastikan nomor ini milikmu.`}
+              : `Konfirmasi dengan kata sandi saat ini, lalu kami kirim kode ${PHONE_OTP_LENGTH} digit untuk memastikan nomor ini milikmu.`}
           </CardDescription>
         </CardHeader>
         <CardContent>

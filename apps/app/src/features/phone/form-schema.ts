@@ -1,4 +1,5 @@
 import {
+  PASSWORD_MAX_LENGTH,
   PHONE_OTP_LENGTH,
   sendPhoneOtpInputSchema,
   verifyPhoneOtpInputSchema,
@@ -47,7 +48,7 @@ export type SendOtpForm = z.infer<typeof sendOtpFormSchema>;
 export type VerifyOtpForm = z.infer<typeof verifyOtpFormSchema>;
 
 /** Pesan Indonesia per field form telepon (skema kontrak tanpa pesan). */
-export const phoneFieldMessage = ({ path }: IssueLike): string => {
+export const phoneFieldMessage = ({ code, path }: IssueLike): string => {
   const [field] = path ?? [];
   switch (field) {
     case "captchaToken": {
@@ -58,6 +59,11 @@ export const phoneFieldMessage = ({ path }: IssueLike): string => {
     }
     case "code": {
       return `Masukkan ${PHONE_OTP_LENGTH} digit kode yang kamu terima.`;
+    }
+    case "currentPassword": {
+      return code === "too_big"
+        ? `Kata sandi maksimal ${PASSWORD_MAX_LENGTH} karakter.`
+        : "Masukkan kata sandi saat ini.";
     }
     case "phoneNumber": {
       return "Masukkan nomor telepon yang valid, mis. 0812-3456-7890.";
@@ -73,6 +79,7 @@ export interface SendStepResult {
   readonly step: "send";
   readonly fieldErrors?: FieldErrors<SendOtpForm>;
   readonly formError?: string;
+  /** Nilai yang diisi ulang; kata sandi tidak pernah ikut. */
   readonly values: {
     readonly channel?: PhoneOtpChannel;
     readonly phoneNumber?: string;
@@ -83,7 +90,10 @@ export interface SendStepResult {
 export interface VerifyStepResult {
   readonly step: "verify";
   readonly channel: PhoneOtpChannel;
-  readonly fieldErrors?: FieldErrors<VerifyOtpForm>;
+  /** `currentPassword`: field kata sandi di form kirim ulang (ganti nomor). */
+  readonly fieldErrors?: FieldErrors<
+    VerifyOtpForm & Pick<SendOtpForm, "currentPassword">
+  >;
   readonly formError?: string;
   /** Info kode terkirim (status, bukan error). */
   readonly notice?: string;

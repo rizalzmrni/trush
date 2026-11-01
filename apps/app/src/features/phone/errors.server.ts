@@ -1,3 +1,4 @@
+import { PHONE_STEP_UP_ERROR_CODES } from "@trush/core/schemas/auth";
 import { formatRelativeTime } from "@trush/design-system/lib/format";
 
 import {
@@ -17,12 +18,15 @@ const MS_PER_SECOND = 1000;
 const PHONE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_NUMBER: "Nomor telepon tidak valid.",
   INVALID_OTP: "Kode salah. Periksa lagi lalu coba kembali.",
+  [PHONE_STEP_UP_ERROR_CODES.invalidPassword]: "Kata sandi saat ini salah.",
   INVALID_PHONE_NUMBER:
     "Nomor telepon tidak valid atau negaranya belum didukung.",
   NOT_ALLOWLISTED: "Nomor ini tidak dapat dipakai di lingkungan ini.",
   OTP_DELIVERY_FAILED: "Kode gagal dikirim. Coba lagi beberapa saat lagi.",
   OTP_EXPIRED: "Kode sudah kedaluwarsa. Minta kode baru.",
   OTP_NOT_FOUND: "Kode tidak ditemukan. Minta kode baru.",
+  [PHONE_STEP_UP_ERROR_CODES.passwordRequired]:
+    "Masukkan kata sandi saat ini untuk mengganti nomor.",
   PHONE_NUMBER_EXIST: "Nomor ini sudah dipakai akun lain.",
   RECIPIENT_UNREACHABLE:
     "Kode tidak dapat dikirim ke nomor ini lewat cara yang dipilih. Coba cara lain.",
@@ -58,13 +62,15 @@ const RATE_LIMIT_SUBJECT: Readonly<Record<PhoneErrorKind, string>> = {
   verify: "Terlalu banyak percobaan kode.",
 };
 
+/** Kuota step-up per pengguna (`PASSWORD_ATTEMPTS_LIMITED`), lintas langkah. */
+const PASSWORD_LIMIT_SUBJECT = "Terlalu banyak percobaan kata sandi.";
+
 /** Mis. "Terlalu banyak permintaan kode. Coba lagi dalam 12 menit." */
 const rateLimitMessage = (
   response: Response,
-  kind: PhoneErrorKind,
+  subject: string,
   now: Date
 ): string => {
-  const subject = RATE_LIMIT_SUBJECT[kind];
   const seconds = retryAfterSeconds(response);
   if (seconds === undefined) {
     return `${subject} Tunggu sebentar lalu coba lagi.`;
@@ -73,23 +79,47 @@ const rateLimitMessage = (
   return `${subject} Coba lagi ${formatRelativeTime(retryAt, { now })}.`;
 };
 
+export interface PhoneError {
+  /** Kode error api (`{ code }`), bila ada. */
+  readonly code?: string;
+  readonly message: string;
+}
+
 /**
- * Pesan Indonesia untuk response gagal kirim/verifikasi OTP telepon.
- * `kind` hanya memengaruhi teks 429.
+ * Kode + pesan Indonesia untuk response gagal kirim/verifikasi OTP telepon.
+ * `kind` hanya memengaruhi teks 429 rate limit kode. Body dibaca sekali.
  */
+export const phoneError = async (
+  response: Response,
+  kind: PhoneErrorKind = "send",
+  now: Date = new Date()
+): Promise<PhoneError> => {
+  const code = await readCode(response);
+  if (response.status === HTTP_TOO_MANY_REQUESTS) {
+    const subject =
+      code === PHONE_STEP_UP_ERROR_CODES.passwordAttemptsLimited
+        ? PASSWORD_LIMIT_SUBJECT
+        : RATE_LIMIT_SUBJECT[kind];
+    return { code, message: rateLimitMessage(response, subject, now) };
+  }
+  if (code === undefined) {
+    return { message: FALLBACK_MESSAGE };
+  }
+  return {
+    code,
+    message:
+      PHONE_ERROR_MESSAGES[code] ??
+      AUTH_ERROR_MESSAGES[code] ??
+      FALLBACK_MESSAGE,
+  };
+};
+
+/** Pesan Indonesia saja; lihat `phoneError`. */
 export const phoneErrorMessage = async (
   response: Response,
   kind: PhoneErrorKind = "send",
   now: Date = new Date()
 ): Promise<string> => {
-  if (response.status === HTTP_TOO_MANY_REQUESTS) {
-    return rateLimitMessage(response, kind, now);
-  }
-  const code = await readCode(response);
-  if (code === undefined) {
-    return FALLBACK_MESSAGE;
-  }
-  return (
-    PHONE_ERROR_MESSAGES[code] ?? AUTH_ERROR_MESSAGES[code] ?? FALLBACK_MESSAGE
-  );
+  const { message } = await phoneError(response, kind, now);
+  return message;
 };

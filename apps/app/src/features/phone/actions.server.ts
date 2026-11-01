@@ -1,4 +1,5 @@
 import { OTP_CHANNEL_HEADER } from "@trush/auth/client";
+import { PHONE_STEP_UP_ERROR_CODES } from "@trush/core/schemas/auth";
 import type { PhoneOtpChannel } from "@trush/core/schemas/auth";
 import { data } from "react-router";
 
@@ -9,7 +10,7 @@ import {
   postAuth,
 } from "../auth/api.server";
 import { parseAuthForm } from "../auth/form-schema";
-import { phoneErrorMessage } from "./errors.server";
+import { phoneError } from "./errors.server";
 import {
   CHANNEL_LABELS,
   INTENT_FIELD,
@@ -38,13 +39,25 @@ const asChannel = (value: string | undefined): PhoneOtpChannel =>
 const reply = (result: PhoneActionResult, init?: ResponseInit) =>
   data(result, init ?? { status: HTTP_BAD_REQUEST });
 
+/** Error api yang ditampilkan di field kata sandi, bukan di atas form. */
+const PASSWORD_FIELD_CODES: ReadonlySet<string | undefined> = new Set([
+  PHONE_STEP_UP_ERROR_CODES.invalidPassword,
+  PHONE_STEP_UP_ERROR_CODES.passwordRequired,
+]);
+
+/** Verify tanpa grant step-up (kedaluwarsa/nomor lain) → minta kode ulang. */
+const GRANT_MISSING_MESSAGE =
+  "Waktu verifikasi sudah habis. Minta kode lagi dengan kata sandi saat ini.";
+
 const sentNotice = (channel: PhoneOtpChannel, phoneNumber: string): string =>
   `Kode dikirim lewat ${CHANNEL_LABELS[channel]} ke ${phoneNumber}.`;
 
 /**
  * Kirim OTP ke nomor baru (pengguna login). Kanal lewat `x-otp-channel`,
  * token Turnstile lewat `x-captcha-response`. Dipakai langkah isi nomor
- * maupun "kirim ulang" di langkah verifikasi.
+ * maupun "kirim ulang" di langkah verifikasi. `currentPassword` selalu ikut
+ * di body (step-up B11, juga untuk nomor pertama); nilainya tidak pernah
+ * dikembalikan ke halaman.
  */
 const sendOtp = async (
   scope: RequestScope,
@@ -57,38 +70,44 @@ const sendOtp = async (
     fields: Pick<SendStepResult, "fieldErrors" | "formError">,
     status?: number
   ) => {
+    const init = status ? { status } : undefined;
     if (failStep === "verify" && rawPhone) {
+      const { currentPassword, ...otherErrors } = fields.fieldErrors ?? {};
       const result: VerifyStepResult = {
         channel: rawChannel,
-        formError:
-          fields.formError ?? Object.values(fields.fieldErrors ?? {})[0],
+        formError: fields.formError ?? Object.values(otherErrors)[0],
         phoneNumber: rawPhone,
         step: "verify",
+        ...(currentPassword ? { fieldErrors: { currentPassword } } : {}),
       };
-      return reply(result, status ? { status } : undefined);
+      return reply(result, init);
     }
     const result: SendStepResult = {
       ...fields,
       step: "send",
       values: { channel: rawChannel, phoneNumber: rawPhone },
     };
-    return reply(result, status ? { status } : undefined);
+    return reply(result, init);
   };
 
   const parsed = parseAuthForm(sendOtpFormSchema, formData, phoneFieldMessage);
   if (!parsed.success) {
     return failure({ fieldErrors: parsed.fieldErrors });
   }
-  const { captchaToken, channel, phoneNumber } = parsed.data;
+  const { captchaToken, channel, currentPassword, phoneNumber } = parsed.data;
   const response = await postAuth(scope, {
-    body: { phoneNumber },
+    // String kosong = tidak ada; server membalas 403 PASSWORD_REQUIRED.
+    body: currentPassword ? { currentPassword, phoneNumber } : { phoneNumber },
     captchaToken,
     endpoint: AUTH_ENDPOINTS.phoneSendOtp,
     headers: { [OTP_CHANNEL_HEADER]: channel },
   });
   if (!response.ok) {
+    const error = await phoneError(response, "send");
     return failure(
-      { formError: await phoneErrorMessage(response, "send") },
+      PASSWORD_FIELD_CODES.has(error.code)
+        ? { fieldErrors: { currentPassword: error.message } }
+        : { formError: error.message },
       response.status
     );
   }
@@ -135,13 +154,19 @@ const verifyOtp = async (scope: RequestScope, formData: FormData) => {
     endpoint: AUTH_ENDPOINTS.phoneVerify,
   });
   if (!response.ok) {
+    const error = await phoneError(response, "verify");
+    if (error.code === PHONE_STEP_UP_ERROR_CODES.passwordRequired) {
+      return reply(
+        {
+          formError: GRANT_MISSING_MESSAGE,
+          step: "send",
+          values: { channel, phoneNumber },
+        },
+        { status: response.status }
+      );
+    }
     return reply(
-      {
-        channel,
-        formError: await phoneErrorMessage(response, "verify"),
-        phoneNumber,
-        step: "verify",
-      },
+      { channel, formError: error.message, phoneNumber, step: "verify" },
       { status: response.status }
     );
   }

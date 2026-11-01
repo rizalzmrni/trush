@@ -7,6 +7,7 @@ import { Form } from "react-router";
 import { Turnstile } from "../../auth/forms/turnstile";
 import { CHANNEL_LABELS, INTENT_FIELD, PHONE_INTENTS } from "../form-schema";
 import type { SendStepResult } from "../form-schema";
+import { CurrentPasswordField } from "./current-password";
 import { usePhoneSubmitting } from "./submitting";
 
 const CHANNEL_OPTIONS = [
@@ -26,7 +27,7 @@ interface SendOtpFormProps {
   turnstileSiteKey: string;
 }
 
-/** Langkah 1: nomor baru + kanal pengiriman kode + Turnstile. */
+/** Langkah 1: nomor baru + kanal pengiriman kode + kata sandi + Turnstile. */
 export const SendOtpForm = ({
   hasPhone,
   result,
@@ -58,6 +59,7 @@ export const SendOtpForm = ({
         name="channel"
         options={CHANNEL_OPTIONS}
       />
+      <CurrentPasswordField error={errors?.currentPassword} resetKey={result} />
       <Turnstile resetKey={result} siteKey={turnstileSiteKey} />
       {errors?.captchaToken ? (
         <FormMessage>{errors.captchaToken}</FormMessage>
