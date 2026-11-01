@@ -8,7 +8,7 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: B11 (batch `feat/f6-phone-ui`, PR #12)
 - Selesai terakhir: B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: fase email (`@trush/email` + driver `memory` email untuk outbox e2e)
 - Blocker: —
@@ -17,12 +17,12 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 - Sedang dikerjakan: —
 - Selesai terakhir: F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: F6b
+- Berikutnya: F6c (setelah B11), F6b
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: Q13 (setelah B11 + F6c)
 - Selesai terakhir: Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
@@ -56,6 +56,9 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | B10a | Rate limit IP `/phone-number/verify` 10/menit (aturan spesifik sebelum `/phone-number/*`; better-auth memakai `customRules` pertama yang cocok, dicek di 1.7.14) | backend-engineer | done (`7a991ee`; belum ada test → Q12) | B7c |
 | F6a | Pesan 429 di langkah verifikasi menyebut "percobaan kode", bukan "permintaan kode" (`apps/app/src/features/phone/errors.server.ts`) | frontend-engineer | done (`eaec0b3`; `phoneErrorMessage(response, kind, now)`) | F6 |
 | Q12 | Test F6 (action, form, pesan error 400/429/502) + test `/api/me` field telepon + test `/phone-number/verify` memakai batas 10/menit (B10a) + e2e telepon lewat UI (ganti jalur API di Q3) | qa-tester | done (`e57f257`, `4bd64e6`; app 275, api 99, core 120, auth 103; e2e diuji di CI, `.dev.vars.e2e` lokal memakai DB palsu) | B10, B10a, F6, F6a |
+| B11 | Step-up ganti nomor (review keamanan PR #12, Medium): bila pengguna sudah punya nomor terverifikasi, `send-otp` (dengan sesi) dan `verify` (`updatePhoneNumber`) wajib password saat ini, dicek server di `phoneBeforeHook`; kontrak di `@trush/core/schemas/auth`; `allowedAttempts: 3` + `otpLength: PHONE_OTP_LENGTH` eksplisit di plugin | backend-engineer | todo | Q12 |
+| F6c | UI step-up: field password saat ganti nomor (langkah kirim), pesan error kode baru; persempit `postAuth` `headers` ke `x-otp-channel` (review #4) | frontend-engineer | todo | B11 |
+| Q13 | Test B11 + F6c: tambah nomor pertama tanpa password, ganti nomor tanpa/salah password ditolak tanpa OTP terkirim, password benar lolos; e2e ganti nomor | qa-tester | todo | B11, F6c |
 | F6b | Catatan Q12 (bukan bug UI): form kirim tanpa field `channel` → error, padahal skema core default `whatsapp` (`parseAuthForm` mengubah field hilang jadi `""`); `retryAfterSeconds`: `Retry-After` tak valid menutupi `X-Retry-After` valid | frontend-engineer | todo | Q12 |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
@@ -102,6 +105,8 @@ Catatan lanjutan dari batch ini:
 - Dev lokal app↔api: `CLOUDFLARE_DEV_REGISTRY_PATH` absolut yang sama (lihat `docs/react-router.md`); api e2e lewat `bun run dev:e2e` (`wrangler dev --env e2e`).
 - B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
 
+- Review PR #12: notifikasi "nomor telepon diubah" ke email (`callbackOnVerification`) saat `@trush/email` siap; pertimbangkan cabut sesi lain setelah ganti nomor; OTP telepon tidak terikat `userId` (Low, DoS verifikasi saja).
+
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
 
 ## Kontrak lintas-wilayah (`packages/core`)
@@ -119,6 +124,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-01 — PR #12 (Draft) dibuka; CI `checks`, `e2e`, `pr-title` hijau. Review keamanan subagent (komentar PR): Medium ganti nomor tanpa step-up → keputusan user: step-up password di PR ini (B11, F6c, Q13). Follow-up: OTP tidak terikat `userId` (Low, risiko diterima sementara), notifikasi perubahan nomor + cabut sesi lain (fase email).
 - 2026-11-01 — Q12 done: test telepon app (+91), api (+5), core (+38), auth (+5, verify 10/menit); e2e telepon lewat UI `/settings/phone`. Tanpa bug; dua catatan kecil → F6b. PR batch `feat/f6-phone-ui` siap dibuka.
 - 2026-11-01 — F6 done (laporan frontend; daftar periksa `DESIGN.md` 11/11 tanpa perubahan kode) dan F6a done (`eaec0b3`, teks 429 verifikasi "percobaan kode"; app 185 test). Q12 wip.
 - 2026-11-01 — Review lead batch `feat/f6-phone-ui`: B10 done (`afb5602`), F6 ke review (`ca87f4f`, `RadioGroupField` `6074749`), B10a (`7a991ee`, perubahan backend tanpa task sebelumnya, kini tercatat), `chore(repo)` lint-staged `--no-error-on-unmatched-pattern` (`0765793`). check-types, check, test app/auth/design-system/storybook hijau. Tambahan: F6a (teks 429 verifikasi), Q12 diperluas dengan test B10a. PR batch menunggu Q12.
