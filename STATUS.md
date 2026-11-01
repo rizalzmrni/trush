@@ -9,14 +9,14 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 ### backend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7 (review); B6
-- Berikutnya: B8 (`APP_ENV` guard production, driver `memory` saat `E2E=true`, `/__e2e/outbox`)
+- Selesai terakhir: B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Berikutnya: B8 (`APP_ENV` guard production, driver `memory` saat `E2E=true`, `/__e2e/outbox`); B7b, B7c (lanjutan keamanan OTP telepon)
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app` (review); F3b
+- Selesai terakhir: F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
 - Berikutnya: fase berikutnya belum dipecah
 - Blocker: —
 
@@ -45,8 +45,10 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | B4a | `@trush/env/db` menolak URL tak valid sebagai issue (bukan TypeError berisi nilai mentah); tsconfig test Node di db (bug Q7) | backend-engineer | done (PR #8) | B4, Q7 |
 | B5 | `apps/api`: `OpenAPIHono`, `/health`, `/openapi.json`, Scalar `/docs`, `@trush/api/client` | backend-engineer | done (PR #4) | B1, B3 |
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | done (PR #9; tanpa `phoneNumber`→B7, `emailOTP`/`polar`→fase email/payments; verifikasi email belum wajib) | B4, B5 |
-| B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | review (OTP sinkron, nomor tak terdaftar tidak dikirimi OTP; rate limit `/phone-number/*` 3/menit per IP) | B1, B6 |
+| B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | done (OTP sinkron, nomor tak terdaftar tidak dikirimi OTP; rate limit `/phone-number/*` 3/menit per IP; lanjutan di B7b, B7c) | B1, B6 |
 | B7a | Perbaiki temuan review keamanan PR #10: login OTP lewat `verify` melewati 2FA (High), `phoneNumber` di sign-up tanpa OTP (Medium), driver `log`/`memory` di staging (Low) | backend-engineer | done | B7, Q9 |
+| B7b | `/phone-number/request-password-reset` tidak membedakan nomor terdaftar lewat waktu respons (samakan jalur nomor tak terdaftar, mis. kerja tiruan/penundaan konstan) + test | backend-engineer | todo | B7a |
+| B7c | Rate limit permintaan OTP per pengguna dan per nomor tujuan (bukan hanya per IP) untuk pengguna yang sudah login | backend-engineer | todo | B7a |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; driver `memory` email saat `E2E=true`; route `/__e2e/outbox` | backend-engineer | todo | B1, B7 |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
@@ -57,7 +59,7 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | F3b | HSTS `apps/web` hanya production di domain resmi (bukan localhost/`*.workers.dev`), seperti api (bug Q6) | frontend-engineer | done (PR #4) | F3, Q6 |
 | F3c | `typegen` web deterministik (`wrangler types --env-file .dev.vars.example`; CI PR #4 merah karena `.dev.vars` lokal) | frontend-engineer | done (PR #4) | F3 |
 | B5a | `typegen` api memakai pola yang sama | backend-engineer | done (PR #4) | B5 |
-| F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | review (diuji Q2b) | F1, B6 |
+| F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | done (diuji Q2b, Q9) | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | done (Q2a PR #9; Q2b 163 test app, tanpa bug) | B6, F4 |
 | Q3 | Workspace `e2e/` + alur kritis (daftar, login + OTP, auth gate, logout) | qa-tester | todo | F4, B8 |
@@ -81,9 +83,8 @@ Catatan lanjutan dari batch ini:
 - `typegen` semua app memakai `wrangler types --env-file .dev.vars.example`: setiap var/secret baru WAJIB masuk `.dev.vars.example` agar ada di tipe `Env` (F4 `apps/app` ikut pola ini).
 - Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
 
-- B7 keputusan terbuka (user): (1) `/phone-number/request-password-reset` masih membedakan nomor terdaftar lewat waktu respons (celah serupa di `send-otp` tertutup karena tanpa sesi tidak pernah mengirim). (2) Pengguna login bisa minta OTP ke nomor mana saja; rate limit hanya per IP, belum per pengguna/nomor tujuan.
-- qa-tester: hapus docblock `// @vitest-environment node` yang kini redundan di 5 test `apps/app` (F4a memisah project vitest).
-- `apps/app` vitest sudah dipisah (F4a). Lint: autofix `bun run fix` mengubah `toHaveBeenCalled()` menjadi `toHaveBeenCalledWith()` (makna assert berubah); lead cek rule di `oxlint.config.mts`. Test entry.server (`onError` 500) belum ada.
+- B7 keputusan terbuka dijadikan task lanjutan B7b (timing reset password) dan B7c (rate limit per pengguna/nomor).
+- Test entry.server `apps/app` (`onError` 500) belum ada.
 - B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
@@ -102,6 +103,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-01 — Pra-merge PR #10: B7 dan F4 done. Keputusan user: dua celah terbuka B7 menjadi task lanjutan B7b + B7c (tidak menahan merge). Lint `vitest/prefer-called-with` (preset Ultracite) dicek: autofix ke `toHaveBeenCalledWith()` justru memperketat assert dan gagal keras bila argumen tidak cocok, `.not.toHaveBeenCalled()` tetap diizinkan; config tidak diubah. qa-tester menghapus docblock `@vitest-environment node` redundan di 5 test `apps/app`. Judul PR #10 diganti (login OTP tidak lagi ada).
 - 2026-11-01 — PR #10 (Draft) dibuka. CI: `fix(repo)` `build:types` bergantung `typegen` (race di checkout bersih). Review keamanan subagent (komentar PR): 3 temuan nyata + 1 low. Keputusan user: login OTP dimatikan (telepon hanya tambahan akun). Q9 repro → B7a + F4a diperbaiki. `e2e` tetap merah sampai Q3.
 - 2026-11-01 — B7 dan F4 ke review di `feat/b7-f4-phone-app` (belum ada PR). Perbaikan B7 (`fix(auth)`): OTP dikirim sinkron tanpa `backgroundTasks`, sehingga error Twilio menjadi 4xx berkode domain / 502 `OTP_DELIVERY_FAILED`; nomor tak terdaftar tidak dikirimi OTP dan responsnya identik. Q8 done (test phone, env, auth). Catatan lanjutan selesai: host resmi bersama di `@trush/core`, `ErrorPage` di design-system. PR batch menunggu Q2b.
 - 2026-11-01 — Q2b done (`test(app)`): 163 test `apps/app` (guard sesi, `getSafeRedirect`, action auth, api-client, security headers, form), tanpa bug. Batch `feat/b7-f4-phone-app` siap PR.
