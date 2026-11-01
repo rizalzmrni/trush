@@ -1,6 +1,3 @@
-// @vitest-environment node
-// Action berjalan di Worker; happy-dom memfilter header terlarang browser
-// (`cookie`, `origin`, `set-cookie`) sehingga tidak mewakili runtime.
 import { CAPTCHA_HEADER } from "@trush/auth/client";
 import { describe, expect, it } from "vitest";
 

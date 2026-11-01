@@ -1,6 +1,3 @@
-// @vitest-environment node
-// Modul server berjalan di Worker; happy-dom memfilter header terlarang
-// browser (`cookie`, `origin`, `set-cookie`) sehingga tidak mewakili runtime.
 import { describe, expect, it } from "vitest";
 
 import {

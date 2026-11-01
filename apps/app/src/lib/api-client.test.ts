@@ -1,7 +1,4 @@
 import { describe, expect, it } from "vitest";
-// @vitest-environment node
-// Mode server berjalan di Worker; happy-dom memfilter header terlarang
-// browser (`cookie`, `origin`) sehingga tidak mewakili runtime.
 import { z } from "zod";
 
 import {

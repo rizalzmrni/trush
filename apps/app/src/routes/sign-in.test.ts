@@ -1,5 +1,3 @@
-// @vitest-environment node
-// Loader berjalan di Worker; happy-dom memfilter header `cookie`.
 import { describe, expect, it } from "vitest";
 
 import {
