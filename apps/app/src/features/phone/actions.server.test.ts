@@ -27,11 +27,13 @@ const SESSION_SET_COOKIE =
 const OTHER_SET_COOKIE =
   "better-auth.dont_remember=palsu; Path=/; HttpOnly; Secure";
 const FALLBACK = "Terjadi kesalahan. Coba lagi beberapa saat lagi.";
+const CURRENT_PASSWORD = "kata-sandi-saat-ini-palsu-9";
 
 const SEND_FIELDS = {
   [INTENT_FIELD]: PHONE_INTENTS.send,
   [TURNSTILE_FIELD]: CAPTCHA,
   channel: "whatsapp",
+  currentPassword: CURRENT_PASSWORD,
   phoneNumber: LOCAL,
 };
 const RESEND_FIELDS = {
@@ -98,6 +100,7 @@ describe("phoneAction: kirim kode (send-otp)", () => {
       cookie: SESSION_COOKIE,
     });
     expect(JSON.parse(request?.body ?? "null")).toStrictEqual({
+      currentPassword: CURRENT_PASSWORD,
       phoneNumber: LOCAL,
     });
     expect(request?.body).not.toContain(CAPTCHA);
@@ -508,5 +511,169 @@ describe("phoneAction: intent", () => {
       step: "send",
       values: {},
     });
+  });
+});
+
+describe("phoneAction: kata sandi saat ini (step-up B11)", () => {
+  const GRANT_MISSING =
+    "Waktu verifikasi sudah habis. Minta kode lagi dengan kata sandi saat ini.";
+
+  it("kata sandi kosong → body tanpa currentPassword (server membalas 403)", async () => {
+    const { api } = await run({ ...SEND_FIELDS, currentPassword: "" });
+
+    expect(JSON.parse(api.requests[0]?.body ?? "null")).toStrictEqual({
+      phoneNumber: LOCAL,
+    });
+  });
+
+  it("kirim ulang meneruskan currentPassword di body, bukan header", async () => {
+    const { api } = await run(RESEND_FIELDS);
+    const [request] = api.requests;
+
+    expect(JSON.parse(request?.body ?? "null")).toStrictEqual({
+      currentPassword: CURRENT_PASSWORD,
+      phoneNumber: E164,
+    });
+    expect(JSON.stringify([...(request?.headers ?? [])])).not.toContain(
+      CURRENT_PASSWORD
+    );
+  });
+
+  it("verify tidak pernah mengirim kata sandi", async () => {
+    const { api } = await run({
+      ...VERIFY_FIELDS,
+      currentPassword: CURRENT_PASSWORD,
+    });
+
+    expect(api.requests[0]?.body).not.toContain(CURRENT_PASSWORD);
+  });
+
+  it.each([
+    [400, "INVALID_PASSWORD", "Kata sandi saat ini salah."],
+    [
+      403,
+      "PASSWORD_REQUIRED",
+      "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor.",
+    ],
+  ])(
+    "send: api %i %s → error di field kata sandi, status sama",
+    async (status, code, message) => {
+      const { result } = await run(SEND_FIELDS, () => authError(status, code));
+
+      expect(statusOf(result)).toBe(status);
+      expect(result.data).toStrictEqual({
+        fieldErrors: { currentPassword: message },
+        step: "send",
+        values: { channel: "whatsapp", phoneNumber: LOCAL },
+      });
+    }
+  );
+
+  it.each([
+    [400, "INVALID_PASSWORD", "Kata sandi saat ini salah."],
+    [
+      403,
+      "PASSWORD_REQUIRED",
+      "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor.",
+    ],
+  ])(
+    "kirim ulang: api %i %s → tetap di verify, error di field kata sandi",
+    async (status, code, message) => {
+      const { result } = await run(RESEND_FIELDS, () =>
+        authError(status, code)
+      );
+
+      expect(statusOf(result)).toBe(status);
+      expect(result.data).toMatchObject({
+        channel: "sms",
+        fieldErrors: { currentPassword: message },
+        phoneNumber: E164,
+        step: "verify",
+      });
+      expect(result.data.formError).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ["send", SEND_FIELDS, "send"],
+    ["kirim ulang", RESEND_FIELDS, "verify"],
+  ] as const)(
+    "%s: 429 PASSWORD_ATTEMPTS_LIMITED → pesan percobaan kata sandi",
+    async (_label, fields, step) => {
+      const { result } = await run(fields, () =>
+        authError(429, "PASSWORD_ATTEMPTS_LIMITED", { "retry-after": "3600" })
+      );
+
+      expect(statusOf(result)).toBe(429);
+      expect(result.data).toMatchObject({
+        formError:
+          "Terlalu banyak percobaan kata sandi. Coba lagi dalam 1 jam.",
+        step,
+      });
+    }
+  );
+
+  it("429 PASSWORD_ATTEMPTS_LIMITED tanpa Retry-After → pesan tunggu umum", async () => {
+    const { result } = await run(SEND_FIELDS, () =>
+      authError(429, "PASSWORD_ATTEMPTS_LIMITED")
+    );
+
+    expect(result.data).toMatchObject({
+      formError:
+        "Terlalu banyak percobaan kata sandi. Tunggu sebentar lalu coba lagi.",
+    });
+  });
+
+  it("verify 403 PASSWORD_REQUIRED (grant habis) → kembali ke langkah send", async () => {
+    const { result } = await run({ ...VERIFY_FIELDS, channel: "sms" }, () =>
+      authError(403, "PASSWORD_REQUIRED")
+    );
+
+    expect(statusOf(result)).toBe(403);
+    expect(result.data).toStrictEqual({
+      formError: GRANT_MISSING,
+      step: "send",
+      values: { channel: "sms", phoneNumber: E164 },
+    });
+  });
+
+  it("kata sandi 128 karakter diterima, 129 ditolak tanpa memanggil api", async () => {
+    const accepted = await run({
+      ...SEND_FIELDS,
+      currentPassword: "a".repeat(128),
+    });
+    const rejected = await run({
+      ...SEND_FIELDS,
+      currentPassword: "a".repeat(129),
+    });
+
+    expect(accepted.api.requests).toHaveLength(1);
+    expect(rejected.api.requests).toHaveLength(0);
+    expect(statusOf(rejected.result)).toBe(400);
+    expect(rejected.result.data.fieldErrors).toStrictEqual({
+      currentPassword: "Kata sandi maksimal 128 karakter.",
+    });
+  });
+
+  it.each([
+    ["send gagal validasi", { [TURNSTILE_FIELD]: "" }, undefined],
+    ["send password salah", {}, () => authError(400, "INVALID_PASSWORD")],
+    ["send kuota", {}, () => authError(429, "PASSWORD_ATTEMPTS_LIMITED")],
+    ["send sukses", {}, undefined],
+  ])(
+    "kata sandi tidak pernah dikembalikan ke halaman (%s)",
+    async (_label, override, handler) => {
+      const { result } = await run({ ...SEND_FIELDS, ...override }, handler);
+
+      expect(JSON.stringify(result.data)).not.toContain(CURRENT_PASSWORD);
+    }
+  );
+
+  it("kata sandi tidak dikembalikan dari kirim ulang yang gagal", async () => {
+    const { result } = await run(RESEND_FIELDS, () =>
+      authError(400, "INVALID_PASSWORD")
+    );
+
+    expect(JSON.stringify(result.data)).not.toContain(CURRENT_PASSWORD);
   });
 });

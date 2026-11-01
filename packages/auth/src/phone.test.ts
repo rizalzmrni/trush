@@ -142,7 +142,13 @@ const sendOtp = (
   phoneNumber: string,
   options: Omit<PostOptions, "body"> = {}
 ) =>
-  postTo(auth, "/phone-number/send-otp", { ...options, body: { phoneNumber } });
+  postTo(auth, "/phone-number/send-otp", {
+    ...options,
+    // Step-up (B11): setiap send-otp dengan sesi wajib password saat ini.
+    body: options.cookie
+      ? { currentPassword: PASSWORD, phoneNumber }
+      : { phoneNumber },
+  });
 
 const OTHER_ID = "+6281299998888";
 const HTTP_BAD_REQUEST = 400;
@@ -432,7 +438,13 @@ describe("plugin phoneNumber", () => {
 
     const replay = await postTo(auth, "/phone-number/verify", { body, cookie });
 
-    expect(replay.status).toBe(400);
+    // Setelah verify pertama akun sudah punya nomor terverifikasi; replay tanpa
+    // grant step-up (B11) ditolak sebelum kode diperiksa.
+    expect(replay.status).toBe(403);
+    await expect(replay.json()).resolves.toMatchObject({
+      code: "PASSWORD_REQUIRED",
+    });
+    expect(setsSessionCookie(replay)).toBeFalsy();
   });
 
   it("verify updatePhoneNumber tanpa sesi → 401", async () => {

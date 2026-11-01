@@ -5,6 +5,7 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PHONE_OTP_LENGTH,
+  PHONE_STEP_UP_ERROR_CODES,
   phoneOtpChannelSchema,
   sendPhoneOtpInputSchema,
   signInEmailInputSchema,
@@ -226,5 +227,59 @@ describe("skema VerifyPhoneOtpInput", () => {
     expect(
       verifyPhoneOtpInputSchema.safeParse({ code: "123456" }).success
     ).toBeFalsy();
+  });
+});
+
+const acceptsCurrentPasswordOf = (length: number): boolean =>
+  sendPhoneOtpInputSchema.safeParse({
+    currentPassword: "a".repeat(length),
+    phoneNumber: PHONE,
+  }).success;
+
+describe("currentPassword di SendPhoneOtpInput (step-up B11)", () => {
+  it("opsional di skema (wajibnya ditegakkan server)", () => {
+    expect(
+      sendPhoneOtpInputSchema.parse({ phoneNumber: PHONE })
+    ).not.toHaveProperty("currentPassword");
+  });
+
+  it("diteruskan apa adanya, tanpa trim", () => {
+    expect(
+      sendPhoneOtpInputSchema.parse({
+        currentPassword: " sandi dengan spasi ",
+        phoneNumber: PHONE,
+      }).currentPassword
+    ).toBe(" sandi dengan spasi ");
+  });
+
+  it("string kosong lolos skema (server memperlakukannya sebagai tidak ada)", () => {
+    expect(
+      sendPhoneOtpInputSchema.safeParse({
+        currentPassword: "",
+        phoneNumber: PHONE,
+      }).success
+    ).toBeTruthy();
+  });
+
+  it("panjang maksimal = PASSWORD_MAX_LENGTH", () => {
+    expect(acceptsCurrentPasswordOf(PASSWORD_MAX_LENGTH)).toBeTruthy();
+    expect(acceptsCurrentPasswordOf(PASSWORD_MAX_LENGTH + 1)).toBeFalsy();
+  });
+
+  it("menolak currentPassword bukan string", () => {
+    expect(
+      sendPhoneOtpInputSchema.safeParse({
+        currentPassword: 12_345_678,
+        phoneNumber: PHONE,
+      }).success
+    ).toBeFalsy();
+  });
+
+  it("kode error step-up stabil (kontrak app)", () => {
+    expect(PHONE_STEP_UP_ERROR_CODES).toStrictEqual({
+      invalidPassword: "INVALID_PASSWORD",
+      passwordAttemptsLimited: "PASSWORD_ATTEMPTS_LIMITED",
+      passwordRequired: "PASSWORD_REQUIRED",
+    });
   });
 });

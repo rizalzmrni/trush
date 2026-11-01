@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { createRoutesStub } from "react-router";
 import { describe, expect, it } from "vitest";
 
@@ -19,6 +20,7 @@ installFakeTurnstile();
 const SITE_KEY = TEST_ENV.VITE_TURNSTILE_SITE_KEY;
 const E164 = "+6281234567890";
 const LOCAL = "0812-3456-7890";
+const CURRENT_PASSWORD = "kata-sandi-palsu-1";
 
 const VERIFY_RESULT: VerifyStepResult = {
   channel: "whatsapp",
@@ -220,6 +222,10 @@ describe("PhoneSettings: langkah kirim kode", () => {
     const { submitted } = renderWithPendingAction();
 
     await user.type(await screen.findByLabelText("Nomor telepon"), LOCAL);
+    await user.type(
+      screen.getByLabelText("Kata sandi saat ini"),
+      CURRENT_PASSWORD
+    );
     await user.click(screen.getByRole("button", { name: "Kirim kode" }));
 
     const busy = await screen.findByRole("button", { name: "Mengirim kode…" });
@@ -329,8 +335,12 @@ describe("PhoneSettings: langkah verifikasi", () => {
     const user = userEvent.setup();
     const { submitted } = renderWithPendingAction(VERIFY_RESULT);
 
+    await user.type(
+      await screen.findByLabelText("Kata sandi saat ini"),
+      CURRENT_PASSWORD
+    );
     await user.click(
-      await screen.findByRole("button", { name: "Kirim ulang lewat SMS" })
+      screen.getByRole("button", { name: "Kirim ulang lewat SMS" })
     );
 
     await expect(
@@ -341,5 +351,170 @@ describe("PhoneSettings: langkah verifikasi", () => {
     ).toMatchObject({ disabled: false });
     expect(submitted[0]?.get(INTENT_FIELD)).toBe(PHONE_INTENTS.resend);
     expect(submitted[0]?.get("channel")).toBe("sms");
+  });
+});
+
+const PASSWORD_LABEL = "Kata sandi saat ini";
+const SEND_FAILED: PhoneActionResult = {
+  formError: "Kode gagal dikirim. Coba lagi beberapa saat lagi.",
+  step: "send",
+  values: { channel: "whatsapp", phoneNumber: LOCAL },
+};
+const SEND_WRONG_PASSWORD: PhoneActionResult = {
+  fieldErrors: { currentPassword: "Kata sandi saat ini salah." },
+  step: "send",
+  values: { channel: "whatsapp", phoneNumber: LOCAL },
+};
+
+/** Hasil action berganti tanpa remount (seperti submit gagal berikutnya). */
+const ResultSwitcher = () => {
+  const [result, setResult] = useState<PhoneActionResult>(SEND_FAILED);
+  return (
+    <>
+      <button onClick={() => setResult(SEND_WRONG_PASSWORD)} type="button">
+        Hasil baru
+      </button>
+      <PhoneSettings
+        phoneNumber={null}
+        phoneNumberVerified={false}
+        result={result}
+        turnstileSiteKey={SITE_KEY}
+      />
+    </>
+  );
+};
+
+describe("PhoneSettings: kata sandi saat ini (step-up)", () => {
+  it.each([
+    ["tanpa nomor", { phoneNumber: null, phoneNumberVerified: false }],
+    ["nomor terverifikasi", { phoneNumber: E164, phoneNumberVerified: true }],
+  ])(
+    "form kirim kode %s memuat field kata sandi wajib yang kosong",
+    async (_label, props) => {
+      renderSettings(props);
+
+      const password = await screen.findByLabelText(PASSWORD_LABEL);
+      expect(password).toMatchObject({
+        autocomplete: "current-password",
+        name: "currentPassword",
+        required: true,
+        type: "password",
+        value: "",
+      });
+      expect(fieldMessage(password)).toContain(
+        "Untuk memastikan perubahan nomor dilakukan oleh kamu."
+      );
+    }
+  );
+
+  it("deskripsi kartu kirim kode menyebut konfirmasi kata sandi", async () => {
+    renderSettings();
+
+    await expect(
+      screen.findByText(
+        "Konfirmasi dengan kata sandi saat ini, lalu kami kirim kode 6 digit untuk memastikan nomor ini milikmu."
+      )
+    ).resolves.toBeTruthy();
+  });
+
+  it("langkah verifikasi: field kata sandi hanya di form kirim ulang", async () => {
+    const { container } = renderSettings({ result: VERIFY_RESULT });
+
+    await screen.findByLabelText("Kode verifikasi");
+    const [verifyForm, resendForm] = [...container.querySelectorAll("form")];
+    expect(screen.getAllByLabelText(PASSWORD_LABEL)).toHaveLength(1);
+    expect(
+      verifyForm?.querySelector('input[name="currentPassword"]')
+    ).toBeNull();
+    expect(
+      resendForm?.querySelector('input[name="currentPassword"]')
+    ).toMatchObject({ required: true, type: "password" });
+  });
+
+  it("error kata sandi di langkah kirim tampil di field", async () => {
+    renderSettings({ result: SEND_WRONG_PASSWORD });
+
+    const password = await screen.findByLabelText(PASSWORD_LABEL);
+    expect(password.getAttribute("aria-invalid")).toBe("true");
+    expect(fieldMessage(password)).toContain("Kata sandi saat ini salah.");
+    expect(password).toHaveProperty("value", "");
+  });
+
+  it("error kata sandi di kirim ulang tampil di field form kirim ulang", async () => {
+    renderSettings({
+      result: {
+        ...VERIFY_RESULT,
+        fieldErrors: {
+          currentPassword:
+            "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor.",
+        },
+        notice: undefined,
+      },
+    });
+
+    const password = await screen.findByLabelText(PASSWORD_LABEL);
+    expect(password.getAttribute("aria-invalid")).toBe("true");
+    expect(fieldMessage(password)).toContain(
+      "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor."
+    );
+    expect(
+      screen.getByLabelText("Kode verifikasi").getAttribute("aria-invalid")
+    ).not.toBe("true");
+  });
+
+  it("hasil action baru mengosongkan kata sandi yang sudah diketik", async () => {
+    const user = userEvent.setup();
+    renderInRouter(<ResultSwitcher />);
+
+    const password = await screen.findByLabelText(PASSWORD_LABEL);
+    await user.type(password, CURRENT_PASSWORD);
+    expect(password).toHaveProperty("value", CURRENT_PASSWORD);
+    await user.click(screen.getByRole("button", { name: "Hasil baru" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(PASSWORD_LABEL)).toHaveProperty("value", "");
+    });
+  });
+
+  it("kata sandi ikut terkirim di form kirim kode", async () => {
+    const user = userEvent.setup();
+    const { submitted } = renderWithPendingAction();
+
+    await user.type(await screen.findByLabelText("Nomor telepon"), LOCAL);
+    await user.type(screen.getByLabelText(PASSWORD_LABEL), CURRENT_PASSWORD);
+    await user.click(screen.getByRole("button", { name: "Kirim kode" }));
+
+    await screen.findByRole("button", { name: "Mengirim kode…" });
+    expect(submitted[0]?.get("currentPassword")).toBe(CURRENT_PASSWORD);
+  });
+
+  it("kirim ulang tanpa kata sandi diblokir validasi browser", async () => {
+    const user = userEvent.setup();
+    const { submitted } = renderWithPendingAction(VERIFY_RESULT);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Kirim ulang lewat SMS" })
+    );
+
+    expect(submitted).toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: "Kirim ulang lewat SMS" })
+    ).toMatchObject({ disabled: false });
+  });
+
+  it("verifikasi kode tidak mengirim kata sandi meski field kirim ulang terisi", async () => {
+    const user = userEvent.setup();
+    const { submitted } = renderWithPendingAction(VERIFY_RESULT);
+
+    await user.type(
+      await screen.findByLabelText(PASSWORD_LABEL),
+      CURRENT_PASSWORD
+    );
+    await user.type(screen.getByLabelText("Kode verifikasi"), "123456");
+    await user.click(screen.getByRole("button", { name: "Verifikasi nomor" }));
+
+    await screen.findByRole("button", { name: "Memverifikasi…" });
+    expect(submitted[0]?.get(INTENT_FIELD)).toBe(PHONE_INTENTS.verify);
+    expect(submitted[0]?.get("currentPassword")).toBeNull();
   });
 });

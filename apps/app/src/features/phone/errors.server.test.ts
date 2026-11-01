@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { phoneErrorMessage, retryAfterSeconds } from "./errors.server";
+import {
+  phoneError,
+  phoneErrorMessage,
+  retryAfterSeconds,
+} from "./errors.server";
 
 const tooMany = (headers: HeadersInit): Response =>
   new Response(null, { headers, status: 429 });
@@ -101,5 +105,78 @@ describe(phoneErrorMessage, () => {
 
     expect(verify).toBe("Kode salah. Periksa lagi lalu coba kembali.");
     expect(send).toBe(verify);
+  });
+});
+
+const errorBody = (status: number, code: string, headers?: HeadersInit) =>
+  Response.json({ code, message: "pesan internal" }, { headers, status });
+
+describe(phoneError, () => {
+  it.each([
+    [400, "INVALID_PASSWORD", "Kata sandi saat ini salah."],
+    [
+      403,
+      "PASSWORD_REQUIRED",
+      "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor.",
+    ],
+  ])("%i %s → kode + pesan Indonesia", async (status, code, message) => {
+    await expect(
+      phoneError(errorBody(status, code), "send", NOW)
+    ).resolves.toStrictEqual({ code, message });
+  });
+
+  it.each(["send", "verify"] as const)(
+    "429 PASSWORD_ATTEMPTS_LIMITED (%s) → percobaan kata sandi, bukan kode",
+    async (kind) => {
+      await expect(
+        phoneError(
+          errorBody(429, "PASSWORD_ATTEMPTS_LIMITED", { "retry-after": "720" }),
+          kind,
+          NOW
+        )
+      ).resolves.toStrictEqual({
+        code: "PASSWORD_ATTEMPTS_LIMITED",
+        message:
+          "Terlalu banyak percobaan kata sandi. Coba lagi dalam 12 menit.",
+      });
+    }
+  );
+
+  it("429 PASSWORD_ATTEMPTS_LIMITED tanpa Retry-After → pesan tunggu umum", async () => {
+    const { message } = await phoneError(
+      errorBody(429, "PASSWORD_ATTEMPTS_LIMITED"),
+      "verify",
+      NOW
+    );
+
+    expect(message).toBe(
+      "Terlalu banyak percobaan kata sandi. Tunggu sebentar lalu coba lagi."
+    );
+  });
+
+  it("429 berkode lain tetap pesan kuota kode", async () => {
+    const { message } = await phoneError(
+      errorBody(429, "OTP_RATE_LIMITED"),
+      "send",
+      NOW
+    );
+
+    expect(message).toBe(
+      "Terlalu banyak permintaan kode. Tunggu sebentar lalu coba lagi."
+    );
+  });
+
+  it("body tanpa kode → hanya pesan fallback, tanpa code", async () => {
+    await expect(
+      phoneError(new Response("bukan json", { status: 500 }), "send", NOW)
+    ).resolves.toStrictEqual({
+      message: "Terjadi kesalahan. Coba lagi beberapa saat lagi.",
+    });
+  });
+
+  it("phoneErrorMessage = pesan dari phoneError", async () => {
+    await expect(
+      phoneErrorMessage(errorBody(400, "INVALID_PASSWORD"), "send", NOW)
+    ).resolves.toBe("Kata sandi saat ini salah.");
   });
 });
