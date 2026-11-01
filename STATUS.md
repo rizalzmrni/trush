@@ -8,7 +8,7 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: B7d
 - Selesai terakhir: B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: fase email (`@trush/email` + driver `memory` email untuk outbox e2e)
 - Blocker: —
@@ -22,8 +22,8 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 ### qa-tester
 
-- Sedang dikerjakan: Q3 (kerangka dulu; alur setelah B8 + F5), lalu Q10
-- Selesai terakhir: Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Sedang dikerjakan: Q11
+- Selesai terakhir: Q3, Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -64,8 +64,10 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | done (diuji Q2b, Q9) | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | done (Q2a PR #9; Q2b 163 test app, tanpa bug) | B6, F4 |
-| Q3 | Workspace `e2e/` + alur kritis (daftar, login email, tambah + verifikasi nomor telepon lewat OTP outbox, auth gate, logout); `write-dev-vars.ts` | qa-tester | wip | F4, B8, F5 |
-| Q10 | Test B7b (respons reset password telepon tidak membedakan nomor) + B7c (rate limit per pengguna/nomor) | qa-tester | todo | B7b, B7c |
+| Q3 | Workspace `e2e/` + alur kritis (daftar, login email, tambah + verifikasi nomor telepon lewat OTP outbox, auth gate, logout); `write-dev-vars.ts` | qa-tester | done (12 test Playwright; telepon lewat API karena UI belum ada → F6; run penuh lewat job CI `e2e`) | F4, B8, F5 |
+| Q10 | Test B7b (respons reset password telepon tidak membedakan nomor) + B7c (rate limit per pengguna/nomor) | qa-tester | done (auth 95 test, tanpa bug) | B7b, B7c |
+| Q11 | Test api `/__e2e/outbox`: 404 di luar E2E, kontrak, filter `?to=`, tidak di `/openapi.json` | qa-tester | wip | B8 |
+| B7d | Kuota OTP per pengguna tidak terpakai oleh nomor tak valid (hitung setelah validator; reset tetap untuk semua nomor valid) | backend-engineer | wip | B7c, Q10 |
 | Q4 | Test design-system: `lib/format` (id-ID, zona waktu) + komponen `feedback/` (role/label, keyboard, state) | qa-tester | done (PR #3) | F1 |
 | Q6 | Test `packages/seo` (meta/canonical/robots) + smoke SSR `apps/web` (render root, error boundary) | qa-tester | done (PR #4) | F3 |
 | Q7 | Test `packages/db` (`newId`, `createTestDb`, `primaryId`/`timestamps`, klien) + `@trush/env/db` | qa-tester | done (PR #8) | B4 |
@@ -89,6 +91,7 @@ Catatan lanjutan dari batch ini:
 - B7 keputusan terbuka dijadikan task lanjutan B7b (timing reset password) dan B7c (rate limit per pengguna/nomor).
 - Test entry.server `apps/app` (`onError` 500) belum ada.
 - Migrasi `0003_otp_rate_limit` belum diterapkan ke branch Neon `dev` (manusia: `bunx turbo run db:migrate --filter=@trush/db`); job e2e CI menerapkannya ke branch sementara.
+- e2e masih memanggil Turnstile siteverify dan HIBP nyata dari Worker api (kunci uji Turnstile); bila job CI tidak stabil, stub di api saat `E2E=true`.
 - Dev lokal app↔api: `CLOUDFLARE_DEV_REGISTRY_PATH` absolut yang sama (lihat `docs/react-router.md`); api e2e lewat `bun run dev:e2e` (`wrangler dev --env e2e`).
 - B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
 
