@@ -19,6 +19,8 @@ export const toMeResponse = ({ session, user }: AuthSession): MeResponse => ({
     id: user.id,
     image: user.image ?? null,
     name: user.name,
+    phoneNumber: user.phoneNumber ?? null,
+    phoneNumberVerified: user.phoneNumberVerified ?? false,
     role: user.role ?? null,
     twoFactorEnabled: user.twoFactorEnabled ?? false,
     username: user.username ?? null,
