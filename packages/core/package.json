@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./hosts": "./src/hosts.ts",
     "./schemas/*": "./src/schemas/*.ts"
   },
   "scripts": {

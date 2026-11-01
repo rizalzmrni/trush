@@ -6,11 +6,13 @@ const validEnv = {
   APP_ENV: "development",
   VITE_API_URL: "http://localhost:8787",
   VITE_APP_ENV: "development",
+  VITE_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
 } as const;
 
 const clientEnv = {
   VITE_API_URL: "https://api.example.test",
   VITE_APP_ENV: "staging",
+  VITE_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
 } as const;
 
 describe("createAppEnv di server", () => {
@@ -95,5 +97,58 @@ describe("createAppEnv di klien", () => {
     expect(() =>
       createAppEnv({ isServer: false, runtimeEnv: { VITE_APP_ENV: "staging" } })
     ).toThrow(/VITE_API_URL/u);
+  });
+
+  it("menolak VITE_TURNSTILE_SITE_KEY yang hilang", () => {
+    const { VITE_TURNSTILE_SITE_KEY: _omitted, ...rest } = clientEnv;
+
+    expect(() => createAppEnv({ isServer: false, runtimeEnv: rest })).toThrow(
+      /VITE_TURNSTILE_SITE_KEY/u
+    );
+  });
+});
+
+describe("VITE_TURNSTILE_SITE_KEY saat production", () => {
+  const productionClientEnv = {
+    VITE_API_URL: "https://api.example.com",
+    VITE_APP_ENV: "production",
+  } as const;
+
+  it.each([
+    "1x00000000000000000000AA",
+    "2x00000000000000000000AB",
+    "3x00000000000000000000FF",
+  ])("menolak kunci uji Cloudflare %s", (key) => {
+    expect(() =>
+      createAppEnv({
+        isServer: false,
+        runtimeEnv: { ...productionClientEnv, VITE_TURNSTILE_SITE_KEY: key },
+      })
+    ).toThrow(/VITE_TURNSTILE_SITE_KEY/u);
+  });
+
+  it("menerima site key non-uji", () => {
+    const env = createAppEnv({
+      isServer: false,
+      runtimeEnv: {
+        ...productionClientEnv,
+        VITE_TURNSTILE_SITE_KEY: "0x4AAAAAAAfake-site-key",
+      },
+    });
+
+    expect(env.VITE_TURNSTILE_SITE_KEY).toBe("0x4AAAAAAAfake-site-key");
+  });
+
+  it("staging boleh memakai kunci uji", () => {
+    const env = createAppEnv({
+      isServer: false,
+      runtimeEnv: {
+        ...productionClientEnv,
+        VITE_APP_ENV: "staging",
+        VITE_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+      },
+    });
+
+    expect(env.VITE_TURNSTILE_SITE_KEY).toBe("1x00000000000000000000AA");
   });
 });

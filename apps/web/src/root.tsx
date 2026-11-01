@@ -1,9 +1,15 @@
+import {
+  NotFoundPage,
+  ServerErrorPage,
+} from "@trush/design-system/components/feedback/error-page";
 import { DesignSystemProvider } from "@trush/design-system/components/provider";
+import { buttonVariants } from "@trush/design-system/components/ui/button";
 import { fontLinks, fontVariables } from "@trush/design-system/lib/font";
 import { createNoindexMeta } from "@trush/seo/meta";
 import type { ReactNode } from "react";
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
@@ -12,7 +18,6 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import { NotFound, ServerError } from "./features/errors/status-pages";
 import { getWebEnv } from "./lib/cloudflare";
 import { useNonce } from "./lib/nonce";
 
@@ -68,9 +73,15 @@ export const Layout = ({ children }: { children: ReactNode }) => {
 const App = () => <Outlet />;
 export default App;
 
+const homeAction = (
+  <Link className={buttonVariants({ size: "lg" })} to="/">
+    Kembali ke beranda
+  </Link>
+);
+
 export const ErrorBoundary = ({ error }: Route.ErrorBoundaryProps) =>
   isRouteErrorResponse(error) && error.status === NOT_FOUND ? (
-    <NotFound />
+    <NotFoundPage action={homeAction} />
   ) : (
-    <ServerError />
+    <ServerErrorPage action={homeAction} />
   );

@@ -26,6 +26,7 @@ export const BASE_ENV = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+  PHONE_DRIVER: "memory",
 } as const;
 
 /**
@@ -36,13 +37,35 @@ export const PRODUCTION_OVERRIDES = {
   APP_ENV: "production",
   BETTER_AUTH_URL: "https://api.example.com",
   TURNSTILE_SECRET_KEY: "0x4AAAAAAAfake-production-secret",
+  PHONE_DRIVER: "twilio",
+  TWILIO_ACCOUNT_SID: "ACtest",
+  TWILIO_API_KEY_SID: "SKtest",
+  TWILIO_API_KEY_SECRET: "fake-secret",
+  TWILIO_MESSAGING_SERVICE_SID: "MGtest",
+  TWILIO_WHATSAPP_OTP_CONTENT_SID: "HXtest",
 } as const;
 
-/** `BASE_ENV` untuk `APP_ENV` tertentu; production memakai penimpa di atas. */
-export const envForAppEnv = (appEnv: string): Record<string, string> =>
-  appEnv === "production"
-    ? { ...BASE_ENV, ...PRODUCTION_OVERRIDES }
-    : { ...BASE_ENV, APP_ENV: appEnv };
+/**
+ * Penimpa staging: driver telepon `memory`/`log` hanya sah di development,
+ * jadi staging memakai `twilio-test` (test credentials palsu, tanpa kirim).
+ */
+export const STAGING_OVERRIDES = {
+  APP_ENV: "staging",
+  PHONE_DRIVER: "twilio-test",
+  TWILIO_TEST_ACCOUNT_SID: "ACtest",
+  TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
+} as const;
+
+/** `BASE_ENV` untuk `APP_ENV` tertentu; staging/production memakai penimpa di atas. */
+export const envForAppEnv = (appEnv: string): Record<string, string> => {
+  if (appEnv === "production") {
+    return { ...BASE_ENV, ...PRODUCTION_OVERRIDES };
+  }
+  if (appEnv === "staging") {
+    return { ...BASE_ENV, ...STAGING_OVERRIDES };
+  }
+  return { ...BASE_ENV, APP_ENV: appEnv };
+};
 
 /**
  * ExecutionContext tiruan: menampung promise `waitUntil` agar bisa ditunggu

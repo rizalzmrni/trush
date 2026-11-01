@@ -10,7 +10,7 @@
   },
   // Development: APP_ENV dan nilai lain datang dari .dev.vars (tanpa default).
   // Secret per lingkungan (DATABASE_URL, BETTER_AUTH_SECRET,
-  // TURNSTILE_SECRET_KEY) diset manusia lewat `wrangler secret put`.
+  // TURNSTILE_SECRET_KEY, TWILIO_*) diset manusia lewat `wrangler secret put`.
   "env": {
     "staging": {
       "name": "trush-api-staging",
@@ -22,6 +22,11 @@
         "CORS_ORIGINS": "https://trush-app-staging.example.workers.dev,https://trush-web-staging.example.workers.dev",
         // L3: URL Worker api staging. AUTH_COOKIE_DOMAIN kosong di *.workers.dev.
         "BETTER_AUTH_URL": "https://trush-api-staging.example.workers.dev",
+        // Twilio sungguhan, hanya ke nomor tim (PHONE_ALLOWLIST wajib).
+        "PHONE_DRIVER": "twilio",
+        "PHONE_ALLOWED_COUNTRIES": "ID",
+        // L3: isi nomor E.164 tim, dipisah koma.
+        "PHONE_ALLOWLIST": "+6280000000000",
       },
     },
     "production": {
@@ -36,6 +41,8 @@
         // BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) lewat `wrangler secret put`.
         "BETTER_AUTH_URL": "https://api.example.com",
         "AUTH_COOKIE_DOMAIN": "example.com",
+        "PHONE_DRIVER": "twilio",
+        "PHONE_ALLOWED_COUNTRIES": "ID",
       },
     },
   },

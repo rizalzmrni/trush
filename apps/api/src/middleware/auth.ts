@@ -1,13 +1,17 @@
 import { createAuth } from "@trush/auth";
 import { createDb } from "@trush/db";
+import { getLogger } from "@trush/observability/logger";
 import { createMiddleware } from "hono/factory";
 
 import type { AppContext } from "../context";
 
+/** Logger driver `log` `@trush/phone` (development): satu-satunya tempat OTP di-log. */
+const phoneLogger = getLogger(["trush", "phone"]);
+
 /**
  * Membuat klien DB dan instance better-auth per request (tidak ada klien
- * global) untuk route di bawah `/api/*`. Tugas latar better-auth diteruskan ke
- * `waitUntil` agar tidak dibatalkan setelah respons terkirim.
+ * global) untuk route di bawah `/api/*`. Tanpa `waitUntil`: pengiriman OTP
+ * dan tugas better-auth lain ditunggu sebelum respons (lihat `createAuth`).
  */
 export const authContext = createMiddleware<AppContext>(async (c, next) => {
   const { env } = c.var;
@@ -18,7 +22,7 @@ export const authContext = createMiddleware<AppContext>(async (c, next) => {
     createAuth({
       db,
       env,
-      waitUntil: (promise) => c.executionCtx.waitUntil(promise),
+      phoneLogger,
     })
   );
   return await next();

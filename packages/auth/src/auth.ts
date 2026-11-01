@@ -2,6 +2,8 @@ import { newId } from "@trush/db";
 import type { AnyDatabase } from "@trush/db";
 import * as schema from "@trush/db/schema";
 import type { ApiEnv } from "@trush/env/api";
+import { createPhoneSender } from "@trush/phone";
+import type { PhoneEnv, PhoneLogger, PhoneSender } from "@trush/phone";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -12,9 +14,16 @@ import {
   multiSession,
   openAPI,
   organization,
+  phoneNumber,
   twoFactor,
   username,
 } from "better-auth/plugins";
+
+import {
+  createSendOtp,
+  createSendPasswordResetOtp,
+  phoneBeforeHook,
+} from "./phone";
 
 /** Path handler better-auth di `apps/api`. */
 export const AUTH_BASE_PATH = "/api/auth";
@@ -22,15 +31,19 @@ export const AUTH_BASE_PATH = "/api/auth";
 /**
  * Endpoint ber-captcha. Ditulis eksplisit karena opsi ini mengganti daftar
  * bawaan; cocokkan dengan versi better-auth setiap upgrade. Tambahkan
- * `/phone-number/send-otp` (B7) dan `/email-otp/send-verification-otp` saat
- * plugin-nya dipasang. `/sign-in/username` (plugin `username`) ikut agar
- * captcha tidak bisa dilewati lewat login username.
+ * `/email-otp/send-verification-otp` saat plugin `emailOTP` dipasang.
+ * Varian login lain (`/sign-in/username`, `/sign-in/phone-number`) dan
+ * pengirim OTP reset (`/phone-number/request-password-reset`) ikut agar
+ * captcha tidak bisa dilewati lewat jalur lain.
  */
 export const CAPTCHA_ENDPOINTS = [
   "/sign-up/email",
   "/sign-in/email",
   "/sign-in/username",
+  "/sign-in/phone-number",
   "/request-password-reset",
+  "/phone-number/send-otp",
+  "/phone-number/request-password-reset",
 ];
 
 const MINUTE_SECONDS = 60;
@@ -57,14 +70,17 @@ export type AuthEnv = Pick<
   | "BETTER_AUTH_URL"
   | "CORS_ORIGINS"
   | "TURNSTILE_SECRET_KEY"
->;
+> &
+  PhoneEnv;
 
 export interface CreateAuthOptions {
   /** Klien per request dari `createDb`; auth tidak membuka koneksi sendiri. */
   db: AnyDatabase;
   env: AuthEnv;
-  /** `executionCtx.waitUntil` agar tugas latar tidak dibatalkan runtime. */
-  waitUntil?: (promise: Promise<unknown>) => void;
+  /** Logger untuk driver `log` `@trush/phone` (development). */
+  phoneLogger?: PhoneLogger | undefined;
+  /** Pengganti pengirim OTP (test); default `createPhoneSender` dari env. */
+  phoneSender?: PhoneSender | undefined;
 }
 
 /**
@@ -72,10 +88,26 @@ export interface CreateAuthOptions {
  * request masuk). `auth.cli.ts` memanggil factory ini juga, jadi plugin untuk
  * CLI dan runtime selalu sama.
  */
-export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
-  betterAuth({
+export const createAuth = ({
+  db,
+  env,
+  phoneLogger,
+  phoneSender = createPhoneSender({ env, logger: phoneLogger }),
+}: CreateAuthOptions) => {
+  const phonePlugin = phoneNumber({
+    // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
+    // valid, negara di luar PHONE_ALLOWED_COUNTRIES, atau di luar allowlist.
+    phoneNumberValidator: (phone) => phoneSender.canSendTo(phone),
+    // Sinkron: error Twilio → 4xx kode domain / 502 OTP_DELIVERY_FAILED.
+    // Hanya untuk pengguna login (menambah nomor); login OTP mati.
+    sendOTP: createSendOtp(phoneSender),
+    sendPasswordResetOTP: createSendPasswordResetOtp(phoneSender),
+  });
+  return betterAuth({
     advanced: {
-      backgroundTasks: waitUntil ? { handler: waitUntil } : undefined,
+      // Sengaja tanpa `backgroundTasks`: plugin phoneNumber akan mengirim OTP
+      // di latar bila diisi, padahal error kirim harus sampai ke pengguna.
+      // Tugas latar lain better-auth jadi ditunggu sebelum respons.
       crossSubDomainCookies: env.AUTH_COOKIE_DOMAIN
         ? { domain: env.AUTH_COOKIE_DOMAIN, enabled: true }
         : undefined,
@@ -93,6 +125,14 @@ export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
     basePath: AUTH_BASE_PATH,
     baseURL: env.BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
+    // Nomor di body → E.164; login OTP dan phoneNumber di sign-up ditolak;
+    // nomor tak terdaftar/belum terverifikasi tidak membocorkan keberadaannya.
+    hooks: {
+      before: phoneBeforeHook({
+        errors: phonePlugin.$ERROR_CODES,
+        phoneSender,
+      }),
+    },
     emailAndPassword: {
       enabled: true,
       // WAJIB diubah ke `true` (plus `emailVerification.sendVerificationEmail`)
@@ -107,6 +147,7 @@ export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
       haveIBeenPwned(),
       lastLoginMethod(),
       multiSession(),
+      phonePlugin,
       // Referensi bawaan memuat skrip Scalar tanpa pin; skemanya digabung ke
       // `/docs` api lewat `/api/auth/open-api/generate-schema`.
       openAPI({ disableDefaultReference: true }),
@@ -125,6 +166,7 @@ export const createAuth = ({ db, env, waitUntil }: CreateAuthOptions) =>
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: env.CORS_ORIGINS,
   });
+};
 
 export type Auth = ReturnType<typeof createAuth>;
 

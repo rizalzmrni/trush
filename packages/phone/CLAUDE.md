@@ -12,7 +12,8 @@ Pengirim pesan telepon trush di atas Twilio Programmable Messaging, dipakai plug
 
 ## Aturan wajib
 
-- Driver dipilih dari env `PHONE_DRIVER`: `memory` (test, dan wajib bila `E2E=true`), `log` (development), `twilio-test` (test credentials + magic number, tanpa biaya), `twilio` (staging/produksi). Selain `twilio` ditolak bila `APP_ENV=production`.
+- Driver dipilih dari env `PHONE_DRIVER`: `memory` (test, dan wajib bila `E2E=true`), `log` (development), `twilio-test` (test credentials + magic number, tanpa biaya), `twilio` (staging/produksi). `memory` dan `log` hanya sah bila `APP_ENV=development`; selain `twilio` ditolak bila `APP_ENV=production`.
+- `@trush/auth` hanya memanggil `sendOtp` untuk pengguna login (menambah nomor) dan reset password nomor terdaftar; login OTP mati.
 - Nomor dinormalisasi ke E.164 sebelum dikirim (`08…` → `+628…`); negara di luar `PHONE_ALLOWED_COUNTRIES` (awal: `ID`) ditolak.
 - Staging memakai `PHONE_ALLOWLIST` (nomor tim); nomor lain ditolak tanpa memanggil Twilio.
 - Kanal default WhatsApp: template autentikasi `TWILIO_WHATSAPP_OTP_CONTENT_SID` lewat `ContentSid` + `ContentVariables`. SMS lewat `TWILIO_MESSAGING_SERVICE_SID`; UI menyediakan "kirim ulang via SMS".
@@ -25,6 +26,9 @@ Pengirim pesan telepon trush di atas Twilio Programmable Messaging, dipakai plug
 - Magic number `+15005550006` sebagai pengirim hanya berlaku dengan test credentials; dengan kredensial live permintaan gagal.
 - Pesan WhatsApp di luar template autentikasi yang disetujui Meta → ditolak. Isi pesan OTP diatur di template, bukan di kode.
 - Respons 201 dari Twilio berarti masuk antrean, bukan terkirim. Status akhir datang lewat status callback.
+- `sendOTP` di `@trush/auth` berjalan sinkron (tanpa `waitUntil`/`backgroundTasks`): `PhoneError` sampai ke pengguna sebagai 4xx berkode domain, atau 502 `OTP_DELIVERY_FAILED` untuk `PROVIDER_*`. Pesan ke klien diambil dari pemetaan per kode di `packages/auth/src/phone.ts`, bukan dari `error.message`, jadi kode `PhoneError` baru wajib ikut dipetakan di sana. Nomor/negara/allowlist tetap ditolak lebih awal oleh `canSendTo()` di `phoneNumberValidator`, sebelum OTP dibuat.
+- Test credentials Twilio tidak menerima API Key → driver `twilio-test` memakai `TWILIO_TEST_ACCOUNT_SID` + `TWILIO_TEST_AUTH_TOKEN` dan selalu SMS dari magic number.
+- Driver `memory` menulis ke `defaultOutbox` per isolate (dibaca `/__e2e/outbox`, B8); test sebaiknya memberi `createOutbox()` sendiri.
 
 ## Pengujian
 

@@ -1,15 +1,9 @@
+import { isOfficialHost } from "@trush/core/hosts";
 import type { WebEnv } from "@trush/env/web";
 
 const NONCE_BYTES = 16;
 // Tanpa `preload`: pendaftaran preload list adalah keputusan pemilik domain.
 const HSTS = "max-age=31536000; includeSubDomains";
-
-/**
- * Host tanpa HSTS karena bukan domain resmi (`docs/react-router.md`). Pola sama
- * dengan `NON_OFFICIAL_HOST` di apps/api (disalin, bukan diimpor lintas app).
- */
-const NON_OFFICIAL_HOST =
-  /(?:^localhost|^127\.0\.0\.1|\.workers\.dev)(?::\d+)?$/u;
 
 /** Nonce base64 acak per request untuk `script-src`. */
 export const createNonce = (): string => {
@@ -52,8 +46,11 @@ export const applySecurityHeaders = (
   headers.set("Content-Security-Policy", contentSecurityPolicy(nonce, env));
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  const isOfficialHost = !NON_OFFICIAL_HOST.test(new URL(requestUrl).host);
-  if (env.APP_ENV === "production" && isOfficialHost) {
+  // Tanpa HSTS di localhost, loopback, dan `*.workers.dev` (`@trush/core/hosts`).
+  if (
+    env.APP_ENV === "production" &&
+    isOfficialHost(new URL(requestUrl).host)
+  ) {
     headers.set("Strict-Transport-Security", HSTS);
   }
 };

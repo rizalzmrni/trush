@@ -10,6 +10,12 @@ import {
 } from "./shared";
 import type { RuntimeEnvInput } from "./shared";
 
+/**
+ * Site key uji Cloudflare Turnstile (`1x…AA` selalu lolos, `2x…AB` selalu
+ * gagal, `3x…FF` memaksa tantangan, dst.). Ditolak saat production.
+ */
+const TURNSTILE_TEST_SITE_KEY = /^[123]x0{20}[A-F]{2}$/u;
+
 export interface CreateAppEnvOptions {
   /**
    * Server (loader/action): gabungan `getCloudflare(context).env` dan
@@ -32,6 +38,8 @@ export const createAppEnv = ({
       VITE_APP_ENV: appEnvSchema,
       /** URL publik `apps/api` untuk klien browser. */
       VITE_API_URL: z.url(),
+      /** Site key widget Turnstile (publik). Development: `1x00000000000000000000AA`. */
+      VITE_TURNSTILE_SITE_KEY: z.string().min(1),
     },
     server: {
       APP_ENV: appEnvSchema,
@@ -43,6 +51,15 @@ export const createAppEnv = ({
   });
   if (isServer) {
     assertSameAppEnv(env.APP_ENV, env.VITE_APP_ENV);
+  }
+  // Dicek dari VITE_APP_ENV agar berlaku juga di klien (APP_ENV hanya server).
+  if (
+    env.VITE_APP_ENV === "production" &&
+    TURNSTILE_TEST_SITE_KEY.test(env.VITE_TURNSTILE_SITE_KEY)
+  ) {
+    throw new Error(
+      "VITE_TURNSTILE_SITE_KEY berisi kunci uji Cloudflare; dilarang saat production."
+    );
   }
   return env;
 };

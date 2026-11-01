@@ -29,6 +29,13 @@ Konfigurasi better-auth server dan klien trush: sesi, akun, plugin, middleware u
 - `auth@latest` lebih baru dari `better-auth` terpasang → skema tidak cocok. Naikkan `better-auth` ke versi yang sama sebelum generate.
 - Test dengan PGlite: `createAuth({ db })` menerima `AnyDatabase`, jadi `createTestDb().db` bisa dipakai langsung. Mock `fetch` untuk Turnstile (`challenges.cloudflare.com`) dan HIBP (`api.pwnedpasswords.com`).
 - `useSecureCookies` → nama cookie sesi `__Secure-better-auth.session_token`.
+- `phoneNumber` (`src/phone.ts`): telepon hanya tambahan akun; login OTP dan daftar lewat telepon MATI (`signUpOnVerification` sengaja tidak diisi). Hook `before`:
+  - `/sign-up/*` dengan `phoneNumber` → 400 `FIELD_NOT_ALLOWED`, apa pun nomornya (tanpa oracle nomor terpakai). `schema.user.fields` plugin hanya mengganti nama kolom, jadi `input: false` tidak bisa dipasang di sana.
+  - `/phone-number/verify` sah hanya dengan `updatePhoneNumber: true` + sesi. Tanpa itu (termasuk `disableSession`) → 400 `INVALID_OTP` sebelum kode diperiksa, jadi tidak ada sesi, tidak melewati 2FA, bukan oracle kode. Tanpa sesi → 401 sebelum kode dikonsumsi.
+  - `/sign-in/phone-number` (tetap ikut 2FA) hanya untuk nomor terverifikasi; nomor tak terdaftar/belum terverifikasi tetap meng-hash password lalu 401 identik dengan password salah. `requireVerification` plugin sengaja tidak dipakai: ia membalas `PHONE_NUMBER_NOT_VERIFIED` sebelum cek password (oracle).
+  - `body.phoneNumber` diganti E.164.
+- `/phone-number/send-otp` tanpa sesi TIDAK PERNAH mengirim; respons tetap 200 "code sent", jadi status maupun waktu tidak membedakan nomor. `/phone-number/request-password-reset` mengirim untuk nomor terdaftar saja (respons sama `{ status: true }`), tetapi waktunya masih berbeda (panggilan penyedia hanya untuk nomor terdaftar). Kanal dari header `x-otp-channel: sms` (default WhatsApp).
+- Jangan isi `advanced.backgroundTasks`: plugin `phoneNumber` lalu mengirim OTP di latar dan error Twilio tidak sampai ke pengguna. Kirim OTP sinkron; `PhoneError` → 400/422/429 berkode domain, `PROVIDER_*` → 502 `OTP_DELIVERY_FAILED`.
 
 ## Prosedur
 

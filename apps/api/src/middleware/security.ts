@@ -1,3 +1,4 @@
+import { isOfficialHost } from "@trush/core/hosts";
 import type { ApiEnv } from "@trush/env/api";
 import { cors as honoCors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
@@ -7,10 +8,6 @@ import type { AppContext } from "../context";
 import { DOCS_PATH } from "../openapi";
 
 const HSTS_VALUE = "max-age=31536000; includeSubDomains";
-
-/** Host tanpa HSTS karena bukan domain resmi (`docs/hono-api.md`). */
-const NON_OFFICIAL_HOST =
-  /(?:^localhost|^127\.0\.0\.1|\.workers\.dev)(?::\d+)?$/u;
 
 /** CDN bundel Scalar; satu-satunya host luar yang diizinkan di `/docs`. */
 const SCALAR_CDN_ORIGIN = "https://cdn.jsdelivr.net";
@@ -66,8 +63,10 @@ export const securityHeaders = createMiddleware<AppContext>(async (c, next) => {
   await headers(c, next);
   // Belum terisi bila `requestContext` gagal memvalidasi env.
   const env: ApiEnv | undefined = c.get("env");
-  const isOfficialHost = !NON_OFFICIAL_HOST.test(new URL(c.req.url).host);
-  if (env?.APP_ENV === "production" && isOfficialHost) {
+  if (
+    env?.APP_ENV === "production" &&
+    isOfficialHost(new URL(c.req.url).host)
+  ) {
     c.header("strict-transport-security", HSTS_VALUE);
   }
 });

@@ -10,6 +10,10 @@ const validEnv = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+  // `memory`/`log` hanya sah di development; staging memakai test credentials.
+  PHONE_DRIVER: "twilio-test",
+  TWILIO_TEST_ACCOUNT_SID: "ACtest",
+  TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
 } as const;
 
 const productionEnv = {
@@ -17,6 +21,12 @@ const productionEnv = {
   APP_ENV: "production",
   BETTER_AUTH_URL: "https://api.example.com",
   TURNSTILE_SECRET_KEY: "0x4AAAAAAAfake-production-secret",
+  PHONE_DRIVER: "twilio",
+  TWILIO_ACCOUNT_SID: "ACtest",
+  TWILIO_API_KEY_SID: "SKtest",
+  TWILIO_API_KEY_SECRET: "fake-secret",
+  TWILIO_MESSAGING_SERVICE_SID: "MGtest",
+  TWILIO_WHATSAPP_OTP_CONTENT_SID: "HXtest",
 } as const;
 
 describe(createApiEnv, () => {
