@@ -19,6 +19,7 @@ Diimpor oleh `apps/app/CLAUDE.md` dan `apps/web/CLAUDE.md`.
 - Di browser, klien memakai `VITE_API_URL` publik dengan `credentials: "include"`.
 - Buat satu factory di `src/lib/api-client.ts` yang menerima mode (server dengan binding + request, atau browser); jangan membuat klien di tempat lain.
 - Cek sintaks service binding & cara memanggilnya di dokumentasi resmi Cloudflare dan `@cloudflare/vite-plugin` versi terpasang.
+- Dev lokal: `wrangler dev` (api) dan `@cloudflare/vite-plugin` (app) membaca dev registry di path default yang berbeda, sehingga binding `API` membalas 503 "no local dev session". Jalankan api dan app dengan `CLOUDFLARE_DEV_REGISTRY_PATH` absolut yang sama (mis. `CLOUDFLARE_DEV_REGISTRY_PATH=$PWD/.wrangler/registry bun run dev`); turbo meneruskannya lewat `passThroughEnv` task `dev`, dan Playwright menyetelnya di `webServer`.
 
 ## Auth gate
 
