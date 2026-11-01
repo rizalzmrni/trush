@@ -1,3 +1,4 @@
+import { PHONE_OTP_LENGTH } from "@trush/core/schemas/auth";
 import { newId } from "@trush/db";
 import type { AnyDatabase } from "@trush/db";
 import * as schema from "@trush/db/schema";
@@ -24,9 +25,11 @@ import type { OtpRateLimiter } from "./otp-rate-limit";
 import {
   createSendOtp,
   createSendPasswordResetOtp,
+  phoneAfterHook,
   phoneBeforeHook,
 } from "./phone";
 import type { WaitUntil } from "./phone";
+import { PHONE_OTP_EXPIRES_SECONDS } from "./phone-step-up";
 
 /** Path handler better-auth di `apps/api`. */
 export const AUTH_BASE_PATH = "/api/auth";
@@ -58,6 +61,9 @@ const MINUTE_SECONDS = 60;
 const RATE_LIMIT_RULES = {
   "/sign-in/*": { max: 5, window: MINUTE_SECONDS },
   "/sign-up/*": { max: 3, window: MINUTE_SECONDS },
+  // Butuh `currentPassword`: tanpa aturan ketat, pemegang sesi bisa memakainya
+  // sebagai oracle brute-force password (aturan default global longgar).
+  "/change-password": { max: 5, window: MINUTE_SECONDS },
   "/request-password-reset": { max: 3, window: MINUTE_SECONDS },
   "/two-factor/*": { max: 5, window: MINUTE_SECONDS },
   // WAJIB sebelum `/phone-number/*`: better-auth memakai aturan PERTAMA yang
@@ -119,6 +125,11 @@ export const createAuth = ({
   waitUntil,
 }: CreateAuthOptions) => {
   const phonePlugin = phoneNumber({
+    // Eksplisit (bukan default better-auth) agar upgrade tidak melonggarkan:
+    // 3 tebakan per OTP, panjang = kontrak form, umur = umur grant step-up.
+    allowedAttempts: 3,
+    expiresIn: PHONE_OTP_EXPIRES_SECONDS,
+    otpLength: PHONE_OTP_LENGTH,
     // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
     // valid, negara di luar PHONE_ALLOWED_COUNTRIES, atau di luar allowlist.
     phoneNumberValidator: (phone) => phoneSender.canSendTo(phone),
@@ -156,6 +167,8 @@ export const createAuth = ({
     // Nomor di body → E.164; login OTP dan phoneNumber di sign-up ditolak;
     // nomor tak terdaftar/belum terverifikasi tidak membocorkan keberadaannya.
     hooks: {
+      // Grant step-up ganti nomor dihapus setelah verify sukses (B11).
+      after: phoneAfterHook(),
       before: phoneBeforeHook({
         errors: phonePlugin.$ERROR_CODES,
         otpRateLimiter,

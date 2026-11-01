@@ -19,6 +19,11 @@ export interface OtpRateRule {
  */
 export const OTP_RATE_RULES = {
   phone: { max: 5, windowSeconds: HOUR_SECONDS },
+  /**
+   * Percobaan step-up password ganti nomor (B11) per pengguna, benar atau
+   * salah: brute-force password lewat `send-otp` dari banyak IP tetap dibatasi.
+   */
+  stepUp: { max: 10, windowSeconds: HOUR_SECONDS },
   user: { max: 10, windowSeconds: HOUR_SECONDS },
 } as const satisfies Record<string, OtpRateRule>;
 
@@ -37,13 +42,24 @@ export const otpPhoneKey = (phoneNumber: string): string =>
 
 export const otpUserKey = (userId: string): string => `otp:user:${userId}`;
 
+export const stepUpUserKey = (userId: string): string =>
+  `step-up:user:${userId}`;
+
+/** Body error 429 (`{ code, message }`). */
+export interface RateLimitError {
+  code: string;
+  message: string;
+}
+
 export interface OtpQuotaRequest {
   key: string;
   rule: OtpRateRule;
+  /** Body 429 bila kunci ini habis; default `OTP_RATE_LIMITED`. */
+  error?: RateLimitError | undefined;
 }
 
 export interface OtpRateLimiter {
-  /** Menghitung semua kunci berurutan; 429 `OTP_RATE_LIMITED` pada yang pertama habis. */
+  /** Menghitung semua kunci berurutan; 429 (`error` kunci, default `OTP_RATE_LIMITED`) pada yang pertama habis. */
   consume: (requests: readonly OtpQuotaRequest[]) => Promise<void>;
 }
 
@@ -57,7 +73,11 @@ const existing = (column: "count" | "window_start") =>
  * selain itu bertambah. Waktu diambil dari `now()` database.
  */
 export const createOtpRateLimiter = (db: AnyDatabase): OtpRateLimiter => {
-  const consumeOne = async ({ key, rule }: OtpQuotaRequest): Promise<void> => {
+  const consumeOne = async ({
+    error = OTP_RATE_LIMITED,
+    key,
+    rule,
+  }: OtpQuotaRequest): Promise<void> => {
     const expired = sql`${existing("window_start")} <= now() - make_interval(secs => ${rule.windowSeconds})`;
     const [row] = await db
       .insert(otpRateLimit)
@@ -96,7 +116,7 @@ export const createOtpRateLimiter = (db: AnyDatabase): OtpRateLimiter => {
       1,
       Math.ceil((resetAt - Date.now()) / MS_PER_SECOND)
     );
-    throw new APIError("TOO_MANY_REQUESTS", OTP_RATE_LIMITED, {
+    throw new APIError("TOO_MANY_REQUESTS", error, {
       "Retry-After": String(retryAfter),
     });
   };

@@ -9,6 +9,12 @@ import {
 
 import { OTP_RATE_RULES, otpPhoneKey, otpUserKey } from "./otp-rate-limit";
 import type { OtpRateLimiter } from "./otp-rate-limit";
+import {
+  assertVerifyStepUp,
+  authorizeSendOtp,
+  consumeStepUpGrant,
+  withoutCurrentPassword,
+} from "./phone-step-up";
 
 /** Header pilihan kanal OTP: `sms` untuk "kirim ulang via SMS", default WhatsApp. */
 export const OTP_CHANNEL_HEADER = "x-otp-channel";
@@ -256,29 +262,37 @@ const consumeOtpQuota = async (
  * Tanpa `updatePhoneNumber: true` (jalur login OTP bawaan plugin, termasuk
  * `disableSession`) ditolak 400 `INVALID_OTP` SEBELUM kode diperiksa, jadi
  * tidak ada sesi, tidak melewati 2FA, dan bukan oracle kode benar/salah.
- * Tanpa sesi ditolak 401 sebelum kode dikonsumsi.
+ * Tanpa sesi ditolak 401 sebelum kode dikonsumsi. Mengembalikan id
+ * pengguna yang login (untuk cek grant step-up B11).
  */
 const assertVerifyAddsPhone = async (
   ctx: GenericEndpointContext,
   body: unknown,
   errors: PhoneErrorCodes
-): Promise<void> => {
+): Promise<string> => {
   if (!isRecord(body) || body.updatePhoneNumber !== true) {
     throw APIError.from("BAD_REQUEST", errors.INVALID_OTP);
   }
-  if ((await getSessionFromCtx(ctx)) === null) {
+  const session = await getSessionFromCtx(ctx);
+  if (session === null) {
     throw APIError.from("UNAUTHORIZED", NO_SESSION_ERROR);
   }
+  return session.user.id;
 };
 
 /**
  * Hook `before` (aturan lengkap di `packages/auth/CLAUDE.md`):
  * 1. `/sign-up/*` dengan `phoneNumber` ditolak 400, apa pun nomornya (tanpa
  *    oracle nomor terpakai). Nomor hanya masuk lewat verify + sesi.
- * 2. `/phone-number/verify` lihat `assertVerifyAddsPhone`.
+ * 2. `/phone-number/verify` lihat `assertVerifyAddsPhone`, lalu grant
+ *    step-up ganti nomor (`assertVerifyStepUp`, B11).
  * 3. `phoneNumber` diganti E.164, jadi OTP, kolom `user.phone_number`, dan
- *    pencarian login memakai satu bentuk.
- * 4. Kuota OTP per pengguna/nomor, lihat `consumeOtpQuota`.
+ *    pencarian login memakai satu bentuk. `currentPassword` dibuang dari
+ *    body `/phone-number/*` (tidak sampai ke plugin). Bukan path lain:
+ *    `/change-password` memakai field bernama sama.
+ * 4. `/phone-number/send-otp`: step-up password ganti nomor
+ *    (`authorizeSendOtp`, B11) sebelum kuota OTP per pengguna/nomor
+ *    (`consumeOtpQuota`).
  * 5. `/sign-in/phone-number` untuk nomor tak terdaftar atau belum
  *    terverifikasi: password tetap di-hash (waktu setara) lalu 401 yang sama
  *    persis dengan password salah.
@@ -300,14 +314,27 @@ export const phoneBeforeHook = ({
       }
       return undefined;
     }
-    if (ctx.path === "/phone-number/verify") {
-      await assertVerifyAddsPhone(ctx, body, errors);
-    }
+    const isPhonePath = ctx.path.startsWith("/phone-number/");
+    const verifyUserId =
+      ctx.path === "/phone-number/verify"
+        ? await assertVerifyAddsPhone(ctx, body, errors)
+        : undefined;
     if (!hasPhoneNumber(body)) {
-      return undefined;
+      return isPhonePath && isRecord(body)
+        ? { context: { body: withoutCurrentPassword(body) } }
+        : undefined;
     }
     const normalized = phoneSender.normalize(body.phoneNumber);
     const phoneNumber = normalized ?? body.phoneNumber;
+    if (verifyUserId !== undefined) {
+      await assertVerifyStepUp(ctx, verifyUserId, phoneNumber);
+    }
+    if (ctx.path === "/phone-number/send-otp") {
+      await authorizeSendOtp(ctx, {
+        limiter: otpRateLimiter,
+        phoneNumber: normalized,
+      });
+    }
     if (otpRateLimiter) {
       await consumeOtpQuota(ctx, normalized, otpRateLimiter, phoneSender);
     }
@@ -321,5 +348,16 @@ export const phoneBeforeHook = ({
         errors.INVALID_PHONE_NUMBER_OR_PASSWORD
       );
     }
-    return { context: { body: { ...body, phoneNumber } } };
+    const forwarded = isPhonePath ? withoutCurrentPassword(body) : body;
+    return { context: { body: { ...forwarded, phoneNumber } } };
+  });
+
+/** Hook `after`: grant step-up ganti nomor sekali pakai (B11). */
+export const phoneAfterHook = () =>
+  createAuthMiddleware(async (ctx): Promise<void> => {
+    if (ctx.path === "/phone-number/verify") {
+      const returned =
+        "returned" in ctx.context ? ctx.context.returned : undefined;
+      await consumeStepUpGrant(ctx, returned);
+    }
   });
