@@ -20,3 +20,4 @@ export {
   verification,
 } from "./auth";
 export { primaryId, timestamps } from "./columns";
+export { otpRateLimit } from "./otp-rate-limit";
