@@ -26,7 +26,7 @@ const PHONE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   OTP_EXPIRED: "Kode sudah kedaluwarsa. Minta kode baru.",
   OTP_NOT_FOUND: "Kode tidak ditemukan. Minta kode baru.",
   [PHONE_STEP_UP_ERROR_CODES.passwordRequired]:
-    "Masukkan kata sandi saat ini untuk mengganti nomor.",
+    "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor.",
   PHONE_NUMBER_EXIST: "Nomor ini sudah dipakai akun lain.",
   RECIPIENT_UNREACHABLE:
     "Kode tidak dapat dikirim ke nomor ini lewat cara yang dipilih. Coba cara lain.",
