@@ -8,16 +8,16 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 
 ### backend-engineer
 
-- Sedang dikerjakan: B8, lalu B7b, B7c (batch `feat/b8-q3-e2e`)
-- Selesai terakhir: B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Sedang dikerjakan: —
+- Selesai terakhir: B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: fase email (`@trush/email` + driver `memory` email untuk outbox e2e)
 - Blocker: —
 
 ### frontend-engineer
 
-- Sedang dikerjakan: F5 (blok `env.e2e` app + web)
-- Selesai terakhir: F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: fase berikutnya belum dipecah
+- Sedang dikerjakan: —
+- Selesai terakhir: F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
+- Berikutnya: F6 (UI telepon)
 - Blocker: —
 
 ### qa-tester
@@ -47,10 +47,11 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | B6 | `packages/auth` (plugin sesuai daftar izin, termasuk `captcha`) + `/api/auth/*`, `/api/me`, `/api/me/organizations` | backend-engineer | done (PR #9; tanpa `phoneNumber`→B7, `emailOTP`/`polar`→fase email/payments; verifikasi email belum wajib) | B4, B5 |
 | B7 | `packages/phone` (driver `memory`/`log`/`twilio-test`/`twilio`) + `sendOTP` plugin `phoneNumber` + rate limit OTP | backend-engineer | done (OTP sinkron, nomor tak terdaftar tidak dikirimi OTP; rate limit `/phone-number/*` 3/menit per IP; lanjutan di B7b, B7c) | B1, B6 |
 | B7a | Perbaiki temuan review keamanan PR #10: login OTP lewat `verify` melewati 2FA (High), `phoneNumber` di sign-up tanpa OTP (Medium), driver `log`/`memory` di staging (Low) | backend-engineer | done | B7, Q9 |
-| B7b | `/phone-number/request-password-reset` tidak membedakan nomor terdaftar lewat waktu respons (samakan jalur nomor tak terdaftar, mis. kerja tiruan/penundaan konstan) + test | backend-engineer | wip | B7a |
-| B7c | Rate limit permintaan OTP per pengguna dan per nomor tujuan (bukan hanya per IP) untuk pengguna yang sudah login | backend-engineer | wip | B7a |
-| B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; `E2E=true` hanya development + wajib `PHONE_DRIVER=memory`; route `/__e2e/outbox` (OTP telepon; email menyusul fase email); blok `env.e2e` api | backend-engineer | wip | B1, B7 |
-| F5 | Blok `env.e2e` di `wrangler.jsonc` `apps/app` (binding `API` ke api lokal) dan `apps/web` + `.dev.vars.e2e` di-gitignore/terdokumentasi | frontend-engineer | wip | F4 |
+| B7b | `/phone-number/request-password-reset` tidak membedakan nomor terdaftar lewat waktu respons (samakan jalur nomor tak terdaftar, mis. kerja tiruan/penundaan konstan) + test | backend-engineer | done (`waitUntil`; error penyedia reset hanya ke log) | B7a |
+| B7c | Rate limit permintaan OTP per pengguna dan per nomor tujuan (bukan hanya per IP) untuk pengguna yang sudah login | backend-engineer | done (tabel `otp_rate_limit`, migrasi 0003; per nomor 5/jam, per pengguna 10/jam, 429 `OTP_RATE_LIMITED`) | B7a |
+| B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; `E2E=true` hanya development + wajib `PHONE_DRIVER=memory`; route `/__e2e/outbox` (OTP telepon; email menyusul fase email); blok `env.e2e` api | backend-engineer | done (`E2E`, guard `LOG_LEVEL` production, `/__e2e/outbox`, `env.e2e` api + script `dev:e2e`; Polar sandbox menyusul fase payments) | B1, B7 |
+| F5 | Blok `env.e2e` di `wrangler.jsonc` `apps/app` (binding `API` ke api lokal) dan `apps/web` + `.dev.vars.e2e` di-gitignore/terdokumentasi | frontend-engineer | done (`trush-app-e2e`/`trush-web-e2e`; VITE_* dari env proses; `CLOUDFLARE_DEV_REGISTRY_PATH` bersama) | F4 |
+| F6 | UI telepon `apps/app`: halaman pengaturan nomor, form kirim + verifikasi OTP (Turnstile, kanal SMS/WhatsApp), pesan 429 dengan `Retry-After`; e2e Q3 lalu memakai UI ini | frontend-engineer | todo | B7c |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
@@ -87,6 +88,8 @@ Catatan lanjutan dari batch ini:
 
 - B7 keputusan terbuka dijadikan task lanjutan B7b (timing reset password) dan B7c (rate limit per pengguna/nomor).
 - Test entry.server `apps/app` (`onError` 500) belum ada.
+- Migrasi `0003_otp_rate_limit` belum diterapkan ke branch Neon `dev` (manusia: `bunx turbo run db:migrate --filter=@trush/db`); job e2e CI menerapkannya ke branch sementara.
+- Dev lokal app↔api: `CLOUDFLARE_DEV_REGISTRY_PATH` absolut yang sama (lihat `docs/react-router.md`); api e2e lewat `bun run dev:e2e` (`wrangler dev --env e2e`).
 - B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
 
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
@@ -98,6 +101,7 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 | `ErrorResponse` (`@trush/core/schemas/error`): `{ error: { code, message, details? } }` | backend-engineer | `apps/api` (onError, defaultHook), klien `apps/app`/`apps/web` | done (B2) |
 | `HealthResponse` (`@trush/core/schemas/health`): `{ status: "ok" }` | backend-engineer | `apps/api` `GET /health` (B5), Q1 | done (B2) |
 | `@trush/api/client`: `hcWithType`, `Client`, `AppType` (tipe dari `dist/types`, `build:types`) | backend-engineer | `apps/app`, `apps/web` | done (B5) |
+| `E2eOutboxResponse` (`@trush/core/schemas/e2e`): `{ messages: [{ id, channel, to, code, body, createdAt }] }`, terbaru dulu; `GET`/`DELETE /__e2e/outbox?to=` | backend-engineer | `e2e/` (Q3) | done (B8) |
 
 ## Blocker aktif
 
