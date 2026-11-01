@@ -390,11 +390,15 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
     expect(valid.status).toBe(HTTP_OK);
   });
 
-  it("reset ke nomor di luar allowlist → 400 tanpa menghitung kuota (B7d)", async () => {
+  // Plugin better-auth tidak menjalankan `phoneNumberValidator` di
+  // request-password-reset: nomor di luar allowlist tetap 200 `{status:true}`
+  // (sama dengan nomor valid tak terdaftar, tanpa oracle), tetapi tidak
+  // dihitung kuota dan tidak pernah dikirimi.
+  it("reset ke nomor di luar allowlist tidak menghitung kuota maupun mengirim (B7d)", async () => {
     const auth = makeAuth({ PHONE_ALLOWLIST: [TARGET] });
     const outside = phoneAt(7);
 
-    const rejected = await statusesOf(
+    const rejected = await sequential(
       repeat(PHONE_MAX + 1, () => requestReset(auth, outside))
     );
     const rowsAfterRejected = await quotaRows();
@@ -402,11 +406,43 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
       repeat(PHONE_MAX + 1, () => requestReset(auth, TARGET))
     );
 
-    expect(rejected).toStrictEqual(
-      repeat(PHONE_MAX + 1, () => HTTP_BAD_REQUEST)
+    expect(rejected.map((response) => response.status)).not.toContain(
+      HTTP_TOO_MANY_REQUESTS
     );
     expect(rowsAfterRejected).toBe(0);
+    expect(outbox.list()).toStrictEqual([]);
     expect(allowed).toStrictEqual([
+      ...repeat(PHONE_MAX, () => HTTP_OK),
+      HTTP_TOO_MANY_REQUESTS,
+    ]);
+  });
+
+  it("reset ke nomor tidak valid → respons seragam tanpa menghitung kuota (B7d)", async () => {
+    const auth = makeAuth();
+
+    const responses = await sequential(
+      repeat(USER_MAX, (index) =>
+        requestReset(
+          auth,
+          INVALID_NUMBERS[index % INVALID_NUMBERS.length] ?? ""
+        )
+      )
+    );
+    const bodies = await Promise.all(
+      responses.map(async (response) => ({
+        body: await response.text(),
+        status: response.status,
+      }))
+    );
+    const rowsAfterInvalid = await quotaRows();
+    const valid = await statusesOf(
+      repeat(PHONE_MAX + 1, () => requestReset(auth, TARGET))
+    );
+
+    expect(new Set(bodies.map((entry) => JSON.stringify(entry))).size).toBe(1);
+    expect(bodies[0]?.status).toBe(HTTP_BAD_REQUEST);
+    expect(rowsAfterInvalid).toBe(0);
+    expect(valid).toStrictEqual([
       ...repeat(PHONE_MAX, () => HTTP_OK),
       HTTP_TOO_MANY_REQUESTS,
     ]);
