@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "dev": "email dev --dir ./emails --port 3030"
+  },
   "dependencies": {
     "@trush/email": "workspace:*",
     "react": "catalog:react",
