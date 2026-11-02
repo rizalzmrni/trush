@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_BASE_PATH, CAPTCHA_ENDPOINTS, createAuth } from "./auth";
 import type { AuthEnv } from "./auth";
+import { TEST_EMAIL_ENV, markEmailVerified } from "./testing";
 
 // Semua nilai palsu. Turnstile memakai kunci uji Cloudflare.
 const PASS_SECRET = "1x0000000000000000000000000000000AA";
@@ -21,6 +22,7 @@ const SIGN_IN_LIMIT = 5;
 const HTTP_TOO_MANY_REQUESTS = 429;
 
 const BASE_ENV: AuthEnv = {
+  ...TEST_EMAIL_ENV,
   APP_ENV: "development",
   AUTH_COOKIE_DOMAIN: undefined,
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
@@ -151,10 +153,27 @@ const nextEmail = (): string => {
   return `pengguna-${emailCounter}@example.test`;
 };
 
-const signUp = (auth: TestAuth, email = nextEmail(), password = PASSWORD) =>
+const signUpRequest = (auth: TestAuth, email: string, password: string) =>
   post(auth, "/sign-up/email", {
     body: { email, name: "Pengguna Uji", password },
   });
+
+/**
+ * Daftar, tandai email terverifikasi, lalu login (sejak B15 sign-up tidak
+ * memberi sesi). Sign-up yang ditolak dikembalikan apa adanya.
+ */
+const signUp = async (
+  auth: TestAuth,
+  email = nextEmail(),
+  password = PASSWORD
+): Promise<Response> => {
+  const response = await signUpRequest(auth, email, password);
+  if (!response.ok) {
+    return response;
+  }
+  await markEmailVerified(auth, email);
+  return post(auth, "/sign-in/email", { body: { email, password } });
+};
 
 const getSession = (auth: TestAuth, cookie: string) =>
   auth.api.getSession({ headers: new Headers({ cookie }) });
@@ -191,7 +210,7 @@ describe(createAuth, () => {
   });
 
   describe("sesi", () => {
-    it("sign-up membuat user dan sesi yang tervalidasi lewat cookie", async () => {
+    it("sign-up + email terverifikasi → sesi tervalidasi lewat cookie", async () => {
       const auth = makeAuth();
       const email = nextEmail();
 
@@ -314,13 +333,14 @@ describe(createAuth, () => {
   });
 
   describe("plugin aktif", () => {
-    it("persis daftar izin (B6 + phone-number B7)", () => {
+    it("persis daftar izin (B6 + phone-number B7 + email-otp B15)", () => {
       const ids = (makeAuth().options.plugins ?? []).map((plugin) => plugin.id);
 
       expect(ids.toSorted()).toStrictEqual(
         [
           "admin",
           "captcha",
+          "email-otp",
           "have-i-been-pwned",
           "last-login-method",
           "multi-session",

@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_BASE_PATH, createAuth } from "./auth";
 import type { AuthEnv } from "./auth";
 import { OTP_CHANNEL_HEADER, otpChannelFrom } from "./phone";
+import { TEST_EMAIL_ENV, markEmailVerified } from "./testing";
 
 // Semua nilai palsu; pengirim telepon driver memory, fetch keluar di-mock.
 const ORIGIN = "http://localhost:5173";
@@ -26,6 +27,7 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const SIX_DIGITS = /^\d{6}$/u;
 
 const BASE_ENV: AuthEnv = {
+  ...TEST_EMAIL_ENV,
   APP_ENV: "development",
   AUTH_COOKIE_DOMAIN: undefined,
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
@@ -164,13 +166,22 @@ const setsSessionCookie = (response: Response): boolean =>
 const isClientError = (status: number): boolean =>
   status >= HTTP_BAD_REQUEST && status < HTTP_SERVER_ERROR;
 
-/** Daftar lewat email; mengembalikan cookie sesi. */
-const signUp = async (auth: TestAuth): Promise<string> =>
-  sessionCookieOf(
-    await postTo(auth, "/sign-up/email", {
-      body: { email: nextEmail(), name: "Pengguna Uji", password: PASSWORD },
+/**
+ * Daftar, tandai email terverifikasi (sejak B15 sign-up tidak memberi sesi),
+ * lalu login; mengembalikan cookie sesi.
+ */
+const signUp = async (auth: TestAuth): Promise<string> => {
+  const email = nextEmail();
+  await postTo(auth, "/sign-up/email", {
+    body: { email, name: "Pengguna Uji", password: PASSWORD },
+  });
+  await markEmailVerified(auth, email);
+  return sessionCookieOf(
+    await postTo(auth, "/sign-in/email", {
+      body: { email, password: PASSWORD },
     })
   );
+};
 
 /** Sign-up email yang menyelipkan `phoneNumber` di body (tanpa OTP). */
 const signUpClaimingPhone = (auth: TestAuth, phoneNumber: string) =>

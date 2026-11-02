@@ -11,6 +11,7 @@ import {
   OTP_RATE_LIMITED,
   OTP_RATE_RULES,
 } from "./otp-rate-limit";
+import { TEST_EMAIL_ENV, markEmailVerified } from "./testing";
 
 // Semua nilai palsu; pengirim telepon driver memory, fetch keluar di-mock.
 const ORIGIN = "http://localhost:5173";
@@ -32,6 +33,7 @@ const SEND_OTP = "/phone-number/send-otp";
 const RESET = "/phone-number/request-password-reset";
 
 const BASE_ENV: AuthEnv = {
+  ...TEST_EMAIL_ENV,
   APP_ENV: "development",
   AUTH_COOKIE_DOMAIN: undefined,
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
@@ -111,11 +113,20 @@ const post = (
   );
 };
 
-/** Daftar lewat email; mengembalikan cookie sesi. */
+/**
+ * Daftar lewat email, tandai email terverifikasi (sejak B15 sign-up tidak
+ * memberi sesi), lalu login; mengembalikan cookie sesi.
+ */
 const signUp = async (auth: TestAuth): Promise<string> => {
-  const response = await post(auth, "/sign-up/email", {
-    email: nextEmail(),
+  const email = nextEmail();
+  await post(auth, "/sign-up/email", {
+    email,
     name: "Pengguna Kuota",
+    password: PASSWORD,
+  });
+  await markEmailVerified(auth, email);
+  const response = await post(auth, "/sign-in/email", {
+    email,
     password: PASSWORD,
   });
   const raw = response.headers
