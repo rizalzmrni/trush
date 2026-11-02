@@ -1,5 +1,7 @@
-import { Heading, Text } from "@react-email/components";
+import { Heading } from "@react-email/heading";
+import { Text } from "@react-email/text";
 
+import { plainText } from "../render";
 import { Layout, styles } from "./layout";
 
 export interface PhoneNumberChangedEmailProps {
@@ -11,6 +13,18 @@ export interface PhoneNumberChangedEmailProps {
 
 export const phoneNumberChangedSubject = (): string =>
   "Nomor telepon akun trush diubah";
+
+/** Versi teks polos (isi sama dengan HTML). */
+export const phoneNumberChangedText = ({
+  changedAt,
+  maskedPhoneNumber,
+}: PhoneNumberChangedEmailProps): string =>
+  plainText([
+    "Nomor telepon diubah",
+    `Nomor telepon akun trush Anda diubah menjadi ${maskedPhoneNumber} pada ${changedAt}. Demi keamanan, semua sesi lain telah dikeluarkan.`,
+    "Bukan Anda?",
+    "Segera atur ulang kata sandi lewat halaman “Lupa kata sandi” di trush, lalu periksa nomor telepon di pengaturan akun.",
+  ]);
 
 /** Notifikasi keamanan setelah nomor telepon akun ditambah atau diganti. */
 export const PhoneNumberChangedEmail = ({

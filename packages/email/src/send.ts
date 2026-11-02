@@ -1,21 +1,24 @@
-import { render } from "@react-email/render";
 import { createElement } from "react";
 import type { ReactElement } from "react";
 
+import { renderHtml } from "./render";
 import type { EmailSender } from "./sender";
 import {
   PasswordResetEmail,
   passwordResetSubject,
+  passwordResetText,
 } from "./templates/password-reset";
 import type { PasswordResetEmailProps } from "./templates/password-reset";
 import {
   PhoneNumberChangedEmail,
   phoneNumberChangedSubject,
+  phoneNumberChangedText,
 } from "./templates/phone-number-changed";
 import type { PhoneNumberChangedEmailProps } from "./templates/phone-number-changed";
 import {
   VerificationOtpEmail,
   verificationOtpSubject,
+  verificationOtpText,
 } from "./templates/verification-otp";
 import type { VerificationOtpEmailProps } from "./templates/verification-otp";
 
@@ -43,13 +46,10 @@ interface RenderedEmail {
   text: string;
 }
 
-const renderEmail = async (element: ReactElement): Promise<RenderedEmail> => {
-  const [html, text] = await Promise.all([
-    render(element),
-    render(element, { plainText: true }),
-  ]);
-  return { html, text };
-};
+const renderEmail = async (
+  element: ReactElement,
+  text: string
+): Promise<RenderedEmail> => ({ html: await renderHtml(element), text });
 
 export interface SendVerificationOtpInput extends VerificationOtpEmailProps {
   to: string;
@@ -65,7 +65,8 @@ export const sendVerificationOtp = async (
   { code, expiresInMinutes, to }: SendVerificationOtpInput
 ): Promise<void> => {
   const rendered = await renderEmail(
-    createElement(VerificationOtpEmail, { code, expiresInMinutes })
+    createElement(VerificationOtpEmail, { code, expiresInMinutes }),
+    verificationOtpText({ code, expiresInMinutes })
   );
   await sender.send({
     ...rendered,
@@ -90,7 +91,8 @@ export const sendPasswordReset = async (
   { expiresInMinutes, to, token, url, userId }: SendPasswordResetInput
 ): Promise<void> => {
   const rendered = await renderEmail(
-    createElement(PasswordResetEmail, { expiresInMinutes, url })
+    createElement(PasswordResetEmail, { expiresInMinutes, url }),
+    passwordResetText({ expiresInMinutes, url })
   );
   await sender.send({
     ...rendered,
@@ -128,11 +130,10 @@ export const sendPhoneNumberChanged = async (
   sender: EmailSender,
   { changedAt, maskedPhoneNumber, to, userId }: SendPhoneNumberChangedInput
 ): Promise<void> => {
+  const props = { changedAt: formatChangedAt(changedAt), maskedPhoneNumber };
   const rendered = await renderEmail(
-    createElement(PhoneNumberChangedEmail, {
-      changedAt: formatChangedAt(changedAt),
-      maskedPhoneNumber,
-    })
+    createElement(PhoneNumberChangedEmail, props),
+    phoneNumberChangedText(props)
   );
   await sender.send({
     ...rendered,

@@ -1,5 +1,9 @@
-import { Button, Heading, Link, Text } from "@react-email/components";
+import { Button } from "@react-email/button";
+import { Heading } from "@react-email/heading";
+import { Link } from "@react-email/link";
+import { Text } from "@react-email/text";
 
+import { plainText } from "../render";
 import { Layout, styles } from "./layout";
 
 export interface PasswordResetEmailProps {
@@ -10,6 +14,19 @@ export interface PasswordResetEmailProps {
 }
 
 export const passwordResetSubject = (): string => "Atur ulang kata sandi trush";
+
+/** Versi teks polos (isi sama dengan HTML, tautan utuh). */
+export const passwordResetText = ({
+  expiresInMinutes,
+  url,
+}: PasswordResetEmailProps): string =>
+  plainText([
+    "Atur ulang kata sandi",
+    "Kami menerima permintaan untuk mengatur ulang kata sandi akun trush Anda. Buka tautan berikut untuk membuat kata sandi baru:",
+    url,
+    `Tautan berlaku ${expiresInMinutes} menit dan hanya bisa dipakai sekali. Setelah kata sandi diganti, semua sesi yang sedang masuk akan keluar.`,
+    "Bila Anda tidak meminta ini, abaikan email ini; kata sandi Anda tidak berubah.",
+  ]);
 
 /** Email tautan reset password (`/request-password-reset`). */
 export const PasswordResetEmail = ({

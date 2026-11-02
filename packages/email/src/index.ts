@@ -21,12 +21,22 @@ export type {
   SendPhoneNumberChangedInput,
   SendVerificationOtpInput,
 } from "./send";
+export { plainText, renderHtml } from "./render";
 export { createEmailSender } from "./sender";
 export type { CreateEmailSenderOptions, EmailSender } from "./sender";
 export { theme } from "./theme";
-export { PasswordResetEmail } from "./templates/password-reset";
+export {
+  PasswordResetEmail,
+  passwordResetText,
+} from "./templates/password-reset";
 export type { PasswordResetEmailProps } from "./templates/password-reset";
-export { PhoneNumberChangedEmail } from "./templates/phone-number-changed";
+export {
+  PhoneNumberChangedEmail,
+  phoneNumberChangedText,
+} from "./templates/phone-number-changed";
 export type { PhoneNumberChangedEmailProps } from "./templates/phone-number-changed";
-export { VerificationOtpEmail } from "./templates/verification-otp";
+export {
+  VerificationOtpEmail,
+  verificationOtpText,
+} from "./templates/verification-otp";
 export type { VerificationOtpEmailProps } from "./templates/verification-otp";

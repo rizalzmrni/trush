@@ -12,15 +12,27 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@react-email/components": "catalog:services",
-    "@react-email/render": "catalog:services",
+    "@react-email/body": "catalog:services",
+    "@react-email/button": "catalog:services",
+    "@react-email/container": "catalog:services",
+    "@react-email/head": "catalog:services",
+    "@react-email/heading": "catalog:services",
+    "@react-email/hr": "catalog:services",
+    "@react-email/html": "catalog:services",
+    "@react-email/link": "catalog:services",
+    "@react-email/preview": "catalog:services",
+    "@react-email/section": "catalog:services",
+    "@react-email/text": "catalog:services",
     "@trush/env": "workspace:*",
     "react": "catalog:react",
+    "react-dom": "catalog:react",
     "resend": "catalog:services"
   },
   "devDependencies": {
+    "@react-email/render": "catalog:services",
     "@trush/typescript-config": "workspace:*",
     "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
     "typescript": "catalog:",
     "vitest": "catalog:test"
   }

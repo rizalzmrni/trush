@@ -1,5 +1,7 @@
-import { Heading, Text } from "@react-email/components";
+import { Heading } from "@react-email/heading";
+import { Text } from "@react-email/text";
 
+import { plainText } from "../render";
 import { Layout, styles } from "./layout";
 
 export interface VerificationOtpEmailProps {
@@ -11,6 +13,19 @@ export interface VerificationOtpEmailProps {
 
 export const verificationOtpSubject = (): string =>
   "Kode verifikasi email trush";
+
+/** Versi teks polos (isi sama dengan HTML). */
+export const verificationOtpText = ({
+  code,
+  expiresInMinutes,
+}: VerificationOtpEmailProps): string =>
+  plainText([
+    "Verifikasi email Anda",
+    "Masukkan kode berikut di trush untuk memverifikasi alamat email Anda.",
+    code,
+    `Kode berlaku ${expiresInMinutes} menit. Jangan bagikan kode ini kepada siapa pun, termasuk pihak yang mengaku dari trush.`,
+    "Bila Anda tidak mendaftar di trush, abaikan email ini.",
+  ]);
 
 /** Email kode verifikasi alamat (daftar, login sebelum verifikasi, kirim ulang). */
 export const VerificationOtpEmail = ({
