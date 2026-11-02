@@ -19,6 +19,11 @@ export interface OtpRateRule {
  */
 export const OTP_RATE_RULES = {
   /**
+   * Percobaan kode verifikasi email per alamat (B20), benar atau salah,
+   * untuk semua alamat valid: membatasi tebakan dari banyak IP.
+   */
+  emailCheck: { max: 10, windowSeconds: HOUR_SECONDS },
+  /**
    * Email terkirim per alamat (verifikasi: daftar, login sebelum verifikasi,
    * kirim ulang). Dihitung di latar saat benar-benar akan mengirim; habis →
    * email tidak dikirim tanpa error ke pengguna (sumber login/daftar).
@@ -56,7 +61,7 @@ export const otpUserKey = (userId: string): string => `otp:user:${userId}`;
 
 /** Kunci per alamat email + jenis (`verify`, `reset`, `delivery`). */
 export const emailQuotaKey = (
-  kind: "delivery" | "reset" | "verify",
+  kind: "check" | "delivery" | "reset" | "verify",
   email: string
 ): string => `email:${kind}:${email}`;
 

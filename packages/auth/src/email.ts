@@ -29,6 +29,9 @@ const SECONDS_PER_MINUTE = 60;
  * upgrade.
  */
 export const DISABLED_EMAIL_OTP_PATHS = [
+  // Endpoint inti better-auth; dengan `overrideDefaultEmailVerification` ia
+  // mengirim OTP lewat plugin tanpa cek `type`, kuota publik, maupun captcha.
+  "/send-verification-email",
   "/sign-in/email-otp",
   "/email-otp/check-verification-otp",
   "/email-otp/request-password-reset",
@@ -218,9 +221,45 @@ const assertTrustedRedirect = (
   }
 };
 
-const QUOTA_KIND_BY_PATH: Readonly<Record<string, "reset" | "verify">> = {
+type QuotaKind = "check" | "reset" | "verify";
+
+const QUOTA_KIND_BY_PATH: Readonly<Record<string, QuotaKind>> = {
   "/email-otp/send-verification-otp": "verify",
+  "/email-otp/verify-email": "check",
   "/request-password-reset": "reset",
+};
+
+const VERIFY_ATTEMPTS_LIMITED = {
+  code: "OTP_RATE_LIMITED",
+  message: "Terlalu banyak percobaan kode. Coba lagi nanti.",
+} as const;
+
+/**
+ * Kuota per alamat untuk satu jenis permintaan. `check` (percobaan kode)
+ * berlaku untuk semua alamat valid; jenis lain hanya untuk alamat yang
+ * boleh dikirimi (`canSendTo`), karena alamat lain tidak pernah dikirimi.
+ */
+const consumeEmailQuota = async (
+  limiter: OtpRateLimiter,
+  kind: QuotaKind,
+  email: string,
+  emailSender: EmailSender
+): Promise<void> => {
+  if (kind === "check") {
+    await limiter.consume([
+      {
+        error: VERIFY_ATTEMPTS_LIMITED,
+        key: emailQuotaKey(kind, email),
+        rule: OTP_RATE_RULES.emailCheck,
+      },
+    ]);
+    return;
+  }
+  if (emailSender.canSendTo(email)) {
+    await limiter.consume([
+      { key: emailQuotaKey(kind, email), rule: OTP_RATE_RULES.emailRequest },
+    ]);
+  }
 };
 
 /**
@@ -231,7 +270,12 @@ const QUOTA_KIND_BY_PATH: Readonly<Record<string, "reset" | "verify">> = {
  *    alamat terdaftar.
  * 2. Tujuan tautan reset password (`redirectTo`, juga `callbackURL` saat
  *    tautan dibuka) hanya origin `CORS_ORIGINS` (`assertTrustedRedirect`).
- * 3. Kuota permintaan per alamat untuk kirim ulang kode dan lupa password,
+ * 3. `/email-otp/verify-email`: kuota percobaan kode per alamat (B20),
+ *    dihitung untuk SETIAP percobaan alamat valid, terdaftar atau tidak,
+ *    sebelum kode diperiksa → 429 `OTP_RATE_LIMITED` identik. Sukses hanya
+ *    sekali per kode, jadi praktis setara kuota kegagalan, tanpa tulis DB
+ *    tambahan di jalur gagal (bukan oracle waktu).
+ * 4. Kuota permintaan per alamat untuk kirim ulang kode dan lupa password,
  *    dihitung untuk SEMUA alamat yang valid dan boleh dikirimi (terdaftar
  *    atau tidak), setelah captcha + rate limit IP: 429 `OTP_RATE_LIMITED`
  *    tidak membocorkan keberadaan akun. Alamat ditolak `canSendTo` tidak
@@ -261,13 +305,8 @@ export const emailBefore =
     if (email === undefined) {
       return undefined;
     }
-    if (otpRateLimiter && emailSender.canSendTo(email)) {
-      await otpRateLimiter.consume([
-        {
-          key: emailQuotaKey(kind, email),
-          rule: OTP_RATE_RULES.emailRequest,
-        },
-      ]);
+    if (otpRateLimiter) {
+      await consumeEmailQuota(otpRateLimiter, kind, email, emailSender);
     }
     return { context: { body: { ...body, email } } };
   };
@@ -278,16 +317,80 @@ const EMAIL_NOT_VERIFIED = {
   message: "Email not verified",
 } as const;
 
+/** Identifier baris OTP verifikasi email plugin (`toOTPIdentifier`). */
+const verificationOtpIdentifier = (email: string): string =>
+  `${EMAIL_VERIFICATION_OTP_TYPE}-otp-${email}`;
+
+const DECOY_BYTES = 32;
+const MS_PER_SECOND = 1000;
+
+/** Nilai acak base64url; tidak pernah sama dengan hash kode 6 digit mana pun. */
+const randomDecoyValue = (): string => {
+  const bytes = crypto.getRandomValues(new Uint8Array(DECOY_BYTES));
+  return btoa(String.fromCodePoint(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+};
+
 /**
- * Bagian email hook `after`: tidak ada sesi untuk email yang belum
- * terverifikasi, apa pun jalurnya. `/sign-in/email` dan `/sign-in/username`
- * sudah menolak sendiri; penjaga ini menutup jalur yang tidak memeriksa
- * `emailVerified` (mis. `/sign-in/phone-number`, lanjutan `/two-factor/*`).
- * Berjalan sesudah password diperiksa, jadi bukan oracle. Sesi baru dihapus
- * dan cookie-nya dibersihkan, lalu 403 `EMAIL_NOT_VERIFIED`. `/admin/*`
- * (impersonasi) dikecualikan.
+ * B21: plugin menghapus baris OTP untuk alamat tak terdaftar, sehingga
+ * verify-email untuk alamat itu selalu `INVALID_OTP`, sedangkan alamat
+ * terdaftar memberi `TOO_MANY_ATTEMPTS` pada tebakan ke-4 dan `OTP_EXPIRED`
+ * setelah 5 menit (oracle keberadaan akun). Setelah kirim kode sukses untuk
+ * alamat tak terdaftar, dibuat baris tiruan dengan identifier, bentuk nilai
+ * (`<hash>:0`), dan umur yang sama; kodenya tidak pernah ada. verify-email
+ * lalu menjalankan operasi DB yang sama dan menghasilkan urutan error yang
+ * sama. Dikerjakan di latar (`waitUntil`) agar respons dan waktu kirim tetap
+ * identik. Baris asli yang sudah ada tidak ditimpa.
  */
-export const emailAfter = async (
+const createDecoyOtp = async (
+  ctx: GenericEndpointContext,
+  options: EmailDeliveryOptions
+): Promise<void> => {
+  const { body } = ctx;
+  if (
+    ctx.path !== "/email-otp/send-verification-otp" ||
+    !isRecord(body) ||
+    typeof body.email !== "string" ||
+    body.type !== EMAIL_VERIFICATION_OTP_TYPE
+  ) {
+    return;
+  }
+  const returned = "returned" in ctx.context ? ctx.context.returned : null;
+  if (returned instanceof APIError) {
+    return;
+  }
+  const email = body.email.toLowerCase();
+  await runDetached(async () => {
+    const adapter = ctx.context.internalAdapter;
+    if ((await adapter.findUserByEmail(email)) !== null) {
+      return;
+    }
+    const identifier = verificationOtpIdentifier(email);
+    if ((await adapter.findVerificationValue(identifier)) !== null) {
+      return;
+    }
+    await adapter.createVerificationValue({
+      expiresAt: new Date(
+        Date.now() + EMAIL_OTP_EXPIRES_SECONDS * MS_PER_SECOND
+      ),
+      identifier,
+      value: `${randomDecoyValue()}:0`,
+    });
+  }, options);
+};
+
+/**
+ * Tidak ada sesi untuk email yang belum terverifikasi, apa pun jalurnya.
+ * `/sign-in/email` dan `/sign-in/username` sudah menolak sendiri; penjaga
+ * ini menutup jalur yang tidak memeriksa `emailVerified` (mis.
+ * `/sign-in/phone-number`, lanjutan `/two-factor/*`). Berjalan sesudah
+ * password diperiksa, jadi bukan oracle. Sesi baru dihapus dan cookie-nya
+ * dibersihkan, lalu 403 `EMAIL_NOT_VERIFIED`. `/admin/*` (impersonasi)
+ * dikecualikan.
+ */
+const revokeUnverifiedSession = async (
   ctx: GenericEndpointContext
 ): Promise<void> => {
   const created = ctx.context.newSession;
@@ -302,3 +405,11 @@ export const emailAfter = async (
   deleteSessionCookie(ctx);
   throw APIError.from("FORBIDDEN", EMAIL_NOT_VERIFIED);
 };
+
+/** Bagian email hook `after`: baris OTP tiruan (B21) + penjaga sesi. */
+export const emailAfter =
+  (options: EmailDeliveryOptions) =>
+  async (ctx: GenericEndpointContext): Promise<void> => {
+    await createDecoyOtp(ctx, options);
+    await revokeUnverifiedSession(ctx);
+  };

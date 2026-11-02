@@ -196,6 +196,7 @@ export const createAuth = ({
     // Kode di tabel `verification` hanya berupa hash.
     storeOTP: "hashed",
   });
+  const emailAfterHook = emailAfter(emailDelivery);
   const emailHook = emailBefore({
     allowedOrigins: env.CORS_ORIGINS,
     emailSender,
@@ -256,7 +257,7 @@ export const createAuth = ({
       // Sesi untuk email belum terverifikasi dicabut (semua jalur login);
       // grant step-up ganti nomor dihapus setelah verify sukses (B11).
       after: createAuthMiddleware(async (ctx) => {
-        await emailAfter(ctx);
+        await emailAfterHook(ctx);
         await phoneAfter(ctx);
       }),
       before: createAuthMiddleware(
