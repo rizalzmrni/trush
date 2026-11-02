@@ -19,7 +19,7 @@ Satu-satunya penanda lingkungan adalah `APP_ENV` (`development | staging | produ
 | Layanan | development | staging | production |
 | --- | --- | --- | --- |
 | Polar | `sandbox` | `sandbox` | `production` |
-| Resend | kunci uji, ke `delivered@resend.dev`; `memory` bila `E2E=true` | domain staging, penerima tim | domain produksi |
+| Resend | `EMAIL_DRIVER=log` (default) atau kunci uji ke `delivered@resend.dev`; `memory` bila `E2E=true` | domain staging, hanya penerima di `EMAIL_ALLOWLIST` (wajib) | domain produksi |
 | Twilio (`PHONE_DRIVER`) | `log`, `twilio-test`, atau `memory` bila `E2E=true` | `twilio` + `PHONE_ALLOWLIST` | `twilio` |
 | PostHog | tanpa key (no-op) atau project dev | project staging | project produksi |
 | Google Analytics | tanpa ID (no-op) | tanpa ID | ID produksi |

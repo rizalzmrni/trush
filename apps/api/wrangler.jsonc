@@ -10,13 +10,15 @@
   },
   // Development: APP_ENV dan nilai lain datang dari .dev.vars (tanpa default).
   // Secret per lingkungan (DATABASE_URL, BETTER_AUTH_SECRET,
-  // TURNSTILE_SECRET_KEY, TWILIO_*) diset manusia lewat `wrangler secret put`.
+  // TURNSTILE_SECRET_KEY, TWILIO_*, RESEND_API_KEY) diset manusia lewat
+  // `wrangler secret put`.
   "env": {
     // Lingkungan lokal Playwright (CLOUDFLARE_ENV=e2e `wrangler dev`), tidak
     // pernah di-deploy. Nama Worker = service binding `API` blok e2e
     // apps/app (dev registry lokal). Secret (DATABASE_URL,
     // BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) di .dev.vars.e2e, yang
-    // menggantikan .dev.vars sepenuhnya. OTP dibaca lewat GET /__e2e/outbox.
+    // menggantikan .dev.vars sepenuhnya. OTP dan email dibaca lewat
+    // GET /__e2e/outbox.
     "e2e": {
       "name": "trush-api-e2e",
       "vars": {
@@ -28,6 +30,7 @@
         "BETTER_AUTH_URL": "http://localhost:8787",
         "PHONE_DRIVER": "memory",
         "PHONE_ALLOWED_COUNTRIES": "ID",
+        "EMAIL_DRIVER": "memory",
       },
     },
     "staging": {
@@ -45,6 +48,12 @@
         "PHONE_ALLOWED_COUNTRIES": "ID",
         // L3: isi nomor E.164 tim, dipisah koma.
         "PHONE_ALLOWLIST": "+6280000000000",
+        // Resend sungguhan, hanya ke alamat/domain tim (EMAIL_ALLOWLIST wajib).
+        // L7: domain pengirim staging terverifikasi di Resend.
+        "EMAIL_DRIVER": "resend",
+        "EMAIL_FROM": "trush staging <noreply@staging.example.com>",
+        // L3: isi alamat atau @domain tim, dipisah koma.
+        "EMAIL_ALLOWLIST": "@example.com",
       },
     },
     "production": {
@@ -61,6 +70,9 @@
         "AUTH_COOKIE_DOMAIN": "example.com",
         "PHONE_DRIVER": "twilio",
         "PHONE_ALLOWED_COUNTRIES": "ID",
+        // L7: domain pengirim produksi terverifikasi di Resend.
+        "EMAIL_DRIVER": "resend",
+        "EMAIL_FROM": "trush <noreply@example.com>",
       },
     },
   },
