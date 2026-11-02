@@ -6,11 +6,11 @@
  *
  * Dasarnya `.dev.vars.example` yang di-commit (semua nilainya palsu),
  * sehingga var baru di contoh otomatis ikut. Yang ditimpa: penanda e2e
- * (`E2E=true`, `PHONE_DRIVER=memory`), kunci uji Turnstile, URL lokal, secret
- * auth acak sekali pakai, dan `DATABASE_URL` / `DATABASE_URL_UNPOOLED` dari
- * env proses (CI: branch Neon sementara; lokal: env developer). Nilai DB
- * tidak pernah dicetak. `.dev.vars` dan `.env*` tidak pernah dibaca atau
- * ditulis.
+ * (`E2E=true`, `PHONE_DRIVER=memory`, `EMAIL_DRIVER=memory`), kunci uji
+ * Turnstile, URL lokal, secret auth acak sekali pakai, dan `DATABASE_URL` /
+ * `DATABASE_URL_UNPOOLED` dari env proses (CI: branch Neon sementara; lokal:
+ * env developer). Nilai DB tidak pernah dicetak. `.dev.vars` dan `.env*`
+ * tidak pernah dibaca atau ditulis.
  *
  * Jalankan dari root: `bun run e2e/scripts/write-dev-vars.ts`.
  */
@@ -44,6 +44,9 @@ const OVERRIDES: Readonly<Record<AppName, Readonly<Record<string, string>>>> = {
     BETTER_AUTH_URL: API_URL,
     CORS_ORIGINS: `${APP_URL},${WEB_URL}`,
     E2E: "true",
+    // Contoh memakai `log`; nilai `.dev.vars.e2e` menimpa `vars` wrangler
+    // blok e2e, jadi `memory` wajib ditulis di sini (`E2E=true` menolak lainnya).
+    EMAIL_DRIVER: "memory",
     PHONE_DRIVER: "memory",
     TURNSTILE_SECRET_KEY: TURNSTILE_TEST_SECRET,
   },

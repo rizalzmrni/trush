@@ -14,7 +14,7 @@ const WARMUP_TIMEOUT_MS = 30_000;
 const FIRST = "+6281200000001";
 const SECOND = "+6281200000002";
 
-/** Development + `E2E=true` + `PHONE_DRIVER=memory` (semua nilai palsu). */
+/** Development + `E2E=true` + driver telepon/email `memory` (semua nilai palsu). */
 const E2E_ENV = { ...envForAppEnv("development"), E2E: "true" };
 
 const outboxRequest = (

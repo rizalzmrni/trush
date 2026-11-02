@@ -14,6 +14,11 @@ const validEnv = {
   PHONE_DRIVER: "twilio-test",
   TWILIO_TEST_ACCOUNT_SID: "ACtest",
   TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
+  // Email `log`/`memory` juga hanya development; staging + resend wajib allowlist.
+  EMAIL_DRIVER: "resend",
+  EMAIL_FROM: "trush <noreply@example.com>",
+  EMAIL_ALLOWLIST: "@example.com",
+  RESEND_API_KEY: "re_fake",
 } as const;
 
 const productionEnv = {
