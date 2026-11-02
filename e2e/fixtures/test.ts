@@ -6,15 +6,19 @@ import {
   createSignUpPage,
 } from "./auth-pages";
 import type { HomePage, SignInPage, SignUpPage } from "./auth-pages";
+import { createPasswordResetPages, createVerifyEmailPage } from "./email";
+import type { PasswordResetPages, VerifyEmailPage } from "./email";
 import { createPhoneSettingsPage } from "./phone";
 import type { PhoneSettingsPage } from "./phone";
 import { stubTurnstile } from "./turnstile";
 
 interface AuthPages {
   homePage: HomePage;
+  passwordReset: PasswordResetPages;
   phoneSettings: PhoneSettingsPage;
   signInPage: SignInPage;
   signUpPage: SignUpPage;
+  verifyEmailPage: VerifyEmailPage;
 }
 
 /**
@@ -30,6 +34,9 @@ export const test = base.extend<AuthPages>({
   homePage: async ({ page }, provide) => {
     await provide(createHomePage(page));
   },
+  passwordReset: async ({ page }, provide) => {
+    await provide(createPasswordResetPages(page));
+  },
   phoneSettings: async ({ page }, provide) => {
     await provide(createPhoneSettingsPage(page));
   },
@@ -38,6 +45,9 @@ export const test = base.extend<AuthPages>({
   },
   signUpPage: async ({ page }, provide) => {
     await provide(createSignUpPage(page));
+  },
+  verifyEmailPage: async ({ page }, provide) => {
+    await provide(createVerifyEmailPage(page));
   },
 });
 

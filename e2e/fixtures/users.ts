@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, request } from "@playwright/test";
 
+import { verifyEmailViaApi } from "./email";
 import { TURNSTILE_DUMMY_TOKEN } from "./turnstile";
 import { API_URL, APP_URL } from "./urls";
 
@@ -38,11 +39,10 @@ export const apiHeaders = (): Record<string, string> => ({
 });
 
 /**
- * Buat akun lewat api (bukan UI) untuk test yang tidak menguji daftar.
- * Context request terpisah dan langsung dibuang: cookie sesinya tidak
- * bocor ke browser test.
+ * Buat akun lewat api tanpa verifikasi email: login ditolak 403
+ * `EMAIL_NOT_VERIFIED` sampai kode dari outbox dimasukkan.
  */
-export const createUserViaApi = async (
+export const createUnverifiedUserViaApi = async (
   user: TestUser = uniqueUser()
 ): Promise<TestUser> => {
   const api = await request.newContext({ baseURL: API_URL });
@@ -56,4 +56,18 @@ export const createUserViaApi = async (
   } finally {
     await api.dispose();
   }
+};
+
+/**
+ * Buat akun lewat api (bukan UI) untuk test yang tidak menguji daftar, lalu
+ * verifikasi emailnya dengan kode dari `/__e2e/outbox` (tanpa itu login
+ * ditolak). Context request terpisah dan langsung dibuang: tidak ada cookie
+ * yang bocor ke browser test.
+ */
+export const createUserViaApi = async (
+  user: TestUser = uniqueUser()
+): Promise<TestUser> => {
+  await createUnverifiedUserViaApi(user);
+  await verifyEmailViaApi(user.email);
+  return user;
 };
