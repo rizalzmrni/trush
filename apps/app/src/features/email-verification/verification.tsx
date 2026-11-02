@@ -1,6 +1,7 @@
 import type { VerifyEmailActionResult } from "./form-schema";
 import { RequestCodeForm } from "./forms/request-code";
 import { VerifyCodeForm } from "./forms/verify-code";
+import { PasswordSetup } from "./password-setup";
 
 interface EmailVerificationProps {
   /** Email dari URL (`?email=`); `null` → langkah isi email. */
@@ -24,6 +25,9 @@ export const EmailVerification = ({
   result,
   turnstileSiteKey,
 }: EmailVerificationProps) => {
+  if (result?.step === "password-setup") {
+    return <PasswordSetup email={result.email} />;
+  }
   if (result?.step === "verify") {
     return (
       <VerifyCodeForm

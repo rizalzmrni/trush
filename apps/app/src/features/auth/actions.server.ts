@@ -104,8 +104,11 @@ export const signInAction = async (scope: RequestScope) => {
     endpoint: AUTH_ENDPOINTS.signIn,
   });
   if (await isEmailNotVerified(response)) {
+    // Cookie `email_pending` dari 403 membuktikan browser ini tahu kata
+    // sandinya saat verifikasi nanti; wajib sampai ke browser.
     return redirect(
-      verifyEmailRedirect(formData, email, VERIFY_REASONS.signIn)
+      verifyEmailRedirect(formData, email, VERIFY_REASONS.signIn),
+      { headers: forwardSetCookies(response) }
     );
   }
   if (!response.ok) {

@@ -43,26 +43,35 @@ export const loader = async ({ context, request }: Route.LoaderArgs) => {
 export const action = ({ context, request }: Route.ActionArgs) =>
   verifyEmailAction({ context, request });
 
-const VerifyEmail = ({ actionData, loaderData }: Route.ComponentProps) => (
-  <PageCard
-    description="Masukkan kode yang kami kirim ke emailmu untuk mengaktifkan akun."
-    footer={
-      <p>
-        Sudah terverifikasi?{" "}
-        <SwitchLink redirectTo={loaderData.redirectTo} to={SIGN_IN_PATH}>
-          Masuk
-        </SwitchLink>
-      </p>
-    }
-    title="Verifikasi email"
-  >
-    <EmailVerification
-      email={loaderData.email}
-      notice={loaderData.notice}
-      redirectTo={loaderData.redirectTo}
-      result={actionData}
-      turnstileSiteKey={loaderData.turnstileSiteKey}
-    />
-  </PageCard>
-);
+const VerifyEmail = ({ actionData, loaderData }: Route.ComponentProps) => {
+  const passwordSetup = actionData?.step === "password-setup";
+  return (
+    <PageCard
+      description={
+        passwordSetup
+          ? "Satu langkah lagi: buat kata sandi lewat tautan di emailmu."
+          : "Masukkan kode yang kami kirim ke emailmu untuk mengaktifkan akun."
+      }
+      footer={
+        <p>
+          {passwordSetup
+            ? "Sudah membuat kata sandi baru?"
+            : "Sudah terverifikasi?"}{" "}
+          <SwitchLink redirectTo={loaderData.redirectTo} to={SIGN_IN_PATH}>
+            Masuk
+          </SwitchLink>
+        </p>
+      }
+      title={passwordSetup ? "Cek emailmu" : "Verifikasi email"}
+    >
+      <EmailVerification
+        email={loaderData.email}
+        notice={loaderData.notice}
+        redirectTo={loaderData.redirectTo}
+        result={actionData}
+        turnstileSiteKey={loaderData.turnstileSiteKey}
+      />
+    </PageCard>
+  );
+};
 export default VerifyEmail;

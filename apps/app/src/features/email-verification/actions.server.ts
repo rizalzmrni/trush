@@ -1,7 +1,12 @@
+import { verifyEmailOtpResponseSchema } from "@trush/core/schemas/auth";
 import { data, redirect } from "react-router";
 
 import type { RequestScope } from "../../lib/api.server";
-import { AUTH_ENDPOINTS, postAuth } from "../auth/api.server";
+import {
+  AUTH_ENDPOINTS,
+  forwardSetCookies,
+  postAuth,
+} from "../auth/api.server";
 import { emailAuthError } from "../auth/email-errors.server";
 import { parseAuthForm } from "../auth/form-schema";
 import { AUTH_NOTICES, NOTICE_PARAM } from "../auth/notices";
@@ -15,6 +20,7 @@ import {
   verifyEmailFieldMessage,
 } from "./form-schema";
 import type {
+  PasswordSetupStepResult,
   RequestStepResult,
   VerifyEmailActionResult,
   VerifyStepResult,
@@ -30,8 +36,28 @@ const formText = (formData: FormData, name: string): string | undefined => {
   return typeof value === "string" ? value.trim() : undefined;
 };
 
-const reply = (result: VerifyEmailActionResult, status = HTTP_BAD_REQUEST) =>
-  data(result, { status });
+const reply = (
+  result: VerifyEmailActionResult,
+  status = HTTP_BAD_REQUEST,
+  headers?: Headers
+) => data(result, { headers, status });
+
+const passwordSetupSchema = verifyEmailOtpResponseSchema.pick({
+  passwordSetupRequired: true,
+});
+
+/**
+ * `passwordSetupRequired` dari respons sukses verify-email. Field tidak ada,
+ * bukan boolean, atau body rusak → `false` (alur login biasa).
+ */
+const needsPasswordSetup = async (response: Response): Promise<boolean> => {
+  try {
+    const parsed = passwordSetupSchema.safeParse(await response.json());
+    return parsed.success && parsed.data.passwordSetupRequired;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * Respons api identik untuk email terdaftar/tidak/sudah terverifikasi, jadi
@@ -98,8 +124,11 @@ const sendCode = async (
 };
 
 /**
- * Cek kode. Sukses tidak membuat sesi → ke `/sign-in` dengan pesan sukses,
- * membawa `redirectTo` agar pengguna mendarat di tujuan semula setelah login.
+ * Cek kode. Header `cookie` browser (termasuk `email_pending`) ikut lewat
+ * `postAuth`; `Set-Cookie` api (mis. penghapusan `email_pending`) selalu
+ * diteruskan. Sukses tidak membuat sesi → ke `/sign-in` dengan pesan sukses
+ * dan `redirectTo`, kecuali api meminta pengguna membuat kata sandi lewat
+ * tautan email (`passwordSetupRequired`).
  */
 const verifyCode = async (scope: RequestScope, formData: FormData) => {
   const rawEmail = formText(formData, "email") ?? "";
@@ -127,18 +156,27 @@ const verifyCode = async (scope: RequestScope, formData: FormData) => {
     body: { email, otp },
     endpoint: AUTH_ENDPOINTS.emailVerify,
   });
+  const headers = forwardSetCookies(response);
   if (!response.ok) {
     const error = await emailAuthError(response, VERIFY_LIMIT_SUBJECT);
     return reply(
       { email, formError: error.message, step: "verify" },
-      response.status
+      response.status,
+      headers
+    );
+  }
+  if (await needsPasswordSetup(response)) {
+    return data(
+      { email, step: "password-setup" } satisfies PasswordSetupStepResult,
+      { headers }
     );
   }
   return redirect(
     authPath(SIGN_IN_PATH, getSafeRedirect(formData.get("redirectTo")), {
       email,
       [NOTICE_PARAM]: AUTH_NOTICES.emailVerified,
-    })
+    }),
+    { headers }
   );
 };
 

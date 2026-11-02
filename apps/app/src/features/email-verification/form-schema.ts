@@ -99,4 +99,17 @@ export interface VerifyStepResult {
   readonly notice?: string;
 }
 
-export type VerifyEmailActionResult = RequestStepResult | VerifyStepResult;
+/**
+ * Email terverifikasi, tetapi browser ini tidak membuktikan tahu kata sandinya
+ * (`passwordSetupRequired: true`): api mencabut kata sandi lama dan mengirim
+ * tautan untuk membuat kata sandi. Tidak diarahkan ke login.
+ */
+export interface PasswordSetupStepResult {
+  readonly step: "password-setup";
+  readonly email: string;
+}
+
+export type VerifyEmailActionResult =
+  | PasswordSetupStepResult
+  | RequestStepResult
+  | VerifyStepResult;
