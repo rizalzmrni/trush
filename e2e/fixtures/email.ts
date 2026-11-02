@@ -113,18 +113,25 @@ export const readResetLink = async (
 
 /**
  * Verifikasi email lewat api (`POST /api/auth/email-otp/verify-email`, tanpa
- * captcha) memakai kode dari outbox. Untuk fixture yang tidak menguji UI
- * verifikasi.
+ * captcha) memakai kode dari outbox dan `cookie` dari sign-up (bukti kata
+ * sandi B19). Untuk fixture yang tidak menguji UI verifikasi.
  */
-export const verifyEmailViaApi = async (email: string): Promise<void> => {
+export const verifyEmailViaApi = async (
+  email: string,
+  cookie: string
+): Promise<void> => {
   const otp = await readEmailOtp(email);
   const api = await request.newContext({ baseURL: API_URL });
   try {
     const response = await api.post("/api/auth/email-otp/verify-email", {
       data: { email, otp },
-      headers: { origin: APP_URL },
+      headers: { cookie, origin: APP_URL },
     });
     expect(response.status(), await response.text()).toBe(200);
+    // Tanpa cookie sah, api mencabut kata sandi (B19) dan login akan 401.
+    expect(await response.json()).toMatchObject({
+      passwordSetupRequired: false,
+    });
   } finally {
     await api.dispose();
   }
