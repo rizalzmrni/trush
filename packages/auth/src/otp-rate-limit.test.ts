@@ -26,6 +26,8 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const HOUR_SECONDS = 3600;
 const PHONE_MAX = OTP_RATE_RULES.phone.max;
 const USER_MAX = OTP_RATE_RULES.user.max;
+const STEP_UP_MAX = OTP_RATE_RULES.stepUp.max;
+const PASSWORD_ATTEMPTS_LIMITED = { code: "PASSWORD_ATTEMPTS_LIMITED" };
 const SEND_OTP = "/phone-number/send-otp";
 const RESET = "/phone-number/request-password-reset";
 
@@ -146,8 +148,12 @@ const statusesOf = async (
 const repeat = <T>(count: number, make: (index: number) => T): T[] =>
   Array.from({ length: count }, (_, index) => make(index));
 
+/** Body send-otp; dengan sesi wajib password saat ini (step-up B11). */
+const sendOtpBody = (phoneNumber: string, cookie?: string) =>
+  cookie ? { currentPassword: PASSWORD, phoneNumber } : { phoneNumber };
+
 const sendOtp = (auth: TestAuth, phoneNumber: string, cookie?: string) => () =>
-  post(auth, SEND_OTP, { phoneNumber }, cookie);
+  post(auth, SEND_OTP, sendOtpBody(phoneNumber, cookie), cookie);
 
 const requestReset = (auth: TestAuth, phoneNumber: string) => () =>
   post(auth, RESET, { phoneNumber });
@@ -184,7 +190,7 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
   /** Daftar + verifikasi nomor (akun terdaftar untuk reset password). */
   const registerPhone = async (auth: TestAuth, phone: string) => {
     const cookie = await signUp(auth);
-    await post(auth, SEND_OTP, { phoneNumber: phone }, cookie);
+    await post(auth, SEND_OTP, sendOtpBody(phone, cookie), cookie);
     const response = await post(
       auth,
       "/phone-number/verify",
@@ -303,21 +309,23 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
     expect(statuses.at(-1)).toBe(HTTP_TOO_MANY_REQUESTS);
   });
 
+  // Step-up (B11) dihitung lebih dulu dan batasnya sama dengan kuota OTP per
+  // pengguna, jadi permintaan ke-11 berhenti di PASSWORD_ATTEMPTS_LIMITED.
   it("per pengguna: nomor berbeda dari IP berbeda, permintaan ke-11 → 429", async () => {
     const auth = makeAuth();
     const cookie = await signUp(auth);
 
     const statuses = await statusesOf(
-      repeat(USER_MAX + 1, (index) => sendOtp(auth, phoneAt(index), cookie))
+      repeat(USER_MAX, (index) => sendOtp(auth, phoneAt(index), cookie))
     );
-    const limited = await sendOtp(auth, phoneAt(USER_MAX + 1), cookie)();
+    const limited = await sendOtp(auth, phoneAt(USER_MAX), cookie)();
 
-    expect(statuses.slice(0, USER_MAX)).toStrictEqual(
-      repeat(USER_MAX, () => HTTP_OK)
-    );
-    expect(statuses.at(-1)).toBe(HTTP_TOO_MANY_REQUESTS);
+    expect(statuses).toStrictEqual(repeat(USER_MAX, () => HTTP_OK));
     expect(limited.status).toBe(HTTP_TOO_MANY_REQUESTS);
-    await expect(limited.json()).resolves.toMatchObject(OTP_RATE_LIMITED);
+    await expect(limited.json()).resolves.toMatchObject(
+      PASSWORD_ATTEMPTS_LIMITED
+    );
+    expect(Number(limited.headers.get("retry-after"))).toBeGreaterThan(0);
     expect(outbox.list()).toHaveLength(USER_MAX);
   });
 
@@ -366,19 +374,23 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
   });
 
   /** Jumlah baris kuota yang tercatat (semua kunci). */
+  /** Baris kuota OTP (`otp:*`); kuota step-up (`step-up:*`) tidak dihitung. */
   const quotaRows = async (): Promise<number> => {
     const result = await handle.db.execute<{ total: number }>(
-      sql`select count(*)::int as total from "otp_rate_limit"`
+      sql`select count(*)::int as total from "otp_rate_limit" where "key" like 'otp:%'`
     );
     return result.rows[0]?.total ?? 0;
   };
 
+  // Tiap percobaan tetap memakai kuota step-up (B11), jadi hanya
+  // STEP_UP_MAX - 1 nomor tidak valid agar percobaan valid berikutnya masuk.
   it("staging: send-otp ke nomor tidak valid tidak memakan kuota pengguna (B7d)", async () => {
     const auth = makeAuth({ APP_ENV: "staging" }, "default");
     const cookie = await signUp(auth);
+    const attempts = STEP_UP_MAX - 1;
 
     const rejected = await statusesOf(
-      repeat(USER_MAX + 1, (index) =>
+      repeat(attempts, (index) =>
         sendOtp(
           auth,
           INVALID_NUMBERS[index % INVALID_NUMBERS.length] ?? "",
@@ -389,9 +401,7 @@ describe("kuota OTP per pengguna dan per nomor (B7c)", () => {
     const rowsAfterRejected = await quotaRows();
     const valid = await sendOtp(auth, TARGET, cookie)();
 
-    expect(rejected).toStrictEqual(
-      repeat(USER_MAX + 1, () => HTTP_BAD_REQUEST)
-    );
+    expect(rejected).toStrictEqual(repeat(attempts, () => HTTP_BAD_REQUEST));
     expect(rowsAfterRejected).toBe(0);
     expect(valid.status).toBe(HTTP_OK);
   });

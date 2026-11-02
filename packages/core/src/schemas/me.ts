@@ -8,6 +8,9 @@ const EXAMPLE_DATE = "2026-10-31T09:00:00.000Z";
 /** Waktu ISO 8601 UTC, mis. `2026-10-31T09:00:00.000Z`. */
 const isoDateTimeSchema = z.iso.datetime();
 
+/** Nomor E.164 tersimpan, mis. `+6281234567890`. */
+const E164 = /^\+[1-9]\d{6,14}$/u;
+
 /** Pengguna yang sedang login (subset aman dari tabel `user`). */
 export const meUserSchema = z
   .object({
@@ -21,6 +24,14 @@ export const meUserSchema = z
     /** Peran plugin `admin` (`user` | `admin`); null = `user`. */
     role: z.string().nullable(),
     twoFactorEnabled: z.boolean(),
+    /**
+     * Nomor telepon E.164 (plugin `phoneNumber`); hanya terisi lewat
+     * verifikasi OTP, jadi bila ada selalu terverifikasi. Opsional dulu
+     * (aturan breaking change `@trush/core`): `GET /api/me` selalu mengisi
+     * keduanya sejak B10; anggap tidak ada = `null` / `false`.
+     */
+    phoneNumber: z.string().regex(E164).nullable().optional(),
+    phoneNumberVerified: z.boolean().optional(),
     createdAt: isoDateTimeSchema,
   })
   .meta({ id: "MeUser" });
@@ -51,6 +62,8 @@ export const meResponseSchema = z
         id: EXAMPLE_USER_ID,
         image: null,
         name: "Budi",
+        phoneNumber: "+6281234567890",
+        phoneNumberVerified: true,
         role: null,
         twoFactorEnabled: false,
         username: null,

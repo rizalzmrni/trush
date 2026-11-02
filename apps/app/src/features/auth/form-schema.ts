@@ -39,7 +39,7 @@ export type ParsedForm<Fields> =
   | { readonly data: Fields; readonly success: true }
   | { readonly fieldErrors: FieldErrors<Fields>; readonly success: false };
 
-interface IssueLike {
+export interface IssueLike {
   readonly code?: string;
   readonly minimum?: unknown;
   readonly path?: readonly PropertyKey[];
@@ -95,7 +95,9 @@ const formString = (formData: FormData, name: string): string => {
  */
 export const parseAuthForm = <Schema extends z.ZodObject>(
   schema: Schema,
-  formData: FormData
+  formData: FormData,
+  /** Pesan per field; fitur lain (mis. telepon) memberi pemetaannya sendiri. */
+  messageFor: (issue: IssueLike) => string = fieldMessage
 ): ParsedForm<z.output<Schema>> => {
   const input: Record<string, string> = {
     captchaToken: formString(formData, TURNSTILE_FIELD),
@@ -116,7 +118,7 @@ export const parseAuthForm = <Schema extends z.ZodObject>(
   for (const issue of result.error.issues) {
     const [field] = issue.path;
     if (typeof field === "string" && !(field in fieldErrors)) {
-      fieldErrors[field as keyof z.output<Schema>] = fieldMessage(issue);
+      fieldErrors[field as keyof z.output<Schema>] = messageFor(issue);
     }
   }
   return { fieldErrors, success: false };

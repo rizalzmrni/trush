@@ -2,28 +2,28 @@
 
 Disunting HANYA oleh lead. Teammate melapor lewat pesan (format di `AGENTS.md`); lead memindahkan isinya ke sini. Status: `todo | wip | review | done | blocked`.
 
-Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
+Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: Fase 0
 
 ## Ringkasan per agent
 
 ### backend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Selesai terakhir: B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: fase email (`@trush/email` + driver `memory` email untuk outbox e2e)
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: F6 (UI telepon)
+- Selesai terakhir: F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
+- Berikutnya: F6b
 - Blocker: —
 
 ### qa-tester
 
 - Sedang dikerjakan: —
-- Selesai terakhir: Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Selesai terakhir: Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -51,7 +51,15 @@ Terakhir diperbarui: 2026-11-01 · oleh lead · fase aktif: Fase 0
 | B7c | Rate limit permintaan OTP per pengguna dan per nomor tujuan (bukan hanya per IP) untuk pengguna yang sudah login | backend-engineer | done (tabel `otp_rate_limit`, migrasi 0003; per nomor 5/jam, per pengguna 10/jam, 429 `OTP_RATE_LIMITED`) | B7a |
 | B8 | `APP_ENV` + guard kombinasi production di `@trush/env`; `E2E=true` hanya development + wajib `PHONE_DRIVER=memory`; route `/__e2e/outbox` (OTP telepon; email menyusul fase email); blok `env.e2e` api | backend-engineer | done (`E2E`, guard `LOG_LEVEL` production, `/__e2e/outbox`, `env.e2e` api + script `dev:e2e`; Polar sandbox menyusul fase payments) | B1, B7 |
 | F5 | Blok `env.e2e` di `wrangler.jsonc` `apps/app` (binding `API` ke api lokal) dan `apps/web` + `.dev.vars.e2e` di-gitignore/terdokumentasi | frontend-engineer | done (`trush-app-e2e`/`trush-web-e2e`; VITE_* dari env proses; `CLOUDFLARE_DEV_REGISTRY_PATH` bersama) | F4 |
-| F6 | UI telepon `apps/app`: halaman pengaturan nomor, form kirim + verifikasi OTP (Turnstile, kanal SMS/WhatsApp), pesan 429 dengan `Retry-After`; e2e Q3 lalu memakai UI ini | frontend-engineer | todo | B7c |
+| F6 | UI telepon `apps/app`: halaman pengaturan nomor, form kirim + verifikasi OTP (Turnstile, kanal SMS/WhatsApp), pesan 429 dengan `Retry-After`; e2e Q3 lalu memakai UI ini | frontend-engineer | done (PR #12; `ca87f4f`; `RadioGroupField` `6074749`; daftar periksa `DESIGN.md` 11/11 lolos) | B7c, B10 |
+| B10 | Kontrak telepon: `meUserSchema` + `phoneNumber`/`phoneNumberVerified`, `/api/me` mengisinya; skema form kirim/verifikasi OTP di `@trush/core/schemas/auth` | backend-engineer | done (PR #12; `afb5602`) | B7c |
+| B10a | Rate limit IP `/phone-number/verify` 10/menit (aturan spesifik sebelum `/phone-number/*`; better-auth memakai `customRules` pertama yang cocok, dicek di 1.7.14) | backend-engineer | done (PR #12; `7a991ee`; belum ada test → Q12) | B7c |
+| F6a | Pesan 429 di langkah verifikasi menyebut "percobaan kode", bukan "permintaan kode" (`apps/app/src/features/phone/errors.server.ts`) | frontend-engineer | done (PR #12; `eaec0b3`; `phoneErrorMessage(response, kind, now)`) | F6 |
+| Q12 | Test F6 (action, form, pesan error 400/429/502) + test `/api/me` field telepon + test `/phone-number/verify` memakai batas 10/menit (B10a) + e2e telepon lewat UI (ganti jalur API di Q3) | qa-tester | done (PR #12; `e57f257`, `4bd64e6`; app 275, api 99, core 120, auth 103; e2e diuji di CI, `.dev.vars.e2e` lokal memakai DB palsu) | B10, B10a, F6, F6a |
+| B11 | Step-up telepon (review keamanan PR #12, Medium): setiap `send-otp` dengan sesi (tambah, ganti, kirim ulang) wajib `currentPassword` → grant (pengguna, nomor) 300 dtk yang wajib di `verify`; kuota step-up 10/jam per pengguna; `/change-password` 5/menit; `allowedAttempts`/`otpLength`/`expiresIn` eksplisit; `@trush/core` jadi dependensi `@trush/auth` | backend-engineer | done (PR #12; `65ab314`) | Q12 |
+| F6c | UI step-up: field kata sandi saat ini selalu ada di form kirim dan kirim ulang (bukan di form kode); 403 `PASSWORD_REQUIRED` saat verify → kembali ke langkah kirim; `postAuth` `headers` hanya `x-otp-channel` (review #4) | frontend-engineer | done (PR #12; `2783c22`) | B11 |
+| Q13 | Test B11 + F6c: step-up (tanpa/salah password, kuota 10/jam, grant terikat nomor, akun kedua, grant kedaluwarsa, kode salah tidak menghapus grant, password tidak bocor), `/change-password` 5/menit, UI field kata sandi, e2e tambah + ganti nomor dengan password | qa-tester | done (PR #12; `0e11f22`, `b5e8452`; app 310, core 126, auth 128, api 99; e2e lewat CI) | B11, F6c |
+| F6b | Catatan Q12 (bukan bug UI): form kirim tanpa field `channel` → error, padahal skema core default `whatsapp` (`parseAuthForm` mengubah field hilang jadi `""`); `retryAfterSeconds`: `Retry-After` tak valid menutupi `X-Retry-After` valid | frontend-engineer | todo | Q12 |
 | F4a | Open redirect `getSafeRedirect` lewat dot-segment (`/.//evil` → `//evil`) + varian halaman auth; vitest `apps/app` node/happy-dom | frontend-engineer | done | F4, Q9 |
 | F1 | `packages/design-system`: `globals.css` kanonik dari `DESIGN.md`, `DesignSystemProvider` (next-themes + Toaster), font Outfit, `cn`, `lib/format`, komponen `feedback/` | frontend-engineer | done (PR #2) | L0, L2 |
 | F2 | `apps/storybook` memuat design-system | frontend-engineer | done (PR #3) | F1 |
@@ -97,6 +105,8 @@ Catatan lanjutan dari batch ini:
 - Dev lokal app↔api: `CLOUDFLARE_DEV_REGISTRY_PATH` absolut yang sama (lihat `docs/react-router.md`); api e2e lewat `bun run dev:e2e` (`wrangler dev --env e2e`).
 - B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
 
+- Review PR #12: notifikasi "nomor telepon diubah" ke email (`callbackOnVerification`) saat `@trush/email` siap; pertimbangkan cabut sesi lain setelah ganti nomor; OTP telepon tidak terikat `userId` (Low, DoS verifikasi saja).
+
 Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
 
 ## Kontrak lintas-wilayah (`packages/core`)
@@ -114,6 +124,14 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 
 ## Log (terbaru di atas)
 
+- 2026-11-02 — PR #12 siap merge: CI `checks`, `e2e`, `pr-title` hijau di `8ba850c` (teks 403 `PASSWORD_REQUIRED` juga untuk tambah nomor). Task batch B10, B10a, B11, F6, F6a, F6c, Q12, Q13 done (PR #12); F6b tetap todo untuk batch berikutnya. Menunggu approval CODEOWNERS (`packages/auth/`, `bun.lock`, `docs/`).
+- 2026-11-02 — Q13 done (tanpa bug). Catatan: kuota OTP per pengguna kini lapisan cadangan di belakang kuota step-up (disengaja, dicatat di `docs/auth-plugins.md`); grant dibuat sebelum pengiriman OTP, jadi bisa tersisa tanpa OTP bila kirim gagal (tidak berbahaya, verify tetap butuh kode).
+- 2026-11-01 — B11 done (`65ab314`, desain grant usulan backend: password di `send-otp`, bukan di `verify`, agar verify tanpa captcha tidak jadi oracle password dan OTP dari akun kedua tidak bisa dipakai). Keputusan user: step-up juga untuk nomor pertama (akun tanpa nomor tidak bisa diambil alih lewat reset telepon). F6c done (`2783c22`). `docs/auth-plugins.md` diperbarui (`43fd964`). Q13 wip: test auth merah sampai helper test mengirim `currentPassword`.
+- 2026-11-01 — PR #12 (Draft) dibuka; CI `checks`, `e2e`, `pr-title` hijau. Review keamanan subagent (komentar PR): Medium ganti nomor tanpa step-up → keputusan user: step-up password di PR ini (B11, F6c, Q13). Follow-up: OTP tidak terikat `userId` (Low, risiko diterima sementara), notifikasi perubahan nomor + cabut sesi lain (fase email).
+- 2026-11-01 — Q12 done: test telepon app (+91), api (+5), core (+38), auth (+5, verify 10/menit); e2e telepon lewat UI `/settings/phone`. Tanpa bug; dua catatan kecil → F6b. PR batch `feat/f6-phone-ui` siap dibuka.
+- 2026-11-01 — F6 done (laporan frontend; daftar periksa `DESIGN.md` 11/11 tanpa perubahan kode) dan F6a done (`eaec0b3`, teks 429 verifikasi "percobaan kode"; app 185 test). Q12 wip.
+- 2026-11-01 — Review lead batch `feat/f6-phone-ui`: B10 done (`afb5602`), F6 ke review (`ca87f4f`, `RadioGroupField` `6074749`), B10a (`7a991ee`, perubahan backend tanpa task sebelumnya, kini tercatat), `chore(repo)` lint-staged `--no-error-on-unmatched-pattern` (`0765793`). check-types, check, test app/auth/design-system/storybook hijau. Tambahan: F6a (teks 429 verifikasi), Q12 diperluas dengan test B10a. PR batch menunggu Q12.
+- 2026-11-01 — PR #11 di-merge (`f717d38`; B8, B7b, B7c, B7d, B9, F5, F7, Q3, Q10, Q11). Batch `feat/f6-phone-ui`: B10 (kontrak telepon, memblokir F6), F6 wip, Q12 wip.
 - 2026-11-01 — F7: flaky e2e berakar di cold start Vite (dependensi klien ditemukan saat muat pertama → reload + 504 Outdated Optimize Dep). Setelah `optimizeDeps.entries` eksplisit, job `e2e` PR #11 12/12 lulus tanpa retry. PR #11 siap review.
 - 2026-11-01 — PR #11 (Draft) dibuka. Job CI `e2e` pertama kali hijau dengan test nyata (11 lulus, 1 flaky di setup karena cold start Vite → diperbaiki dengan pemanasan). Selesai di batch ini juga: B7d, B9, Q11. Keputusan: `request-password-reset` untuk nomor tak valid tetap 200 identik (aman, tanpa oracle).
 - 2026-11-01 — PR #10 di-merge (`dfd01f9`; B7, B7a, F4, F4a, Q2b, Q8, Q9). Branch lama (`feat/fase0-*`, `origin/feat/b4-db`) dihapus. Batch `feat/b8-q3-e2e`: B8, B7b, B7c, F5, Q3 wip; Q10 menunggu B7b/B7c. Login OTP sudah mati, jadi alur e2e "login + OTP" diganti tambah + verifikasi nomor telepon. Driver `memory` email ditunda ke fase email (`@trush/email` baru berisi CLAUDE.md).
