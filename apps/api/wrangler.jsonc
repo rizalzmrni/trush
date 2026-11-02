@@ -27,6 +27,7 @@
         "API_DOCS_ENABLED": true,
         "LOG_LEVEL": "info",
         "CORS_ORIGINS": "http://localhost:5174,http://localhost:5173",
+        "APP_URL": "http://localhost:5174",
         "BETTER_AUTH_URL": "http://localhost:8787",
         "PHONE_DRIVER": "memory",
         "PHONE_ALLOWED_COUNTRIES": "ID",
@@ -41,6 +42,8 @@
         "LOG_LEVEL": "info",
         // L3: ganti dengan URL *.workers.dev app & web staging yang sebenarnya.
         "CORS_ORIGINS": "https://trush-app-staging.example.workers.dev,https://trush-web-staging.example.workers.dev",
+        // L3: URL app staging (harus ada di CORS_ORIGINS).
+        "APP_URL": "https://trush-app-staging.example.workers.dev",
         // L3: URL Worker api staging. AUTH_COOKIE_DOMAIN kosong di *.workers.dev.
         "BETTER_AUTH_URL": "https://trush-api-staging.example.workers.dev",
         // Twilio sungguhan, hanya ke nomor tim (PHONE_ALLOWLIST wajib).
@@ -64,6 +67,8 @@
         "LOG_LEVEL": "info",
         // L4: ganti dengan domain resmi (app.<domain>, <domain>).
         "CORS_ORIGINS": "https://app.example.com,https://example.com",
+        // L4: URL app produksi (harus ada di CORS_ORIGINS).
+        "APP_URL": "https://app.example.com",
         // L4: ganti dengan domain resmi. Secret (DATABASE_URL,
         // BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) lewat `wrangler secret put`.
         "BETTER_AUTH_URL": "https://api.example.com",

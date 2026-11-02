@@ -113,6 +113,23 @@ export const verifyEmailOtpInputSchema = z.object({
 });
 
 /**
+ * Respons sukses `/api/auth/email-otp/verify-email` (B19). Sesi tidak
+ * pernah dibuat (`token` selalu null).
+ * - `passwordSetupRequired: false`: alur normal, arahkan ke login.
+ * - `passwordSetupRequired: true`: akun belum terverifikasi dan browser ini
+ *   tidak membuktikan tahu kata sandinya (tanpa cookie `email_pending` sah),
+ *   jadi kata sandi lama, semua sesi, dan nomor telepon yang belum terbukti
+ *   dicabut, lalu tautan reset dikirim ke email. Tampilkan "cek email untuk
+ *   membuat kata sandi", jangan arahkan ke login.
+ * Field lain (`user`) mengikuti better-auth dan tidak dijamin kontrak ini.
+ */
+export const verifyEmailOtpResponseSchema = z.object({
+  status: z.literal(true),
+  token: z.null(),
+  passwordSetupRequired: z.boolean(),
+});
+
+/**
  * Input "kirim ulang kode" (`/api/auth/email-otp/send-verification-otp`,
  * body JSON `{ email, type }`, header Turnstile `x-captcha-response`).
  * Respons 200 identik untuk email terdaftar/tidak/sudah terverifikasi.
@@ -175,6 +192,9 @@ export type PhoneOtpChannel = z.infer<typeof phoneOtpChannelSchema>;
 export type SendPhoneOtpInput = z.infer<typeof sendPhoneOtpInputSchema>;
 export type VerifyPhoneOtpInput = z.infer<typeof verifyPhoneOtpInputSchema>;
 export type VerifyEmailOtpInput = z.infer<typeof verifyEmailOtpInputSchema>;
+export type VerifyEmailOtpResponse = z.infer<
+  typeof verifyEmailOtpResponseSchema
+>;
 export type SendEmailVerificationOtpInput = z.infer<
   typeof sendEmailVerificationOtpInputSchema
 >;

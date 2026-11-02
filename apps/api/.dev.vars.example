@@ -3,6 +3,8 @@
 APP_ENV=development
 API_DOCS_ENABLED=true
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+# Origin apps/app (wajib, harus ada di CORS_ORIGINS): tujuan tautan email.
+APP_URL=http://localhost:5174
 LOG_LEVEL=debug
 # Lingkungan lokal Playwright saja (blok env.e2e + .dev.vars.e2e). true hanya
 # sah bila APP_ENV=development, PHONE_DRIVER=memory, dan EMAIL_DRIVER=memory;

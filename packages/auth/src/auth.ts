@@ -36,6 +36,11 @@ import {
 import { createOtpRateLimiter } from "./otp-rate-limit";
 import type { OtpRateLimiter } from "./otp-rate-limit";
 import {
+  markPasswordProven,
+  recordPendingVerification,
+  settleVerification,
+} from "./pending-verification";
+import {
   createSendOtp,
   createSendPasswordResetOtp,
   phoneAfter,
@@ -94,6 +99,7 @@ const RATE_LIMIT_RULES = {
 export type AuthEnv = Pick<
   ApiEnv,
   | "APP_ENV"
+  | "APP_URL"
   | "AUTH_COOKIE_DOMAIN"
   | "BETTER_AUTH_SECRET"
   | "BETTER_AUTH_URL"
@@ -197,6 +203,10 @@ export const createAuth = ({
     storeOTP: "hashed",
   });
   const emailAfterHook = emailAfter(emailDelivery);
+  const settleHook = settleVerification({
+    ...emailDelivery,
+    appUrl: env.APP_URL,
+  });
   const emailHook = emailBefore({
     allowedOrigins: env.CORS_ORIGINS,
     emailSender,
@@ -258,11 +268,26 @@ export const createAuth = ({
       // grant step-up ganti nomor dihapus setelah verify sukses (B11).
       after: createAuthMiddleware(async (ctx) => {
         await emailAfterHook(ctx);
+        // B19: verify-email → cabut akses tak terbukti + `passwordSetupRequired`;
+        // jalur lain → cookie bukti kata sandi (sign-up, login 403).
+        if (ctx.path === "/email-otp/verify-email") {
+          return await settleHook(ctx);
+        }
+        await markPasswordProven(ctx);
         await phoneAfter(ctx);
       }),
-      before: createAuthMiddleware(
-        async (ctx) => (await emailHook(ctx)) ?? (await phoneHook(ctx))
-      ),
+      before: createAuthMiddleware(async (ctx) => {
+        const override = (await emailHook(ctx)) ?? (await phoneHook(ctx));
+        // B19: catat status akun + bukti kata sandi sebelum kode diperiksa.
+        const email = override?.context.body.email;
+        if (
+          ctx.path === "/email-otp/verify-email" &&
+          typeof email === "string"
+        ) {
+          await recordPendingVerification(ctx, email);
+        }
+        return override;
+      }),
     },
     plugins: [
       organization(),

@@ -15,6 +15,7 @@ export const auth = createAuth({
     AUTH_COOKIE_DOMAIN: undefined,
     BETTER_AUTH_SECRET: "cli-only-secret-tidak-dipakai-runtime-0000",
     BETTER_AUTH_URL: "http://localhost:8787",
+    APP_URL: "http://localhost:5174",
     CORS_ORIGINS: ["http://localhost:5174"],
     TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
     PHONE_ALLOWED_COUNTRIES: ["ID"],

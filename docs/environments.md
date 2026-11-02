@@ -25,6 +25,7 @@ Satu-satunya penanda lingkungan adalah `APP_ENV` (`development | staging | produ
 | Google Analytics | tanpa ID (no-op) | tanpa ID | ID produksi |
 | Turnstile (`captcha`) | kunci uji (selalu lolos) | widget staging | widget produksi |
 | BetterStack | nonaktif (console saja) | source staging | source produksi |
+| `APP_URL` (api; origin app, wajib ada di `CORS_ORIGINS`) | `http://localhost:5174` | origin app staging | `https://app.<domain>` |
 | `API_DOCS_ENABLED` | `true` | `true` | `false` |
 | SEO | `noindex` | `noindex` | diindeks |
 | `LOG_LEVEL` | `debug` | `info` | `info` |

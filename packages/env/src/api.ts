@@ -111,6 +111,18 @@ const assertProductionSafe = (env: {
   }
 };
 
+/** `APP_URL` harus salah satu origin `CORS_ORIGINS` (tautan email ke app tepercaya). */
+const assertAppUrl = (env: {
+  APP_URL: string;
+  CORS_ORIGINS: readonly string[];
+}): void => {
+  const appOrigin = new URL(env.APP_URL).origin;
+  const origins = env.CORS_ORIGINS.map((origin) => new URL(origin).origin);
+  if (!origins.includes(appOrigin)) {
+    throw new Error("APP_URL harus salah satu origin di CORS_ORIGINS.");
+  }
+};
+
 export interface CreateApiEnvOptions {
   /** `c.env` dari Hono. */
   runtimeEnv: RuntimeEnvInput;
@@ -125,6 +137,12 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       APP_ENV: appEnvSchema,
       API_DOCS_ENABLED: booleanFlagSchema.default(false),
       CORS_ORIGINS: originListSchema,
+      /**
+       * URL origin `apps/app`, mis. `https://app.example.com`. Tujuan tautan
+       * email yang dibuat server (B19: tautan membuat kata sandi). Origin-nya
+       * wajib ada di `CORS_ORIGINS`.
+       */
+      APP_URL: z.url(),
       LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
       /**
        * Lingkungan lokal Playwright (`CLOUDFLARE_ENV=e2e`). Hanya development,
@@ -164,6 +182,7 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       "BETTERSTACK_INGEST_URL dan BETTERSTACK_SOURCE_TOKEN harus diisi bersama atau dikosongkan bersama."
     );
   }
+  assertAppUrl(env);
   assertProductionSafe(env);
   assertE2eEnv(env);
   assertPhoneEnv(env);

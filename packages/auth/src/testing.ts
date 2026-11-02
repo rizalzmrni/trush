@@ -10,14 +10,18 @@ import type { Auth } from "./auth";
 
 /**
  * Var email untuk `AuthEnv` uji: driver `memory` (tanpa Resend), tanpa
- * allowlist. Sebar ke env uji: `{ ...BASE_ENV, ...TEST_EMAIL_ENV }`.
+ * allowlist, dan `APP_URL` (tujuan tautan buat kata sandi B19; `createAuth`
+ * tidak memeriksanya terhadap `CORS_ORIGINS`, tetapi membuka tautan itu
+ * butuh origin ini di `CORS_ORIGINS` uji). Sebar ke env uji:
+ * `{ ...BASE_ENV, ...TEST_EMAIL_ENV }`.
  */
 export const TEST_EMAIL_ENV = {
+  APP_URL: "http://localhost:5174",
   EMAIL_ALLOWLIST: undefined,
   EMAIL_DRIVER: "memory",
   EMAIL_FROM: undefined,
   RESEND_API_KEY: undefined,
-} as const satisfies Omit<EmailEnv, "APP_ENV">;
+} as const satisfies Omit<EmailEnv, "APP_ENV"> & { APP_URL: string };
 
 /**
  * Tandai email pengguna terverifikasi langsung di DB (jalan pintas untuk test
