@@ -1,0 +1,19 @@
+{
+  "name": "@trush/email-preview",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@trush/email": "workspace:*",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@react-email/ui": "catalog:services",
+    "@trush/typescript-config": "workspace:*",
+    "@types/react": "catalog:react",
+    "@types/react-dom": "catalog:react",
+    "react-email": "catalog:services",
+    "typescript": "catalog:"
+  }
+}
