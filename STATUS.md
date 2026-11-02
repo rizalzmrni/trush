@@ -8,21 +8,21 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 
 ### backend-engineer
 
-- Sedang dikerjakan: B20 (lanjut B21, B19; B19 memakai env baru `APP_URL` api)
-- Selesai terakhir: B15a, B17, B16, B15, B14, B13, B12; B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Sedang dikerjakan: —
+- Selesai terakhir: B19, B21, B20, B18; B15a, B17, B16, B15, B14, B13, B12; B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: perbaikan dari temuan Q16/Q17 bila ada
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F10, F9, F8; F6b; F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
+- Selesai terakhir: F11; F10, F9, F8; F6b; F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
 - Berikutnya: perbaikan dari temuan Q17 bila ada
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: —
+- Sedang dikerjakan: Q18
 - Selesai terakhir: Q17, Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
@@ -90,6 +90,9 @@ Catatan lanjutan dari batch ini:
 
 Catatan lanjutan (terbuka):
 
+- B19: developer lokal wajib menambah `APP_URL=http://localhost:5174` ke `apps/api/.dev.vars` (api tidak start tanpa itu); L3/L4 isi `APP_URL` per lingkungan.
+- Review keamanan PR #14 Low tambahan (B21): verify-email tanpa kirim kode lebih dulu masih membedakan alamat yang daftar/login ≤5 menit terakhir.
+
 - Review keamanan PR #14, Low (follow-up, keputusan user): DoS rotasi kode verifikasi (cek kuota sebelum OTP dibuat); timing `/sign-up/email` dan `send-verification-otp` (waktu minimum konstan; ukur di staging); token reset di URL/log (redaksi path `/reset-password/*` di logger error, token ke cookie HttpOnly lalu redirect tanpa query).
 
 - F4: klien auth `createAuthClient({ baseURL, plugins: createAuthClientPlugins() })` dari `better-auth/react` + `@trush/auth/client`; token Turnstile di header `x-captcha-response` (`CAPTCHA_HEADER`); `credentials: "include"`; teruskan header `cookie` saat SSR lewat Service Binding; kontrak `@trush/core/schemas/me`.
@@ -136,12 +139,12 @@ Keputusan (disetujui user 2026-11-02):
 | Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | done (`cc97880`; auth 171, api 106; bug keamanan: token reset bocor lewat `redirectTo` asing → B15a) | B15, B16, B17 |
 | B15a | Bug Q16 (High): `redirectTo`/`callbackURL` reset password di luar `CORS_ORIGINS` meneruskan token ke origin penyerang (`originCheck` better-auth melewatkan request tanpa cookie) → 403 `INVALID_REDIRECT_URL` di hook `before` | backend-engineer | done (`c8d3ead`) | B15, Q16 |
 | Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | done (`752fae7` app 490, `8e438b0` e2e; e2e dijalankan job CI PR #14) | F9, F10, B17 |
-| B18 | CI `checks` PR #14: worker `cloudflare-pool` test api crash "WebSocket 1009 Message is too large" (lokal hijau) — cari akar masalah | backend-engineer | done (render sendiri lewat `react-dom/server.edge` + komponen `@react-email/*` satuan; pesan terbesar 896 KB prettier → 839 KB neon, sudah ada sebelumnya; selisih CI vs lokal tidak tereproduksi) | B17 |
-| B19 | Review keamanan PR #14 Medium #1 (pra-pembajakan akun): verify-email tanpa bukti kata sandi (cookie "pending verification") mencabut akses tak terbukti (password, sesi, telepon) + kirim tautan set password | backend-engineer | todo | B18 |
-| B20 | Review keamanan PR #14 Medium #2: `/send-verification-email` dimatikan; kuota kegagalan verify-email per alamat | backend-engineer | wip | B18 |
-| B21 | Review keamanan PR #14 Medium #3: verify-email identik untuk alamat terdaftar/tidak (tanpa oracle `TOO_MANY_ATTEMPTS`/`OTP_EXPIRED`) | backend-engineer | todo | B18 |
-| F11 | UI kasus B19 (verifikasi tanpa bukti kata sandi → "cek email untuk membuat kata sandi") | frontend-engineer | todo | B19 |
-| Q18 | Test B19–B21 + F11 (auth, api, app; e2e bila alur berubah) | qa-tester | todo | B19, B20, B21, F11 |
+| B18 | CI `checks` PR #14: worker `cloudflare-pool` test api crash "WebSocket 1009 Message is too large" (lokal hijau) — cari akar masalah | backend-engineer | done (`b454b3b`; render sendiri lewat `react-dom/server.edge` + komponen `@react-email/*` satuan; pesan terbesar 896 KB prettier → 839 KB neon; CI `checks` hijau setelahnya) | B17 |
+| B19 | Review keamanan PR #14 Medium #1 (pra-pembajakan akun): verify-email tanpa bukti kata sandi (cookie "pending verification") mencabut akses tak terbukti (password, sesi, telepon) + kirim tautan set password | backend-engineer | done (`177f2c8`; cookie `email_pending`, env baru `APP_URL` api; username pendaftar tetap ada tanpa kata sandi) | B18 |
+| B20 | Review keamanan PR #14 Medium #2: `/send-verification-email` dimatikan; kuota kegagalan verify-email per alamat | backend-engineer | done (`a122943`) | B18 |
+| B21 | Review keamanan PR #14 Medium #3: verify-email identik untuk alamat terdaftar/tidak (tanpa oracle `TOO_MANY_ATTEMPTS`/`OTP_EXPIRED`) | backend-engineer | done (`a122943`; sisa Low: tebakan tanpa kirim dulu bisa mengenali alamat yang daftar/login ≤5 menit terakhir) | B18 |
+| F11 | UI kasus B19 (verifikasi tanpa bukti kata sandi → "cek email untuk membuat kata sandi") | frontend-engineer | done (`b8054a9`) | B19 |
+| Q18 | Test B19–B21 + F11 (auth, api, app; e2e bila alur berubah) | qa-tester | wip (B20/B21 `ea2cea6`; B19/F11/e2e menyusul) | B19, B20, B21, F11 |
 
 ## Kontrak lintas-wilayah (`packages/core`)
 
@@ -157,6 +160,8 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-03 — B18 (CI api hijau kembali), B20, B21, B19, F11 done. Medium #1–#3 review keamanan PR #14 tertutup; Q18 wip.
 
 - 2026-11-02 — PR #14: CI `e2e` + `pr-title` hijau, `checks` merah (test api crash di CI → B18). Review keamanan subagent (komentar PR): 3 Medium + 3 Low. Keputusan user: ketiga Medium diperbaiki di PR ini (B19–B21, F11, Q18); #1 dengan "cabut akses tak terbukti" (lead menambah cookie pending-verification agar pengguna sah tetap memegang kata sandinya); Low jadi follow-up.
 
