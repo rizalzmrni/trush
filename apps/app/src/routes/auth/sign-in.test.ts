@@ -8,8 +8,8 @@ import {
   ME_FIXTURE,
   SESSION_COOKIE,
   TEST_ENV,
-} from "../testing/cloudflare";
-import type { ApiHandler } from "../testing/cloudflare";
+} from "../../testing/cloudflare";
+import type { ApiHandler } from "../../testing/cloudflare";
 import { handle, loader } from "./sign-in";
 
 const runLoader = async (path: string, handler: ApiHandler) => {
