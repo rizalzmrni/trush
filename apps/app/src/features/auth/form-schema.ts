@@ -83,15 +83,21 @@ export const fieldMessage = (issue: IssueLike): string => {
   }
 };
 
-const formString = (formData: FormData, name: string): string => {
+/**
+ * Nilai string field form. Field yang tidak ada (atau berupa `File`) menjadi
+ * `undefined` agar `.default()`/`.optional()` skema berlaku; field yang dikirim
+ * kosong tetap `""`.
+ */
+const formString = (formData: FormData, name: string): string | undefined => {
   const value = formData.get(name);
-  return typeof value === "string" ? value : "";
+  return typeof value === "string" ? value : undefined;
 };
 
 /**
  * Baca & validasi `FormData` form auth. Token Turnstile dibaca dari field
- * bawaan widget; email dipangkas spasinya. Error dikembalikan satu pesan per
- * field.
+ * bawaan widget; email dipangkas spasinya. Field yang tidak ada diteruskan
+ * sebagai `undefined` (default skema berlaku). Error dikembalikan satu pesan
+ * per field.
  */
 export const parseAuthForm = <Schema extends z.ZodObject>(
   schema: Schema,
@@ -99,7 +105,7 @@ export const parseAuthForm = <Schema extends z.ZodObject>(
   /** Pesan per field; fitur lain (mis. telepon) memberi pemetaannya sendiri. */
   messageFor: (issue: IssueLike) => string = fieldMessage
 ): ParsedForm<z.output<Schema>> => {
-  const input: Record<string, string> = {
+  const input: Record<string, string | undefined> = {
     captchaToken: formString(formData, TURNSTILE_FIELD),
   };
   for (const key of Object.keys(schema.shape)) {
@@ -107,7 +113,7 @@ export const parseAuthForm = <Schema extends z.ZodObject>(
       input[key] = formString(formData, key);
     }
   }
-  if (input.email !== undefined) {
+  if (typeof input.email === "string") {
     input.email = input.email.trim();
   }
   const result = schema.safeParse(input);

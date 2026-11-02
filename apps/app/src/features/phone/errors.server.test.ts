@@ -45,6 +45,40 @@ describe(retryAfterSeconds, () => {
       retryAfterSeconds(tooMany({ "retry-after": value }))
     ).toBeUndefined();
   });
+
+  it.each([
+    ["Retry-After teks", { "retry-after": "abc", "x-retry-after": "30" }, 30],
+    ["Retry-After nol", { "retry-after": "0", "x-retry-after": "30" }, 30],
+    ["Retry-After kosong", { "retry-after": "", "x-retry-after": "30" }, 30],
+  ])(
+    "%s → header valid pertama dipakai",
+    (_label, headers: Record<string, string>, expected) => {
+      expect(retryAfterSeconds(tooMany(headers))).toBe(expected);
+    }
+  );
+
+  it.each([
+    ["teks + nol", { "retry-after": "abc", "x-retry-after": "0" }],
+    ["nol + negatif", { "retry-after": "0", "x-retry-after": "-5" }],
+    [
+      "HTTP-date + pecahan",
+      {
+        "retry-after": "Wed, 21 Oct 2026 07:28:00 GMT",
+        "x-retry-after": "1.5",
+      },
+    ],
+  ])(
+    "keduanya tidak valid (%s) → undefined",
+    (_label, headers: Record<string, string>) => {
+      expect(retryAfterSeconds(tooMany(headers))).toBeUndefined();
+    }
+  );
+
+  it("X-Retry-After tidak valid saja → undefined", () => {
+    expect(
+      retryAfterSeconds(tooMany({ "x-retry-after": "abc" }))
+    ).toBeUndefined();
+  });
 });
 
 const NOW = new Date("2026-11-01T09:00:00.000Z");
@@ -88,6 +122,37 @@ describe(phoneErrorMessage, () => {
     "429 %s tanpa header → pesan tunggu umum",
     async (kind, subject) => {
       await expect(phoneErrorMessage(tooMany({}), kind, NOW)).resolves.toBe(
+        `Terlalu banyak ${subject} kode. Tunggu sebentar lalu coba lagi.`
+      );
+    }
+  );
+
+  it.each(["send", "verify"] as const)(
+    "429 %s: Retry-After tidak valid jatuh ke X-Retry-After",
+    async (kind) => {
+      await expect(
+        phoneErrorMessage(
+          tooMany({ "retry-after": "abc", "x-retry-after": "30" }),
+          kind,
+          NOW
+        )
+      ).resolves.toMatch(/Coba lagi dalam 30 detik\.$/u);
+    }
+  );
+
+  it.each([
+    ["send", "permintaan"],
+    ["verify", "percobaan"],
+  ] as const)(
+    "429 %s dengan kedua header tidak valid → pesan tunggu umum",
+    async (kind, subject) => {
+      await expect(
+        phoneErrorMessage(
+          tooMany({ "retry-after": "0", "x-retry-after": "abc" }),
+          kind,
+          NOW
+        )
+      ).resolves.toBe(
         `Terlalu banyak ${subject} kode. Tunggu sebentar lalu coba lagi.`
       );
     }

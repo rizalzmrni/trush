@@ -216,6 +216,40 @@ describe.each([
     expect(failure.data.values.email).toBe("bukan-email");
   });
 
+  it("form tanpa field sama sekali → 400 fieldErrors per field, tanpa memanggil api", async () => {
+    const { api, result } = await run(action, {
+      fields: {},
+      handler: () => okWithCookies(NEW_SESSION_COOKIE),
+      path,
+    });
+
+    expect(api.requests).toHaveLength(0);
+    const failure = asFailure(result);
+    expect(failure.init?.status).toBe(400);
+    expect(
+      Object.keys(failure.data.fieldErrors ?? {}).toSorted()
+    ).toStrictEqual([...Object.keys(expectedBody), "captchaToken"].toSorted());
+    expect(failure.data.fieldErrors).toMatchObject({
+      captchaToken: "Selesaikan verifikasi keamanan terlebih dahulu.",
+      email: "Masukkan alamat email yang valid.",
+      password: "Masukkan kata sandi.",
+    });
+  });
+
+  it("tanpa field password → 400 'Masukkan kata sandi.', tanpa memanggil api", async () => {
+    const { password: _omit, ...withoutPassword } = fields;
+    const { api, result } = await run(action, {
+      fields: withoutPassword,
+      handler: () => okWithCookies(NEW_SESSION_COOKIE),
+      path,
+    });
+
+    expect(api.requests).toHaveLength(0);
+    expect(asFailure(result).data.fieldErrors).toStrictEqual({
+      password: "Masukkan kata sandi.",
+    });
+  });
+
   it("nilai isi ulang tidak memuat kata sandi atau token", async () => {
     const { result } = await run(action, {
       fields,

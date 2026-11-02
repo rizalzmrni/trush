@@ -36,19 +36,33 @@ const PHONE_ERROR_MESSAGES: Readonly<Record<string, string>> = {
     "Sesi kamu sudah berakhir. Muat ulang halaman lalu masuk lagi.",
 };
 
-/**
- * Detik tunggu dari `Retry-After` (kuota OTP `OTP_RATE_LIMITED`) atau
- * `X-Retry-After` (rate limit IP better-auth). Hanya bentuk detik.
- */
-export const retryAfterSeconds = (response: Response): number | undefined => {
-  const raw =
-    response.headers.get("retry-after") ??
-    response.headers.get("x-retry-after");
-  if (raw === null || !/^\d+$/u.test(raw.trim())) {
+const RETRY_AFTER_HEADERS = ["retry-after", "x-retry-after"] as const;
+const DELTA_SECONDS = /^\d+$/u;
+
+/** Detik positif dari satu header, atau `undefined` bila tidak ada/tak valid. */
+const headerSeconds = (raw: string | null): number | undefined => {
+  const value = raw?.trim();
+  if (value === undefined || !DELTA_SECONDS.test(value)) {
     return undefined;
   }
-  const seconds = Number(raw.trim());
+  const seconds = Number(value);
   return seconds > 0 ? seconds : undefined;
+};
+
+/**
+ * Detik tunggu dari `Retry-After` (kuota OTP `OTP_RATE_LIMITED`) atau
+ * `X-Retry-After` (rate limit IP better-auth). Hanya bentuk detik. Header
+ * pertama yang valid menurut urutan itu dipakai; `Retry-After` yang tidak
+ * valid tidak menutupi `X-Retry-After` yang valid.
+ */
+export const retryAfterSeconds = (response: Response): number | undefined => {
+  for (const name of RETRY_AFTER_HEADERS) {
+    const seconds = headerSeconds(response.headers.get(name));
+    if (seconds !== undefined) {
+      return seconds;
+    }
+  }
+  return undefined;
 };
 
 /**

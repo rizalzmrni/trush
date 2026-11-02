@@ -56,6 +56,44 @@ describe("parseAuthForm sign-in", () => {
     });
   });
 
+  it.each([
+    ["email", { email: "Masukkan alamat email yang valid." }],
+    ["password", { password: "Masukkan kata sandi." }],
+    [
+      TURNSTILE_FIELD,
+      { captchaToken: "Selesaikan verifikasi keamanan terlebih dahulu." },
+    ],
+  ])("tanpa field %s → error hanya di field itu", (name, expected) => {
+    const fields = Object.fromEntries(
+      Object.entries({
+        email: "budi@example.test",
+        password: VALID_PASSWORD,
+        [TURNSTILE_FIELD]: "t",
+      }).filter(([key]) => key !== name)
+    );
+
+    expect(parseAuthForm(signInFormSchema, formOf(fields))).toStrictEqual({
+      fieldErrors: expected,
+      success: false,
+    });
+  });
+
+  it("kata sandi dikirim kosong → pesan wajib diisi", () => {
+    const result = parseAuthForm(
+      signInFormSchema,
+      formOf({
+        email: "budi@example.test",
+        password: "",
+        [TURNSTILE_FIELD]: "t",
+      })
+    );
+
+    expect(result).toStrictEqual({
+      fieldErrors: { password: "Masukkan kata sandi." },
+      success: false,
+    });
+  });
+
   it("menolak email tidak valid", () => {
     const result = parseAuthForm(
       signInFormSchema,
@@ -150,6 +188,49 @@ describe("parseAuthForm sign-up", () => {
     expect(
       parseAuthForm(signUpFormSchema, formOf({ ...valid, ...override }))
     ).toStrictEqual({ fieldErrors: expected, success: false });
+  });
+
+  it("form kosong → satu pesan per field", () => {
+    expect(parseAuthForm(signUpFormSchema, new FormData())).toStrictEqual({
+      fieldErrors: {
+        captchaToken: "Selesaikan verifikasi keamanan terlebih dahulu.",
+        email: "Masukkan alamat email yang valid.",
+        name: "Masukkan nama kamu.",
+        password: "Masukkan kata sandi.",
+      },
+      success: false,
+    });
+  });
+
+  it.each([
+    ["name", { name: "Masukkan nama kamu." }],
+    ["email", { email: "Masukkan alamat email yang valid." }],
+    // Perilaku F6b: field tidak ada → "wajib", bukan pesan panjang minimal.
+    ["password", { password: "Masukkan kata sandi." }],
+    [
+      TURNSTILE_FIELD,
+      { captchaToken: "Selesaikan verifikasi keamanan terlebih dahulu." },
+    ],
+  ])("tanpa field %s → error hanya di field itu", (name, expected) => {
+    const fields = Object.fromEntries(
+      Object.entries(valid).filter(([key]) => key !== name)
+    );
+
+    expect(parseAuthForm(signUpFormSchema, formOf(fields))).toStrictEqual({
+      fieldErrors: expected,
+      success: false,
+    });
+  });
+
+  it("kata sandi dikirim kosong → pesan minimal karakter", () => {
+    expect(
+      parseAuthForm(signUpFormSchema, formOf({ ...valid, password: "" }))
+    ).toStrictEqual({
+      fieldErrors: {
+        password: `Kata sandi minimal ${PASSWORD_MIN_LENGTH} karakter.`,
+      },
+      success: false,
+    });
   });
 
   it("menerima kata sandi tepat di batas minimal dan maksimal", () => {
