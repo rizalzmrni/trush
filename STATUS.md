@@ -9,7 +9,7 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 ### backend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: B17, B16, B15, B14, B13, B12; B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Selesai terakhir: B15a, B17, B16, B15, B14, B13, B12; B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
 - Berikutnya: perbaikan dari temuan Q16/Q17 bila ada
 - Blocker: —
 
@@ -22,8 +22,8 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 
 ### qa-tester
 
-- Sedang dikerjakan: Q16, Q17
-- Selesai terakhir: Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Sedang dikerjakan: Q17
+- Selesai terakhir: Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -131,7 +131,8 @@ Keputusan (disetujui user 2026-11-02):
 | F9 | UI verifikasi email `apps/app`: halaman kode setelah sign-up, kirim ulang (Turnstile), login dengan email belum terverifikasi diarahkan ke verifikasi; pesan 429 | frontend-engineer | done (`5488abd`; route auth dipindah ke `routes/auth/` di commit yang sama) | B12, B15 |
 | F10 | UI lupa + reset password `apps/app` (`/forgot-password` dengan Turnstile, `/reset-password?token=`); pesan sukses identik untuk email terdaftar/tidak | frontend-engineer | done (`5488abd`; `redirectTo` dari origin request, tanpa env baru) | B12, B15 |
 | Q15 | Test `@trush/env` email (guard) + `packages/email` (render tiap template dengan `PreviewProps`, `idempotencyKey`, pemilihan driver, Resend di-mock) | qa-tester | done (`ad76df5` env 46 kasus, `75945da` email 87 test; tanpa bug) | B13, B14 |
-| Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | wip | B15, B16, B17 |
+| Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | done (`cc97880`; auth 171, api 106; bug keamanan: token reset bocor lewat `redirectTo` asing → B15a) | B15, B16, B17 |
+| B15a | Bug Q16 (High): `redirectTo`/`callbackURL` reset password di luar `CORS_ORIGINS` meneruskan token ke origin penyerang (`originCheck` better-auth melewatkan request tanpa cookie) → 403 `INVALID_REDIRECT_URL` di hook `before` | backend-engineer | done (`c8d3ead`) | B15, Q16 |
 | Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | wip | F9, F10, B17 |
 
 ## Kontrak lintas-wilayah (`packages/core`)
@@ -148,6 +149,8 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-02 — Q16 done (`cc97880`). Bug keamanan Q16 → B15a done (`c8d3ead`): reset password menolak `redirectTo`/`callbackURL` di luar `CORS_ORIGINS`; belum pernah ada di `main`. Q17 wip.
 
 - 2026-11-02 — B13–B17, F8–F10, Q15 done (`1bd1198`…`3613d78`). Verifikasi email kini wajib (sign-up tanpa sesi; 403 `EMAIL_NOT_VERIFIED`). Freeze singkat tim agar hook pre-commit tidak tertahan file setengah jadi di working tree bersama. Pemindahan route auth ikut `feat(app)` (lint-staged `--no-stash` menyulitkan commit parsial; PR di-squash). `docs/auth-plugins.md` diperbarui. Q16, Q17 wip.
 
