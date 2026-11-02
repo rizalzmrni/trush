@@ -167,9 +167,56 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 export interface EmailBeforeHookOptions {
   emailSender: EmailSender;
+  /** `CORS_ORIGINS`: satu-satunya origin tujuan tautan reset password. */
+  allowedOrigins: readonly string[];
   /** Kuota permintaan per alamat; tanpa nilai = tidak dibatasi. */
   otpRateLimiter?: OtpRateLimiter | undefined;
 }
+
+const INVALID_REDIRECT_URL = {
+  code: "INVALID_REDIRECT_URL",
+  message: "Alamat tujuan tautan tidak diizinkan.",
+} as const;
+
+/** Origin URL absolut, atau `undefined` bila bukan URL absolut. */
+const toOrigin = (value: string): string | undefined => {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+};
+
+const readString = (source: unknown, key: string): string | undefined => {
+  if (!isRecord(source)) {
+    return undefined;
+  }
+  const value = source[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
+/**
+ * Tujuan redirect tautan reset (`redirectTo` saat meminta reset,
+ * `callbackURL` saat tautan dibuka) wajib URL absolut http(s) ber-origin di
+ * `CORS_ORIGINS`; kosong = tanpa redirect ke app (tetap di api). Selain itu
+ * 403 `INVALID_REDIRECT_URL` SEBELUM token dibuat atau dibaca. Tanpa ini,
+ * penyerang meminta reset untuk korban dengan `redirectTo` miliknya, korban
+ * mengeklik tautan resmi, dan token terkirim ke origin penyerang (ambil alih
+ * akun): `originCheck` better-auth tidak menahan request tanpa cookie.
+ */
+const assertTrustedRedirect = (
+  target: string | undefined,
+  origins: ReadonlySet<string | undefined>
+): void => {
+  if (target === undefined) {
+    return;
+  }
+  const isHttp = target.startsWith("https://") || target.startsWith("http://");
+  const origin = isHttp ? toOrigin(target) : undefined;
+  if (origin === undefined || !origins.has(origin)) {
+    throw APIError.from("FORBIDDEN", INVALID_REDIRECT_URL);
+  }
+};
 
 const QUOTA_KIND_BY_PATH: Readonly<Record<string, "reset" | "verify">> = {
   "/email-otp/send-verification-otp": "verify",
@@ -182,15 +229,22 @@ const QUOTA_KIND_BY_PATH: Readonly<Record<string, "reset" | "verify">> = {
  *    (400 `INVALID_OTP_TYPE` selainnya): OTP login/reset/ganti email tidak
  *    dipakai trush, dan tanpa ini plugin tetap mengirim OTP jenis lain ke
  *    alamat terdaftar.
- * 2. Kuota permintaan per alamat untuk kirim ulang kode dan lupa password,
+ * 2. Tujuan tautan reset password (`redirectTo`, juga `callbackURL` saat
+ *    tautan dibuka) hanya origin `CORS_ORIGINS` (`assertTrustedRedirect`).
+ * 3. Kuota permintaan per alamat untuk kirim ulang kode dan lupa password,
  *    dihitung untuk SEMUA alamat yang valid dan boleh dikirimi (terdaftar
  *    atau tidak), setelah captcha + rate limit IP: 429 `OTP_RATE_LIMITED`
  *    tidak membocorkan keberadaan akun. Alamat ditolak `canSendTo` tidak
  *    dihitung (tidak akan pernah dikirimi).
  */
 export const emailBefore =
-  ({ emailSender, otpRateLimiter }: EmailBeforeHookOptions) =>
+  ({ allowedOrigins, emailSender, otpRateLimiter }: EmailBeforeHookOptions) =>
   async (ctx: GenericEndpointContext): Promise<BodyOverride> => {
+    const origins = new Set(allowedOrigins.map(toOrigin));
+    if (ctx.path.startsWith("/reset-password/")) {
+      assertTrustedRedirect(readString(ctx.query, "callbackURL"), origins);
+      return undefined;
+    }
     const kind = QUOTA_KIND_BY_PATH[ctx.path];
     const { body } = ctx;
     if (kind === undefined || !isRecord(body)) {
@@ -198,6 +252,9 @@ export const emailBefore =
     }
     if (kind === "verify" && body.type !== EMAIL_VERIFICATION_OTP_TYPE) {
       throw APIError.from("BAD_REQUEST", INVALID_OTP_TYPE);
+    }
+    if (kind === "reset") {
+      assertTrustedRedirect(readString(body, "redirectTo"), origins);
     }
     const email =
       typeof body.email === "string" ? normalizeEmail(body.email) : undefined;

@@ -196,7 +196,11 @@ export const createAuth = ({
     // Kode di tabel `verification` hanya berupa hash.
     storeOTP: "hashed",
   });
-  const emailHook = emailBefore({ emailSender, otpRateLimiter });
+  const emailHook = emailBefore({
+    allowedOrigins: env.CORS_ORIGINS,
+    emailSender,
+    otpRateLimiter,
+  });
   const phoneHook = phoneBefore({
     errors: phonePlugin.$ERROR_CODES,
     otpRateLimiter,

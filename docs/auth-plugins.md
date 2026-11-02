@@ -18,7 +18,8 @@ Diimpor oleh `packages/auth/CLAUDE.md`. Daftar izin plugin ada di file itu; doku
 ## Reset password (email)
 
 - `sendResetPassword` mengirim tautan (template `password-reset`) lewat `waitUntil`; `resetPasswordTokenExpiresIn` 3600, `revokeSessionsOnPasswordReset: true`.
-- `redirectTo` dari klien wajib ber-origin di `CORS_ORIGINS`; token tidak sah dialihkan ke `redirectTo?error=INVALID_TOKEN`.
+- `redirectTo` dari klien wajib URL absolut http(s) ber-origin di `CORS_ORIGINS`, ditegakkan hook `before` (403 `INVALID_REDIRECT_URL` sebelum token dibuat, tanpa email dan tanpa kuota). Alasan: `originCheck` better-auth melewatkan request tanpa cookie, sehingga penyerang bisa meminta reset untuk korban dengan `redirectTo` ke domain miliknya dan menerima token saat korban membuka tautan sah.
+- Lapisan kedua: `GET /reset-password/:token` dengan `callbackURL` di luar `CORS_ORIGINS` → 403 tanpa redirect. Token tidak sah dialihkan ke `redirectTo?error=INVALID_TOKEN`.
 
 ## captcha (Cloudflare Turnstile)
 
