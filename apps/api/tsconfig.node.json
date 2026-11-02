@@ -3,6 +3,8 @@
   // `worker-configuration.d.ts`; @types/node hanya dipakai di sini.
   "extends": "@trush/typescript-config/base.json",
   "compilerOptions": {
+    // Template `@trush/email` (.tsx) ikut dicek lewat impor.
+    "jsx": "react-jsx",
     "types": ["node"]
   },
   "include": ["src/**/*.db.test.ts", "src/testing/db-*.ts", "vitest.config.ts"]

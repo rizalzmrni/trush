@@ -1,5 +1,6 @@
 import {
   adminClient,
+  emailOTPClient,
   lastLoginMethodClient,
   multiSessionClient,
   organizationClient,
@@ -38,4 +39,5 @@ export const createAuthClientPlugins = ({
   lastLoginMethodClient(),
   multiSessionClient(),
   phoneNumberClient(),
+  emailOTPClient(),
 ];

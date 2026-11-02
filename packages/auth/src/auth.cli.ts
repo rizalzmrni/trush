@@ -27,5 +27,9 @@ export const auth = createAuth({
     TWILIO_TEST_ACCOUNT_SID: undefined,
     TWILIO_TEST_AUTH_TOKEN: undefined,
     TWILIO_WHATSAPP_OTP_CONTENT_SID: undefined,
+    EMAIL_DRIVER: "memory",
+    EMAIL_ALLOWLIST: undefined,
+    EMAIL_FROM: undefined,
+    RESEND_API_KEY: undefined,
   },
 });

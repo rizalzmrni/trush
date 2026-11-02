@@ -1,11 +1,7 @@
 import { PhoneError } from "@trush/phone";
 import type { OtpChannel, PhoneErrorCode, PhoneSender } from "@trush/phone";
 import type { GenericEndpointContext } from "better-auth";
-import {
-  APIError,
-  createAuthMiddleware,
-  getSessionFromCtx,
-} from "better-auth/api";
+import { APIError, getSessionFromCtx } from "better-auth/api";
 
 import { OTP_RATE_RULES, otpPhoneKey, otpUserKey } from "./otp-rate-limit";
 import type { OtpRateLimiter } from "./otp-rate-limit";
@@ -208,9 +204,11 @@ const hasVerifiedPhone = async (
 };
 
 /** Hasil hook `before`: `context` digabung ke context endpoint. */
-type BodyOverride = { context: { body: Record<string, unknown> } } | undefined;
+export type BodyOverride =
+  | { context: { body: Record<string, unknown> } }
+  | undefined;
 
-interface PhoneBeforeHookOptions {
+export interface PhoneBeforeHookOptions {
   errors: PhoneErrorCodes;
   phoneSender: PhoneSender;
   /** Batas OTP per pengguna/nomor (B7c); tanpa nilai = tidak dibatasi. */
@@ -297,12 +295,9 @@ const assertVerifyAddsPhone = async (
  *    terverifikasi: password tetap di-hash (waktu setara) lalu 401 yang sama
  *    persis dengan password salah.
  */
-export const phoneBeforeHook = ({
-  errors,
-  otpRateLimiter,
-  phoneSender,
-}: PhoneBeforeHookOptions) =>
-  createAuthMiddleware(async (ctx): Promise<BodyOverride> => {
+export const phoneBefore =
+  ({ errors, otpRateLimiter, phoneSender }: PhoneBeforeHookOptions) =>
+  async (ctx: GenericEndpointContext): Promise<BodyOverride> => {
     const { body } = ctx;
     if (ctx.path.startsWith("/sign-up/")) {
       const claimsPhone =
@@ -350,14 +345,15 @@ export const phoneBeforeHook = ({
     }
     const forwarded = isPhonePath ? withoutCurrentPassword(body) : body;
     return { context: { body: { ...forwarded, phoneNumber } } };
-  });
+  };
 
-/** Hook `after`: grant step-up ganti nomor sekali pakai (B11). */
-export const phoneAfterHook = () =>
-  createAuthMiddleware(async (ctx): Promise<void> => {
-    if (ctx.path === "/phone-number/verify") {
-      const returned =
-        "returned" in ctx.context ? ctx.context.returned : undefined;
-      await consumeStepUpGrant(ctx, returned);
-    }
-  });
+/** Bagian telepon hook `after`: grant step-up ganti nomor sekali pakai (B11). */
+export const phoneAfter = async (
+  ctx: GenericEndpointContext
+): Promise<void> => {
+  if (ctx.path === "/phone-number/verify") {
+    const returned =
+      "returned" in ctx.context ? ctx.context.returned : undefined;
+    await consumeStepUpGrant(ctx, returned);
+  }
+};
