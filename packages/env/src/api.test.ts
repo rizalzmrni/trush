@@ -349,3 +349,51 @@ describe(createApiEnv, () => {
     ).toThrow(/BETTER_AUTH_URL.*https/u);
   });
 });
+
+describe("APP_URL (B19)", () => {
+  it("origin app yang ada di CORS_ORIGINS diterima", () => {
+    const env = createApiEnv({
+      runtimeEnv: {
+        ...validEnv,
+        APP_URL: "https://app.example.test",
+        CORS_ORIGINS: "https://web.example.test,https://app.example.test",
+      },
+    });
+
+    expect(env.APP_URL).toBe("https://app.example.test");
+  });
+
+  it("APP_URL hilang ditolak dengan nama var", () => {
+    const { APP_URL: _omitted, ...rest } = validEnv;
+
+    expect(() => createApiEnv({ runtimeEnv: rest })).toThrow(/APP_URL/u);
+  });
+
+  it.each(["bukan-url", "app.example.test"])(
+    "APP_URL %s bukan URL ditolak",
+    (value) => {
+      expect(() =>
+        createApiEnv({ runtimeEnv: { ...validEnv, APP_URL: value } })
+      ).toThrow(/APP_URL/u);
+    }
+  );
+
+  it.each([
+    "https://evil.example",
+    "http://app.example.test",
+    "https://app.example.test:8443",
+    "https://sub.app.example.test",
+  ])("APP_URL %s di luar CORS_ORIGINS ditolak", (value) => {
+    expect(() =>
+      createApiEnv({ runtimeEnv: { ...validEnv, APP_URL: value } })
+    ).toThrow("APP_URL harus salah satu origin di CORS_ORIGINS.");
+  });
+
+  it("APP_URL dengan path: yang dibandingkan origin-nya", () => {
+    const env = createApiEnv({
+      runtimeEnv: { ...validEnv, APP_URL: "https://app.example.test/" },
+    });
+
+    expect(new URL(env.APP_URL).origin).toBe("https://app.example.test");
+  });
+});
