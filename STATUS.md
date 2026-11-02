@@ -22,8 +22,8 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 
 ### qa-tester
 
-- Sedang dikerjakan: Q18
-- Selesai terakhir: Q17, Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Sedang dikerjakan: —
+- Selesai terakhir: Q18, Q17, Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -144,7 +144,7 @@ Keputusan (disetujui user 2026-11-02):
 | B20 | Review keamanan PR #14 Medium #2: `/send-verification-email` dimatikan; kuota kegagalan verify-email per alamat | backend-engineer | done (`a122943`) | B18 |
 | B21 | Review keamanan PR #14 Medium #3: verify-email identik untuk alamat terdaftar/tidak (tanpa oracle `TOO_MANY_ATTEMPTS`/`OTP_EXPIRED`) | backend-engineer | done (`a122943`; sisa Low: tebakan tanpa kirim dulu bisa mengenali alamat yang daftar/login ≤5 menit terakhir) | B18 |
 | F11 | UI kasus B19 (verifikasi tanpa bukti kata sandi → "cek email untuk membuat kata sandi") | frontend-engineer | done (`b8054a9`) | B19 |
-| Q18 | Test B19–B21 + F11 (auth, api, app; e2e bila alur berubah) | qa-tester | wip (B20/B21 `ea2cea6`; B19/F11/e2e menyusul) | B19, B20, B21, F11 |
+| Q18 | Test B19–B21 + F11 (auth, api, app; e2e bila alur berubah) | qa-tester | done (auth 193, env 186, api 106, app 497; e2e pra-pembajakan; tanpa bug) | B19, B20, B21, F11 |
 
 ## Kontrak lintas-wilayah (`packages/core`)
 
