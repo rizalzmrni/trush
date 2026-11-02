@@ -157,4 +157,25 @@ describe(EmailVerification, () => {
     );
     await expect(alertTexts()).resolves.toContain("Masukkan email yang valid.");
   });
+
+  it("langkah buat kata sandi: pesan tautan terkirim, tanpa form kode, tautan minta lagi", async () => {
+    renderInRouter(
+      <EmailVerification
+        email={EMAIL}
+        notice="Akun berhasil dibuat."
+        redirectTo="/"
+        result={{ email: EMAIL, step: "password-setup" }}
+        turnstileSiteKey={SITE_KEY}
+      />
+    );
+
+    await expect(screen.findByRole("status")).resolves.toHaveProperty(
+      "textContent",
+      expect.stringContaining(`Kami mengirim tautan ke ${EMAIL}`)
+    );
+    expect(screen.queryByLabelText("Kode verifikasi")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Tidak menerima tautan? Minta lagi" })
+    ).toHaveProperty("pathname", "/forgot-password");
+  });
 });

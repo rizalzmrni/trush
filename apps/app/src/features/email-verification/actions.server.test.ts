@@ -292,4 +292,74 @@ describe("verifyEmailAction: verifikasi kode", () => {
       })
     ).rejects.toThrow(TypeError);
   });
+
+  it("passwordSetupRequired true → langkah buat kata sandi (bukan ke /sign-in)", async () => {
+    const { result } = await run(verifyFields(), () =>
+      jsonResponse({ passwordSetupRequired: true, status: true, token: null })
+    );
+
+    expect(result).not.toBeInstanceOf(Response);
+    expect(result).toMatchObject({
+      data: { email: EMAIL, step: "password-setup" },
+    });
+  });
+
+  it.each([
+    ["false", { passwordSetupRequired: false, status: true }],
+    ["tidak ada", { status: true }],
+    ["bukan boolean", { passwordSetupRequired: "true", status: true }],
+  ])(
+    "passwordSetupRequired %s → ke /sign-in seperti biasa",
+    async (_label, body) => {
+      const { result } = await run(verifyFields(), () => jsonResponse(body));
+
+      expect(asRedirect(result).pathname).toBe("/sign-in");
+    }
+  );
+
+  it("Set-Cookie api (hapus email_pending) diteruskan di semua hasil verify", async () => {
+    const clear =
+      "__Secure-better-auth.email_pending=; Max-Age=0; Path=/; HttpOnly; Secure";
+    const withCookie = (body: unknown, status = 200) =>
+      jsonResponse(body, { headers: { "set-cookie": clear }, status });
+
+    const redirected = await run(verifyFields(), () =>
+      withCookie({ passwordSetupRequired: false, status: true })
+    );
+    const setup = await run(verifyFields(), () =>
+      withCookie({ passwordSetupRequired: true, status: true })
+    );
+    const failed = await run(verifyFields(), () =>
+      withCookie({ code: "INVALID_OTP" }, 400)
+    );
+
+    expect(
+      (redirected.result as Response).headers.getSetCookie()
+    ).toStrictEqual([clear]);
+    expect(setup.result).toMatchObject({
+      init: { headers: expect.any(Headers) },
+    });
+    expect(
+      (
+        setup.result as { init: { headers: Headers } }
+      ).init.headers.getSetCookie()
+    ).toStrictEqual([clear]);
+    expect(
+      (
+        failed.result as { init: { headers: Headers } }
+      ).init.headers.getSetCookie()
+    ).toStrictEqual([clear]);
+  });
+
+  it("cookie browser (email_pending) diteruskan ke api", async () => {
+    const api = createFakeApi(() => jsonResponse({ status: true }));
+    const cookie = "__Secure-better-auth.email_pending=bukti-palsu";
+
+    await verifyEmailAction({
+      context: createTestContext({ api }),
+      request: formRequest("/verify-email", verifyFields(), cookie),
+    });
+
+    expect(api.requests[0]?.headers.get("cookie")).toBe(cookie);
+  });
 });
