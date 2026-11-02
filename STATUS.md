@@ -9,22 +9,22 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 ### backend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
-- Berikutnya: fase email: B12 (kontrak) → B13 (env) → B14 (`@trush/email`) → B15, B16, B17
+- Selesai terakhir: B17, B16, B15, B14, B13, B12; B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Berikutnya: perbaikan dari temuan Q16/Q17 bila ada
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F6b; F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: fase email: F8 (`apps/email`), F9 (verifikasi email), F10 (lupa/reset password)
+- Selesai terakhir: F10, F9, F8; F6b; F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
+- Berikutnya: perbaikan dari temuan Q17 bila ada
 - Blocker: —
 
 ### qa-tester
 
-- Sedang dikerjakan: —
-- Selesai terakhir: Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
-- Berikutnya: fase email: Q15, Q16, Q17
+- Sedang dikerjakan: Q16, Q17
+- Selesai terakhir: Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Berikutnya: —
 - Blocker: —
 
 ## Backlog bootstrap
@@ -121,18 +121,18 @@ Keputusan (disetujui user 2026-11-02):
 | --- | --- | --- | --- | --- |
 | L7 | Resend: domain pengirim terverifikasi (staging, produksi), secret `RESEND_API_KEY` per lingkungan, kunci uji untuk dev | manusia | todo | L3 (staging), L4 (produksi) |
 | L8 | Dependensi `packages/email` (`resend`, `@react-email/components`, `@react-email/render`, `react`, `@trush/env`) dan `apps/email` (`@trush/email-preview`: `react-email`, `@react-email/ui`, `@trush/email`); semua dari catalog `services`/`react` yang sudah ada | lead | done (manifest saja; `tsconfig`, script, dan `src/` milik pemilik paket di B14/F8; task turbo `dev` yang ada sudah mencakup `apps/email`) | — |
-| B12 | Kontrak: `e2eOutboxChannelSchema` + `email` dan field `subject` (nullable) di `@trush/core/schemas/e2e`; skema form verifikasi kode email, lupa password, reset password di `@trush/core/schemas/auth` | backend-engineer | todo | — |
-| B13 | `@trush/env` email: `EMAIL_DRIVER` (`memory`/`log`/`resend`), `EMAIL_FROM`, `RESEND_API_KEY` (secret), allowlist penerima staging; guard: `E2E=true` wajib `memory`, `log`/`memory` hanya development, production wajib `resend`; `.dev.vars.example` | backend-engineer | todo | — |
-| B14 | `packages/email`: `theme.ts` dari tabel hex `DESIGN.md`, driver `memory`/`log`/`resend`, template `verification-otp`, `password-reset`, `phone-number-changed` (+ `PreviewProps`), fungsi `send<Nama>()` dengan `idempotencyKey`; outbox `memory` bersama driver telepon | backend-engineer | todo | B12, B13, L8 |
-| B15 | `@trush/auth`: plugin `emailOTP` (kirim lewat `@trush/email`), `requireEmailVerification: true`, kirim saat sign-up, `sendResetPassword` + `revokeSessionsOnPasswordReset`; kuota OTP email per alamat; `/email-otp/*` di captcha + rate limit; migrasi bila CLI better-auth menghasilkan perubahan | backend-engineer | todo | B14 |
-| B16 | Notifikasi email "nomor telepon diubah" (`callbackOnVerification`) + cabut sesi lain setelah nomor diganti (follow-up review PR #12) | backend-engineer | todo | B15 |
-| B17 | `/__e2e/outbox` memuat pesan email (filter `?to=` alamat email) | backend-engineer | todo | B12, B14 |
-| F8 | `apps/email`: workspace preview React Email untuk template `@trush/email` | frontend-engineer | todo | B14, L8 |
-| F9 | UI verifikasi email `apps/app`: halaman kode setelah sign-up, kirim ulang (Turnstile), login dengan email belum terverifikasi diarahkan ke verifikasi; pesan 429 | frontend-engineer | todo | B12, B15 |
-| F10 | UI lupa + reset password `apps/app` (`/forgot-password` dengan Turnstile, `/reset-password?token=`); pesan sukses identik untuk email terdaftar/tidak | frontend-engineer | todo | B12, B15 |
-| Q15 | Test `@trush/env` email (guard) + `packages/email` (render tiap template dengan `PreviewProps`, `idempotencyKey`, pemilihan driver, Resend di-mock) | qa-tester | todo | B13, B14 |
-| Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | todo | B15, B16, B17 |
-| Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | todo | F9, F10, B17 |
+| B12 | Kontrak: `e2eOutboxChannelSchema` + `email` dan field `subject` (nullable) di `@trush/core/schemas/e2e`; skema form verifikasi kode email, lupa password, reset password di `@trush/core/schemas/auth` | backend-engineer | done (`2834d7f`; `EMAIL_AUTH_ERROR_CODES`, verify-email tanpa sesi, `redirectTo` reset harus di `CORS_ORIGINS`) | — |
+| B13 | `@trush/env` email: `EMAIL_DRIVER` (`memory`/`log`/`resend`), `EMAIL_FROM`, `RESEND_API_KEY` (secret), allowlist penerima staging; guard: `E2E=true` wajib `memory`, `log`/`memory` hanya development, production wajib `resend`; `.dev.vars.example` | backend-engineer | done (`1bd1198`; default `EMAIL_DRIVER=log`, staging+resend wajib allowlist; test `ad76df5`) | — |
+| B14 | `packages/email`: `theme.ts` dari tabel hex `DESIGN.md`, driver `memory`/`log`/`resend`, template `verification-otp`, `password-reset`, `phone-number-changed` (+ `PreviewProps`), fungsi `send<Nama>()` dengan `idempotencyKey`; outbox `memory` bersama driver telepon | backend-engineer | done (`c955058`; kunci idempotensi hanya hash; test Q15 `75945da`) | B12, B13, L8 |
+| B15 | `@trush/auth`: plugin `emailOTP` (kirim lewat `@trush/email`), `requireEmailVerification: true`, kirim saat sign-up, `sendResetPassword` + `revokeSessionsOnPasswordReset`; kuota OTP email per alamat; `/email-otp/*` di captcha + rate limit; migrasi bila CLI better-auth menghasilkan perubahan | backend-engineer | done (`ff19b63`; tanpa migrasi; endpoint OTP lain 404; sesi email belum terverifikasi dicabut di hook `after`, termasuk login telepon/2FA; helper `@trush/auth/testing`; fixture test `a7d4759`) | B14 |
+| B16 | Notifikasi email "nomor telepon diubah" (`callbackOnVerification`) + cabut sesi lain setelah nomor diganti (follow-up review PR #12) | backend-engineer | done (`ff19b63`, `phone-changed.ts`) | B15 |
+| B17 | `/__e2e/outbox` memuat pesan email (filter `?to=` alamat email) | backend-engineer | done (`4965710`) | B12, B14 |
+| F8 | `apps/email`: workspace preview React Email untuk template `@trush/email` | frontend-engineer | done (`3613d78`; port 3030, tanpa script export karena `email export` tidak memakai `PreviewProps`) | B14, L8 |
+| F9 | UI verifikasi email `apps/app`: halaman kode setelah sign-up, kirim ulang (Turnstile), login dengan email belum terverifikasi diarahkan ke verifikasi; pesan 429 | frontend-engineer | done (`5488abd`; route auth dipindah ke `routes/auth/` di commit yang sama) | B12, B15 |
+| F10 | UI lupa + reset password `apps/app` (`/forgot-password` dengan Turnstile, `/reset-password?token=`); pesan sukses identik untuk email terdaftar/tidak | frontend-engineer | done (`5488abd`; `redirectTo` dari origin request, tanpa env baru) | B12, B15 |
+| Q15 | Test `@trush/env` email (guard) + `packages/email` (render tiap template dengan `PreviewProps`, `idempotencyKey`, pemilihan driver, Resend di-mock) | qa-tester | done (`ad76df5` env 46 kasus, `75945da` email 87 test; tanpa bug) | B13, B14 |
+| Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | wip | B15, B16, B17 |
+| Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | wip | F9, F10, B17 |
 
 ## Kontrak lintas-wilayah (`packages/core`)
 
@@ -148,6 +148,10 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-02 — B13–B17, F8–F10, Q15 done (`1bd1198`…`3613d78`). Verifikasi email kini wajib (sign-up tanpa sesi; 403 `EMAIL_NOT_VERIFIED`). Freeze singkat tim agar hook pre-commit tidak tertahan file setengah jadi di working tree bersama. Pemindahan route auth ikut `feat(app)` (lint-staged `--no-stash` menyulitkan commit parsial; PR di-squash). `docs/auth-plugins.md` diperbarui. Q16, Q17 wip.
+
+- 2026-11-02 — B12 done (`2834d7f`, kontrak email + outbox `subject`). backend-engineer lanjut B13; frontend-engineer di-spawn untuk F9, F10.
 
 - 2026-11-02 — PR #13 di-merge (`b9b3e8b`; F6b, Q14). Batch `feat/email-verification` dibuka; user menyetujui tiga keputusan fase email. L8 done (manifest `packages/email` + `apps/email`, `bun.lock`).
 
