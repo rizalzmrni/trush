@@ -21,6 +21,7 @@ export const listOutbox = (
       code,
       createdAt: sentAt.toISOString(),
       id,
+      subject: null,
       to: recipient,
     })),
 });
