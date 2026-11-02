@@ -266,6 +266,126 @@ describe("phoneAction: kirim kode (send-otp)", () => {
         "Terlalu banyak permintaan kode. Tunggu sebentar lalu coba lagi.",
     });
   });
+
+  it("429 Retry-After tidak valid tidak menutupi X-Retry-After yang valid", async () => {
+    const { result } = await run(SEND_FIELDS, () =>
+      authError(429, undefined, { "retry-after": "abc", "x-retry-after": "30" })
+    );
+
+    expect(result.data).toMatchObject({
+      formError: "Terlalu banyak permintaan kode. Coba lagi dalam 30 detik.",
+    });
+  });
+
+  it("429 kedua header tunggu tidak valid → pesan umum", async () => {
+    const { result } = await run(SEND_FIELDS, () =>
+      authError(429, "OTP_RATE_LIMITED", {
+        "retry-after": "0",
+        "x-retry-after": "abc",
+      })
+    );
+
+    expect(result.data).toMatchObject({
+      formError:
+        "Terlalu banyak permintaan kode. Tunggu sebentar lalu coba lagi.",
+    });
+  });
+});
+
+/** Field form tanpa satu kunci (field sama sekali tidak dikirim). */
+const omitField = (
+  fields: Record<string, string>,
+  name: string
+): Record<string, string> =>
+  Object.fromEntries(Object.entries(fields).filter(([key]) => key !== name));
+
+describe("phoneAction: field yang tidak dikirim (F6b)", () => {
+  it("send tanpa field channel → default whatsapp di header dan langkah verify", async () => {
+    const { api, result } = await run(omitField(SEND_FIELDS, "channel"));
+
+    expect(api.requests).toHaveLength(1);
+    expect(api.requests[0]?.headers.get(OTP_CHANNEL_HEADER)).toBe("whatsapp");
+    expect(statusOf(result)).toBe(200);
+    expect(result.data).toStrictEqual({
+      channel: "whatsapp",
+      notice: `Kode dikirim lewat WhatsApp ke ${LOCAL}.`,
+      phoneNumber: LOCAL,
+      step: "verify",
+    });
+  });
+
+  it("kirim ulang tanpa field channel → default whatsapp", async () => {
+    const { api, result } = await run(omitField(RESEND_FIELDS, "channel"));
+
+    expect(api.requests[0]?.headers.get(OTP_CHANNEL_HEADER)).toBe("whatsapp");
+    expect(result.data).toMatchObject({ channel: "whatsapp", step: "verify" });
+  });
+
+  it.each([
+    ["kosong", ""],
+    ["tak dikenal", "telegram"],
+    ["huruf besar", "SMS"],
+  ])(
+    "channel %s → fieldError kanal, tanpa memanggil api",
+    async (_label, channel) => {
+      const { api, result } = await run({ ...SEND_FIELDS, channel });
+
+      expect(api.requests).toHaveLength(0);
+      expect(statusOf(result)).toBe(400);
+      expect(result.data).toMatchObject({
+        fieldErrors: { channel: "Pilih cara pengiriman kode." },
+        step: "send",
+      });
+    }
+  );
+
+  it("tanpa field currentPassword → body sama dengan kata sandi kosong", async () => {
+    const missing = await run(omitField(SEND_FIELDS, "currentPassword"));
+    const empty = await run({ ...SEND_FIELDS, currentPassword: "" });
+
+    const bodyOf = (api: typeof missing.api) =>
+      JSON.parse(api.requests[0]?.body ?? "null") as unknown;
+    expect(bodyOf(missing.api)).toStrictEqual({ phoneNumber: LOCAL });
+    expect(bodyOf(missing.api)).toStrictEqual(bodyOf(empty.api));
+    expect(missing.result.data.fieldErrors).toBeUndefined();
+  });
+
+  it("tanpa field currentPassword + api 403 PASSWORD_REQUIRED → error di field kata sandi", async () => {
+    const { result } = await run(
+      omitField(SEND_FIELDS, "currentPassword"),
+      () => authError(403, "PASSWORD_REQUIRED")
+    );
+
+    expect(statusOf(result)).toBe(403);
+    expect(result.data).toMatchObject({
+      fieldErrors: {
+        currentPassword:
+          "Masukkan kata sandi saat ini untuk menambah atau mengganti nomor.",
+      },
+      step: "send",
+    });
+  });
+
+  it("tanpa field phoneNumber → fieldError nomor, tanpa memanggil api", async () => {
+    const { api, result } = await run(omitField(SEND_FIELDS, "phoneNumber"));
+
+    expect(api.requests).toHaveLength(0);
+    expect(result.data).toMatchObject({
+      fieldErrors: {
+        phoneNumber: "Masukkan nomor telepon yang valid, mis. 0812-3456-7890.",
+      },
+      step: "send",
+    });
+  });
+
+  it("tanpa field token Turnstile → fieldError captcha", async () => {
+    const { api, result } = await run(omitField(SEND_FIELDS, TURNSTILE_FIELD));
+
+    expect(api.requests).toHaveLength(0);
+    expect(result.data.fieldErrors).toMatchObject({
+      captchaToken: "Selesaikan verifikasi keamanan terlebih dahulu.",
+    });
+  });
 });
 
 describe("phoneAction: kirim ulang (resend-otp)", () => {
