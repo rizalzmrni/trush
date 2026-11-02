@@ -140,8 +140,19 @@ const signUpRaw = (auth: TestAuth, email: string) =>
 const signIn = (auth: TestAuth, email: string, password = PASSWORD) =>
   post(auth, "/sign-in/email", { body: { email, password } });
 
-const verifyEmail = (auth: TestAuth, email: string, otp: string) =>
-  post(auth, "/email-otp/verify-email", { body: { email, otp } });
+const verifyEmail = (
+  auth: TestAuth,
+  email: string,
+  otp: string,
+  cookie?: string
+) => post(auth, "/email-otp/verify-email", { body: { email, otp }, cookie });
+
+/** Semua cookie `Set-Cookie` sebagai header `cookie` (mis. bukti pendaftar B19). */
+const cookiesOf = (response: Response): string =>
+  response.headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .join("; ");
 
 const sendVerification = (auth: TestAuth, email: string, type: string) =>
   post(auth, "/email-otp/send-verification-otp", { body: { email, type } });
@@ -157,6 +168,21 @@ const verifiedUser = async (auth: TestAuth, email: string) => {
   await markEmailVerified(auth, email);
   return requireCookie(await signIn(auth, email));
 };
+/** `[status, code]` tiap percobaan verify-email, berurutan. */
+const verifyOutcomes = async (
+  auth: TestAuth,
+  email: string,
+  otps: readonly string[]
+): Promise<(readonly [number, unknown])[]> => {
+  const [otp, ...rest] = otps;
+  if (otp === undefined) {
+    return [];
+  }
+  const response = await verifyEmail(auth, email, otp);
+  const outcome = [response.status, await errorCode(response)] as const;
+  return [outcome, ...(await verifyOutcomes(auth, email, rest))];
+};
+
 /** Jalankan permintaan berurutan (hitungan percobaan/kuota deterministik). */
 const sequential = async (
   tasks: readonly (() => Promise<Response>)[]
@@ -216,6 +242,12 @@ describe("email: verifikasi, reset password, kuota (B15)", () => {
     );
     return result.rows[0]?.verified ?? false;
   };
+
+  /** Kedaluwarsakan baris OTP satu alamat saja. */
+  const expire = (email: string) =>
+    handle.db.execute(
+      sql`update "verification" set expires_at = now() - interval '1 second' where identifier = ${`email-verification-otp-${email}`}`
+    );
 
   /** Tautan reset dari outbox → token (lewat redirect `?token=`). */
   const resetTokenFor = async (auth: TestAuth, email: string) => {
@@ -349,9 +381,15 @@ describe("email: verifikasi, reset password, kuota (B15)", () => {
     it("kode benar → terverifikasi tanpa sesi otomatis, lalu login berhasil", async () => {
       const auth = makeAuth();
       const email = nextEmail();
-      await signUpRaw(auth, email);
+      // Browser pendaftar membawa cookie dari sign-up (bukti kata sandi, B19).
+      const signedUp = await signUpRaw(auth, email);
 
-      const response = await verifyEmail(auth, email, latestCode(email));
+      const response = await verifyEmail(
+        auth,
+        email,
+        latestCode(email),
+        cookiesOf(signedUp)
+      );
 
       expect(response.status).toBe(HTTP_OK);
       await expect(response.json()).resolves.toMatchObject({
@@ -724,6 +762,199 @@ describe("email: verifikasi, reset password, kuota (B15)", () => {
         "evil.example"
       );
       expect(response.status).toBe(403);
+    });
+  });
+  describe("pembajakan tebakan & enumerasi OTP email (B20, B21)", () => {
+    const UNKNOWN = "belum-terdaftar@example.test";
+    const WRONG = "000000";
+    const OTHER_WRONG = "999999";
+
+    /** Kode salah yang pasti berbeda dari kode asli. */
+    const wrongFor = (email: string): string => {
+      const code = emailOutbox.latestFor(email)?.code;
+      return code === WRONG ? OTHER_WRONG : WRONG;
+    };
+
+    it("/send-verification-email (endpoint inti) → 404 tanpa email", async () => {
+      const auth = makeAuth();
+      const email = nextEmail();
+      await signUpRaw(auth, email);
+      const before = emailOutbox.list().length;
+
+      const response = await post(auth, "/send-verification-email", {
+        body: { callbackURL: "/", email },
+      });
+
+      expect(response.status).toBe(404);
+      expect(emailOutbox.list()).toHaveLength(before);
+    });
+
+    it("alamat tak terdaftar setelah kirim kode: urutan error verify identik dengan terdaftar", async () => {
+      const auth = makeAuth();
+      const registered = nextEmail();
+      await signUpRaw(auth, registered);
+      await sendVerification(auth, registered, "email-verification");
+      await sendVerification(auth, UNKNOWN, "email-verification");
+      const wrong = wrongFor(registered);
+      const guesses = [wrong, wrong, wrong, wrong, wrong];
+
+      const known = await verifyOutcomes(auth, registered, guesses);
+      const unknown = await verifyOutcomes(auth, UNKNOWN, guesses);
+
+      expect(known).toStrictEqual([
+        [400, "INVALID_OTP"],
+        [400, "INVALID_OTP"],
+        [400, "INVALID_OTP"],
+        [403, "TOO_MANY_ATTEMPTS"],
+        [400, "INVALID_OTP"],
+      ]);
+      expect(unknown).toStrictEqual(known);
+    });
+
+    // better-auth membersihkan SEMUA baris kedaluwarsa saat mencari satu
+    // baris, jadi tiap alamat dikedaluwarsakan tepat sebelum percobaannya.
+    it("setelah kedaluwarsa: OTP_EXPIRED untuk terdaftar dan tak terdaftar", async () => {
+      const auth = makeAuth();
+      const registered = nextEmail();
+      await signUpRaw(auth, registered);
+      await sendVerification(auth, UNKNOWN, "email-verification");
+      const wrong = wrongFor(registered);
+
+      await expire(registered);
+      const known = await verifyOutcomes(auth, registered, [wrong]);
+      await expire(UNKNOWN);
+      const unknown = await verifyOutcomes(auth, UNKNOWN, [wrong]);
+
+      expect(known).toStrictEqual([[400, "OTP_EXPIRED"]]);
+      expect(unknown).toStrictEqual(known);
+    });
+
+    it("baris tiruan berumur 300 detik dan tidak memuat kode 6 digit", async () => {
+      const auth = makeAuth();
+
+      await sendVerification(auth, UNKNOWN, "email-verification");
+
+      const result = await handle.db.execute<{
+        seconds: number;
+        value: string;
+      }>(
+        sql`select value, extract(epoch from (expires_at - now()))::int as seconds from "verification" where identifier = ${`email-verification-otp-${UNKNOWN}`}`
+      );
+      const [row] = result.rows;
+      expect(row?.value).toMatch(/^[\w-]+:0$/u);
+      expect(row?.value).not.toMatch(/^\d{6}:/u);
+      expect(row?.seconds).toBeGreaterThan(290);
+      expect(row?.seconds).toBeLessThanOrEqual(300);
+    });
+
+    it("kirim kode ke alamat terdaftar tidak membuat tiruan: kode asli tetap berlaku", async () => {
+      const auth = makeAuth();
+      const email = nextEmail();
+      await signUpRaw(auth, email);
+      await sendVerification(auth, email, "email-verification");
+
+      const response = await verifyEmail(auth, email, latestCode(email));
+
+      expect(response.status).toBe(HTTP_OK);
+      await expect(emailVerifiedOf(email)).resolves.toBeTruthy();
+    });
+
+    it("kirim ulang setelah 2 tebakan salah: urutan berikutnya identik terdaftar/tidak", async () => {
+      const auth = makeAuth();
+      const registered = nextEmail();
+      await signUpRaw(auth, registered);
+      await sendVerification(auth, UNKNOWN, "email-verification");
+      const wrong = wrongFor(registered);
+      await verifyOutcomes(auth, registered, [wrong, wrong]);
+      await verifyOutcomes(auth, UNKNOWN, [wrong, wrong]);
+
+      await sendVerification(auth, registered, "email-verification");
+      await sendVerification(auth, UNKNOWN, "email-verification");
+      const retry = wrongFor(registered);
+      const guesses = [retry, retry, retry, retry];
+      const known = await verifyOutcomes(auth, registered, guesses);
+      const unknown = await verifyOutcomes(auth, UNKNOWN, guesses);
+
+      expect(unknown).toStrictEqual(known);
+    });
+
+    it("kuota percobaan 10/jam per alamat: ke-11 → 429 OTP_RATE_LIMITED + Retry-After, identik terdaftar/tidak", async () => {
+      const auth = makeAuth({ limited: true });
+      const registered = nextEmail();
+      await signUpRaw(auth, registered);
+      await sendVerification(auth, UNKNOWN, "email-verification");
+      const wrong = wrongFor(registered);
+      const tenGuesses = Array.from({ length: 10 }, () => wrong);
+
+      const known = await verifyOutcomes(auth, registered, tenGuesses);
+      const unknown = await verifyOutcomes(auth, UNKNOWN, tenGuesses);
+      const knownLimited = await verifyEmail(
+        auth,
+        registered,
+        latestCode(registered)
+      );
+      const unknownLimited = await verifyEmail(auth, UNKNOWN, wrong);
+
+      expect(unknown).toStrictEqual(known);
+      expect(known.map(([status]) => status)).not.toContain(
+        HTTP_TOO_MANY_REQUESTS
+      );
+      expect([knownLimited.status, unknownLimited.status]).toStrictEqual([
+        HTTP_TOO_MANY_REQUESTS,
+        HTTP_TOO_MANY_REQUESTS,
+      ]);
+      expect(Number(knownLimited.headers.get("retry-after"))).toBeGreaterThan(
+        0
+      );
+      await expect(errorCode(unknownLimited)).resolves.toBe("OTP_RATE_LIMITED");
+    });
+
+    it("kuota dihitung sebelum kode diperiksa: kode benar setelah kuota habis tetap 429, email belum terverifikasi", async () => {
+      const auth = makeAuth({ limited: true });
+      const email = nextEmail();
+      await signUpRaw(auth, email);
+      const wrong = wrongFor(email);
+      await verifyOutcomes(
+        auth,
+        email,
+        Array.from({ length: 10 }, () => wrong)
+      );
+
+      const response = await verifyEmail(auth, email, latestCode(email));
+
+      expect(response.status).toBe(HTTP_TOO_MANY_REQUESTS);
+      await expect(emailVerifiedOf(email)).resolves.toBeFalsy();
+    });
+
+    it("kuota per alamat tanpa beda huruf; alamat lain tidak ikut terblokir", async () => {
+      const auth = makeAuth({ limited: true });
+      const email = nextEmail();
+      await signUpRaw(auth, email);
+      const wrong = wrongFor(email);
+      await verifyOutcomes(
+        auth,
+        email.toUpperCase(),
+        Array.from({ length: 10 }, () => wrong)
+      );
+
+      const blocked = await verifyEmail(auth, email, wrong);
+      const other = await verifyEmail(auth, "lain@example.test", wrong);
+
+      expect(blocked.status).toBe(HTTP_TOO_MANY_REQUESTS);
+      expect(other.status).toBe(400);
+    });
+
+    it("development (limiter bawaan mati): tanpa 429 setelah 11 percobaan", async () => {
+      const auth = makeAuth();
+      const outcomes = await verifyOutcomes(
+        auth,
+        UNKNOWN,
+        Array.from({ length: 11 }, () => WRONG)
+      );
+
+      expect(outcomes.map(([status]) => status)).not.toContain(
+        HTTP_TOO_MANY_REQUESTS
+      );
     });
   });
 });
