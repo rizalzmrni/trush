@@ -8,6 +8,7 @@ const baseEnv = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   CORS_ORIGINS: "http://localhost:5173",
+  APP_URL: "http://localhost:5173",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
   PHONE_DRIVER: "memory",

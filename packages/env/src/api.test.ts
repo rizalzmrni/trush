@@ -5,6 +5,7 @@ import { createApiEnv } from "./api";
 const validEnv = {
   APP_ENV: "staging",
   CORS_ORIGINS: "https://app.example.test",
+  APP_URL: "https://app.example.test",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
@@ -49,6 +50,7 @@ describe(createApiEnv, () => {
       runtimeEnv: {
         ...validEnv,
         CORS_ORIGINS: "http://localhost:5173, http://localhost:5174,",
+        APP_URL: "http://localhost:5174",
       },
     });
 

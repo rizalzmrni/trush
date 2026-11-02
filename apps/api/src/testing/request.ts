@@ -20,6 +20,8 @@ export const BASE_ENV = {
   API_DOCS_ENABLED: "false",
   APP_ENV: "development",
   CORS_ORIGINS: "http://localhost:5173,http://localhost:5174",
+  // Origin app; wajib salah satu origin CORS_ORIGINS.
+  APP_URL: "http://localhost:5174",
   LOG_LEVEL: "info",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
