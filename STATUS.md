@@ -22,8 +22,8 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 
 ### qa-tester
 
-- Sedang dikerjakan: Q17
-- Selesai terakhir: Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Sedang dikerjakan: —
+- Selesai terakhir: Q17, Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -133,7 +133,7 @@ Keputusan (disetujui user 2026-11-02):
 | Q15 | Test `@trush/env` email (guard) + `packages/email` (render tiap template dengan `PreviewProps`, `idempotencyKey`, pemilihan driver, Resend di-mock) | qa-tester | done (`ad76df5` env 46 kasus, `75945da` email 87 test; tanpa bug) | B13, B14 |
 | Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | done (`cc97880`; auth 171, api 106; bug keamanan: token reset bocor lewat `redirectTo` asing → B15a) | B15, B16, B17 |
 | B15a | Bug Q16 (High): `redirectTo`/`callbackURL` reset password di luar `CORS_ORIGINS` meneruskan token ke origin penyerang (`originCheck` better-auth melewatkan request tanpa cookie) → 403 `INVALID_REDIRECT_URL` di hook `before` | backend-engineer | done (`c8d3ead`) | B15, Q16 |
-| Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | wip | F9, F10, B17 |
+| Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | done (`752fae7` app 490, `8e438b0` e2e; e2e dijalankan job CI PR #14) | F9, F10, B17 |
 
 ## Kontrak lintas-wilayah (`packages/core`)
 
@@ -149,6 +149,8 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-02 — Q17 done. PR #14 (Draft) dibuka untuk batch `feat/email-verification`; menunggu CI `e2e` + review keamanan subagent (menyentuh `packages/auth`).
 
 - 2026-11-02 — Q16 done (`cc97880`). Bug keamanan Q16 → B15a done (`c8d3ead`): reset password menolak `redirectTo`/`callbackURL` di luar `CORS_ORIGINS`; belum pernah ada di `main`. Q17 wip.
 
