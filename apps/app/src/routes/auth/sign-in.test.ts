@@ -103,4 +103,39 @@ describe("route /sign-in", () => {
 
     expect((result as Response).headers.get("location")).toBe("/");
   });
+
+  it("?notice dikenal + ?email valid → pesan sukses dan email awal (dinormalisasi)", async () => {
+    const result = await runLoader(
+      "/sign-in?notice=email-verified&email=%20Budi%40Example.TEST%20",
+      () => new Response(null, { status: 401 })
+    );
+
+    expect(result).toStrictEqual({
+      email: "budi@example.test",
+      notice: expect.stringContaining("Email berhasil diverifikasi"),
+      redirectTo: "/",
+      turnstileSiteKey: TEST_ENV.VITE_TURNSTILE_SITE_KEY,
+    });
+  });
+
+  it("?notice=password-reset → pesan kata sandi diganti", async () => {
+    const result = await runLoader(
+      "/sign-in?notice=password-reset",
+      () => new Response(null, { status: 401 })
+    );
+
+    expect(result).toMatchObject({
+      notice: expect.stringContaining("Kata sandi berhasil diganti"),
+    });
+  });
+
+  it("?notice asing dan ?email tidak valid tidak ikut ke halaman", async () => {
+    const result = await runLoader(
+      "/sign-in?notice=Akun%20diblokir&email=%3Cscript%3E",
+      () => new Response(null, { status: 401 })
+    );
+
+    expect(result).not.toHaveProperty("notice");
+    expect(result).not.toHaveProperty("email");
+  });
 });

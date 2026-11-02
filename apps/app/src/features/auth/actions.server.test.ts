@@ -432,3 +432,83 @@ describe(signOutAction, () => {
     });
   });
 });
+
+/** Query `Location` redirect sebagai objek. */
+const redirectQuery = (result: unknown) => {
+  const location = new URL(
+    asRedirect(result).headers.get("location") ?? "",
+    "https://app.example.test"
+  );
+  return {
+    pathname: location.pathname,
+    query: Object.fromEntries(location.searchParams),
+  };
+};
+
+describe("verifikasi email wajib (B15)", () => {
+  it("signIn 403 EMAIL_NOT_VERIFIED → /verify-email?email&reason=sign-in&redirectTo", async () => {
+    const { result } = await run(signInAction, {
+      fields: { ...SIGN_IN_FIELDS, redirectTo: "/org/acme" },
+      handler: () => authError(403, "EMAIL_NOT_VERIFIED"),
+      path: "/sign-in",
+    });
+
+    expect(redirectQuery(result)).toStrictEqual({
+      pathname: "/verify-email",
+      query: {
+        email: "budi@example.test",
+        reason: "sign-in",
+        redirectTo: "/org/acme",
+      },
+    });
+  });
+
+  it("signIn 403 EMAIL_NOT_VERIFIED dengan redirectTo eksternal → redirectTo dibuang", async () => {
+    const { result } = await run(signInAction, {
+      fields: { ...SIGN_IN_FIELDS, redirectTo: "https://evil.example" },
+      handler: () => authError(403, "EMAIL_NOT_VERIFIED"),
+      path: "/sign-in",
+    });
+
+    expect(redirectQuery(result).query).not.toHaveProperty("redirectTo");
+  });
+
+  it("signIn 403 kode lain → tetap pesan form, bukan ke verifikasi", async () => {
+    const { result } = await run(signInAction, {
+      fields: SIGN_IN_FIELDS,
+      handler: () => authError(403, "VERIFICATION_FAILED"),
+      path: "/sign-in",
+    });
+
+    const failure = asFailure(result);
+    expect(failure.init?.status).toBe(403);
+    expect(failure.data.formError).toStrictEqual(expect.any(String));
+  });
+
+  it("signUp { token: null } (tanpa sesi) → /verify-email?reason=sign-up", async () => {
+    const { result } = await run(signUpAction, {
+      fields: { ...SIGN_UP_FIELDS, redirectTo: "/billing" },
+      handler: () => jsonResponse({ token: null, user: { id: "u1" } }),
+      path: "/sign-up",
+    });
+
+    expect(redirectQuery(result)).toStrictEqual({
+      pathname: "/verify-email",
+      query: {
+        email: "budi@example.test",
+        reason: "sign-up",
+        redirectTo: "/billing",
+      },
+    });
+  });
+
+  it("signUp body bukan JSON → diperlakukan seperti sesi dibuat (redirect tujuan)", async () => {
+    const { result } = await run(signUpAction, {
+      fields: SIGN_UP_FIELDS,
+      handler: () => new Response("ok"),
+      path: "/sign-up",
+    });
+
+    expect(asRedirect(result).headers.get("location")).toBe("/");
+  });
+});
