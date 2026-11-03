@@ -2,7 +2,7 @@
 
 Disunting HANYA oleh lead. Teammate melapor lewat pesan (format di `AGENTS.md`); lead memindahkan isinya ke sini. Status: `todo | wip | review | done | blocked`.
 
-Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/email-verification`) · sisa Fase 0: L3, L4, L6
+Terakhir diperbarui: 2026-11-03 · oleh lead · fase email selesai (PR #14) · sisa Fase 0: L3, L4, L6 · berikutnya: follow-up Low PR #14, lalu payments/storage/analytics
 
 ## Ringkasan per agent
 
@@ -86,8 +86,6 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: email (batch `feat/e
 | Q9 | Test reproduksi temuan review keamanan PR #10 (auth 7, app 22, env 2) | qa-tester | done | — |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
-Catatan lanjutan dari batch ini:
-
 Catatan lanjutan (terbuka):
 
 - B19: developer lokal wajib menambah `APP_URL=http://localhost:5174` ke `apps/api/.dev.vars` (api tidak start tanpa itu); L3/L4 isi `APP_URL` per lingkungan.
@@ -114,7 +112,7 @@ Fase berikutnya (belum dipecah): payments, storage, analytics.
 
 ## Backlog fase email
 
-Batch `feat/email-verification` (dibuka 2026-11-02 setelah PR #13 di-merge). Satu PR untuk B12–B17, F8–F10, Q15–Q17: begitu B15 mewajibkan verifikasi email, fixture e2e `createUserViaApi` (Q17) harus ikut, atau job `e2e` merah.
+Batch `feat/email-verification` (dibuka 2026-11-02 setelah PR #13 di-merge; selesai di PR #14, di-approve user 2026-11-03). Satu PR untuk B12–B17, F8–F10, Q15–Q17: begitu B15 mewajibkan verifikasi email, fixture e2e `createUserViaApi` (Q17) harus ikut, atau job `e2e` merah.
 
 Keputusan (disetujui user 2026-11-02):
 
@@ -160,6 +158,8 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-03 — Q18 done (+ test atribut cookie `email_pending` dan `APP_URL` tidak bocor di pesan error; auth 194, env 186). Semua task fase email done; PR #14 di-approve user, CI hijau → ready + auto-merge squash. `.dev.vars` lokal api/db sudah diisi user.
 
 - 2026-11-03 — B18 (CI api hijau kembali), B20, B21, B19, F11 done. Medium #1–#3 review keamanan PR #14 tertutup; Q18 wip.
 
