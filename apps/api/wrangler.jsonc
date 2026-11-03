@@ -9,9 +9,11 @@
     "enabled": true,
   },
   // Development: APP_ENV dan nilai lain datang dari .dev.vars (tanpa default).
-  // Secret per lingkungan (DATABASE_URL, BETTER_AUTH_SECRET,
-  // TURNSTILE_SECRET_KEY, TWILIO_*, RESEND_API_KEY) diset manusia lewat
-  // `wrangler secret put`.
+  // Staging/production: `vars` di blok env.<nama> di bawah; secret diisi
+  // manusia per Worker, daftarnya di komentar "Secret wajib" tiap blok:
+  //   cd apps/api && CLOUDFLARE_ENV=<env> bunx wrangler secret put <NAMA>
+  // Opsional di kedua lingkungan (isi berdua atau kosongkan berdua):
+  // BETTERSTACK_INGEST_URL, BETTERSTACK_SOURCE_TOKEN.
   "env": {
     // Lingkungan lokal Playwright (CLOUDFLARE_ENV=e2e `wrangler dev`), tidak
     // pernah di-deploy. Nama Worker = service binding `API` blok e2e
@@ -34,6 +36,17 @@
         "EMAIL_DRIVER": "memory",
       },
     },
+    // Secret wajib (Worker trush-api-staging):
+    //   DATABASE_URL            Neon branch staging, host -pooler
+    //   BETTER_AUTH_SECRET      `openssl rand -base64 32`
+    //   TURNSTILE_SECRET_KEY    widget Turnstile staging
+    //   RESEND_API_KEY
+    //   EMAIL_ALLOWLIST         email pemilik akun Resend (lihat EMAIL_FROM)
+    //   TWILIO_TEST_ACCOUNT_SID Twilio Console > Test credentials
+    //   TWILIO_TEST_AUTH_TOKEN  Twilio Console > Test credentials
+    // Tidak dibaca selama PHONE_DRIVER=twilio-test: TWILIO_ACCOUNT_SID,
+    // TWILIO_API_KEY_SID, TWILIO_API_KEY_SECRET, TWILIO_MESSAGING_SERVICE_SID,
+    // TWILIO_WHATSAPP_OTP_CONTENT_SID, PHONE_ALLOWLIST.
     "staging": {
       "name": "trush-api-staging",
       "vars": {
@@ -45,22 +58,34 @@
         "APP_URL": "https://trush-app-staging.rizalzmrni.workers.dev",
         // URL Worker api staging. AUTH_COOKIE_DOMAIN kosong di *.workers.dev.
         "BETTER_AUTH_URL": "https://trush-api-staging.rizalzmrni.workers.dev",
-        // Twilio sungguhan, hanya ke nomor tim (PHONE_ALLOWLIST wajib).
-        "PHONE_DRIVER": "twilio",
+        // Sementara twilio-test (test credentials, tanpa biaya, OTP tidak
+        // benar-benar terkirim) karena belum ada nomor Twilio, Messaging
+        // Service, dan template WhatsApp (ADR 0001). Setelah tersedia: ganti
+        // ke "twilio" dan isi secret TWILIO_ACCOUNT_SID, TWILIO_API_KEY_SID,
+        // TWILIO_API_KEY_SECRET, TWILIO_MESSAGING_SERVICE_SID,
+        // TWILIO_WHATSAPP_OTP_CONTENT_SID, PHONE_ALLOWLIST (nomor E.164 tim;
+        // secret karena data pribadi di repo publik).
+        "PHONE_DRIVER": "twilio-test",
         "PHONE_ALLOWED_COUNTRIES": "ID",
-        // PHONE_ALLOWLIST (nomor E.164 tim, dipisah koma) berisi data pribadi
-        // dan repo publik, jadi diisi sebagai secret:
-        // `CLOUDFLARE_ENV=staging wrangler secret put PHONE_ALLOWLIST`.
         // Resend sungguhan, hanya ke alamat/domain tim (EMAIL_ALLOWLIST wajib).
         "EMAIL_DRIVER": "resend",
         // Tanpa domain terverifikasi, Resend hanya menerima pengirim
         // onboarding@resend.dev (dan hanya ke email pemilik akun Resend).
         // L7: ganti ke domain pengirim staging setelah terverifikasi.
         "EMAIL_FROM": "trush staging <onboarding@resend.dev>",
-        // EMAIL_ALLOWLIST juga secret (data pribadi):
-        // `CLOUDFLARE_ENV=staging wrangler secret put EMAIL_ALLOWLIST`.
       },
     },
+    // Secret wajib (Worker trush-api-production):
+    //   DATABASE_URL                    Neon branch utama, host -pooler
+    //   BETTER_AUTH_SECRET              beda dari staging
+    //   TURNSTILE_SECRET_KEY            widget produksi (kunci uji ditolak)
+    //   RESEND_API_KEY
+    //   TWILIO_ACCOUNT_SID
+    //   TWILIO_API_KEY_SID
+    //   TWILIO_API_KEY_SECRET
+    //   TWILIO_MESSAGING_SERVICE_SID
+    //   TWILIO_WHATSAPP_OTP_CONTENT_SID
+    // Tanpa allowlist di production (EMAIL_ALLOWLIST, PHONE_ALLOWLIST kosong).
     "production": {
       "name": "trush-api-production",
       "vars": {
@@ -71,8 +96,7 @@
         "CORS_ORIGINS": "https://app.example.com,https://example.com",
         // L4: URL app produksi (harus ada di CORS_ORIGINS).
         "APP_URL": "https://app.example.com",
-        // L4: ganti dengan domain resmi. Secret (DATABASE_URL,
-        // BETTER_AUTH_SECRET, TURNSTILE_SECRET_KEY) lewat `wrangler secret put`.
+        // L4: ganti dengan domain resmi.
         "BETTER_AUTH_URL": "https://api.example.com",
         "AUTH_COOKIE_DOMAIN": "example.com",
         "PHONE_DRIVER": "twilio",

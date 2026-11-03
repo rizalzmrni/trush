@@ -3,6 +3,10 @@
   // Blok top-level = development lokal (`bun run dev`); APP_ENV dari .dev.vars.
   // Lingkungan dipilih dengan CLOUDFLARE_ENV saat `vite build`
   // (docs/environments.md), bukan flag --env.
+  // Staging/production: Worker ini TIDAK punya secret Cloudflare. APP_ENV
+  // dari `vars` di bawah; VITE_* (publik, dibakar saat build) diisi sebagai
+  // Variable di GitHub Environment `staging` / `production`, dipakai
+  // .github/workflows/deploy.yml. Daftarnya di komentar tiap blok.
   "name": "trush-web",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-08-04",
@@ -19,12 +23,22 @@
         "APP_ENV": "development",
       },
     },
+    // Secret Cloudflare: — (tidak ada).
+    // Variable GitHub Environment `staging`:
+    //   VITE_APP_URL   https://trush-app-staging.rizalzmrni.workers.dev
+    //   VITE_SITE_URL  https://trush-web-staging.rizalzmrni.workers.dev
+    // VITE_APP_ENV diisi otomatis oleh workflow.
     "staging": {
       "name": "trush-web-staging",
       "vars": {
         "APP_ENV": "staging",
       },
     },
+    // Secret Cloudflare: — (tidak ada).
+    // Variable GitHub Environment `production`:
+    //   VITE_APP_URL   https://app.<domain> (L4: domain resmi)
+    //   VITE_SITE_URL  https://<domain>
+    // VITE_APP_ENV diisi otomatis oleh workflow.
     "production": {
       "name": "trush-web-production",
       "vars": {
