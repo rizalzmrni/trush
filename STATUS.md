@@ -35,7 +35,7 @@ Terakhir diperbarui: 2026-11-03 · oleh lead · fase email selesai (PR #14) · s
 | L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | done (CI, ruleset `protect-main` lengkap, bot `trush-app[bot]`) | L0 |
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
-| L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | todo | L3 |
+| L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | wip (`deploy.yml` di `ci/l4-deploy-workflow`; tunggu manusia: GitHub Environment `staging`/`production` + secret/variable, hapus Worker `trush` sisa Workers Builds, domain) | L3 |
 | L5 | Environment GitHub `e2e` (secret `NEON_API_KEY`, variable `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | done (secret + variable diisi 2026-10-31; branch Neon `dev` sebagai parent `e2e.yml`; job `e2e` hijau sejak PR #11) | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
@@ -159,6 +159,7 @@ Keputusan (disetujui user 2026-11-02):
 
 ## Log (terbaru di atas)
 
+- 2026-11-03 — L4 wip: Workers Builds dari dashboard gagal (`npx` ditolak `devEngines` bun; root `/` tanpa `wrangler.jsonc`; Worker `trush` tak cocok dengan nama di repo). Diputuskan deploy lewat GitHub Actions (`deploy.yml`) sesuai `docs/environments.md`; Workers Builds dimatikan.
 - 2026-11-03 — Q18 done (+ test atribut cookie `email_pending` dan `APP_URL` tidak bocor di pesan error; auth 194, env 186). Semua task fase email done; PR #14 di-approve user, CI hijau → ready + auto-merge squash. `.dev.vars` lokal api/db sudah diisi user.
 
 - 2026-11-03 — B18 (CI api hijau kembali), B20, B21, B19, F11 done. Medium #1–#3 review keamanan PR #14 tertutup; Q18 wip.
