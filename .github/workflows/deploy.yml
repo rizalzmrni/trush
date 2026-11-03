@@ -1,0 +1,90 @@
+# Deploy trush ke Cloudflare Workers (docs/environments.md, "Alur promosi").
+# - push ke main      -> staging (otomatis)
+# - workflow_dispatch -> staging atau production (production butuh approval
+#   reviewer di GitHub Environment "production")
+# Urutan dalam satu job agar approval cukup sekali: migrasi -> api -> app/web.
+# Secret runtime Worker (BETTER_AUTH_SECRET, dll.) TIDAK diatur di sini; diisi
+# manusia lewat `CLOUDFLARE_ENV=<env> wrangler secret put`.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Lingkungan tujuan
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  # Deploy ke lingkungan yang sama tidak boleh tumpang tindih atau dibatalkan
+  # di tengah migrasi.
+  group: deploy-${{ github.event_name == 'push' && 'staging' || inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Samakan dengan devEngines di package.json setiap upgrade bun.
+          bun-version: "1.4.3"
+      - run: bun install --frozen-lockfile
+      - run: bun run check-types
+      - run: bun run check
+      - run: bun run test
+
+  deploy:
+    needs: verify
+    # Produksi hanya dari main.
+    if: github.event_name == 'push' || inputs.environment == 'staging' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event_name == 'push' && 'staging' || inputs.environment }}
+    env:
+      CLOUDFLARE_ENV: ${{ github.event_name == 'push' && 'staging' || inputs.environment }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - run: bun install --frozen-lockfile
+
+      # Pola expand/contract: kode versi lama tetap cocok dengan skema baru.
+      - name: Migrasi database
+        env:
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+        run: bunx turbo run db:migrate --filter=@trush/db
+
+      # api dulu: Service Binding API milik app menunjuk Worker ini.
+      - name: Deploy api
+        working-directory: apps/api
+        run: bunx wrangler deploy
+
+      # VITE_* dibakar saat build, jadi app & web di-build per lingkungan.
+      - name: Build app & web
+        env:
+          VITE_APP_ENV: ${{ env.CLOUDFLARE_ENV }}
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          VITE_APP_URL: ${{ vars.VITE_APP_URL }}
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
+        run: bunx turbo run build --filter=@trush/app --filter=@trush/web
+
+      # wrangler membaca config hasil build (build/server/wrangler.json).
+      - name: Deploy app
+        working-directory: apps/app
+        run: bunx wrangler deploy
+
+      - name: Deploy web
+        working-directory: apps/web
+        run: bunx wrangler deploy

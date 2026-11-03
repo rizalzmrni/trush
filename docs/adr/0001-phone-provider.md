@@ -27,7 +27,7 @@ Twilio **Programmable Messaging**, bukan Twilio Verify: test credentials dan mag
 | Development | `log` | Kode OTP ditulis ke logger lokal |
 | Development (uji integrasi) | `twilio-test` | Test credentials + `From` `+15005550006`, tanpa biaya, tanpa pesan nyata |
 | Development (uji WhatsApp nyata) | `twilio` + WhatsApp Sandbox | Penerima harus join sandbox |
-| Staging | `twilio` + `PHONE_ALLOWLIST` | Hanya nomor tim yang dikirimi |
+| Staging | `twilio` + `PHONE_ALLOWLIST` | Hanya nomor tim yang dikirimi. Sementara `twilio-test` sampai nomor, Messaging Service, dan template WhatsApp tersedia (OTP tidak terkirim di staging) |
 | Produksi | `twilio` | Sender WhatsApp sendiri + Messaging Service SMS |
 
 ## Konsekuensi

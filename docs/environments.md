@@ -20,7 +20,7 @@ Satu-satunya penanda lingkungan adalah `APP_ENV` (`development | staging | produ
 | --- | --- | --- | --- |
 | Polar | `sandbox` | `sandbox` | `production` |
 | Resend | `EMAIL_DRIVER=log` (default) atau kunci uji ke `delivered@resend.dev`; `memory` bila `E2E=true` | domain staging, hanya penerima di `EMAIL_ALLOWLIST` (wajib) | domain produksi |
-| Twilio (`PHONE_DRIVER`) | `log`, `twilio-test`, atau `memory` bila `E2E=true` | `twilio` + `PHONE_ALLOWLIST` | `twilio` |
+| Twilio (`PHONE_DRIVER`) | `log`, `twilio-test`, atau `memory` bila `E2E=true` | `twilio` + `PHONE_ALLOWLIST` (sementara `twilio-test`, lihat ADR 0001) | `twilio` |
 | PostHog | tanpa key (no-op) atau project dev | project staging | project produksi |
 | Google Analytics | tanpa ID (no-op) | tanpa ID | ID produksi |
 | Turnstile (`captcha`) | kunci uji (selalu lolos) | widget staging | widget produksi |
@@ -50,6 +50,21 @@ Satu-satunya penanda lingkungan adalah `APP_ENV` (`development | staging | produ
 3. Uji di staging (manual + smoke test).
 4. Rilis produksi: workflow deploy production (manual, approval Environment) → migrasi produksi → deploy `api`, lalu build + deploy `app` dan `web` dengan `CLOUDFLARE_ENV=production`.
 5. Rollback: `CLOUDFLARE_ENV=production wrangler rollback` per Worker. Migrasi tidak di-rollback; pola expand/contract menjaga kode versi sebelumnya tetap cocok dengan skema baru.
+
+## Workflow deploy (`.github/workflows/deploy.yml`)
+
+- Satu job `deploy` per run, sesudah job `verify` (check-types, check, test): migrasi (`db:migrate`) → `apps/api` → build `app` + `web` dengan `CLOUDFLARE_ENV` → deploy `app` dan `web`. Satu job agar approval produksi cukup sekali dan urutan terjamin.
+- Pemicu: push ke `main` → staging; `workflow_dispatch` → staging atau production (production hanya dari `main`).
+- Workers Builds (koneksi Git di dashboard Cloudflare) tidak dipakai, agar migrasi, urutan deploy, dan approval tetap di satu pipeline.
+- Isi per GitHub Environment (`staging`, `production`):
+
+  | Jenis | Nama |
+  | --- | --- |
+  | Secret | `CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers"), `CLOUDFLARE_ACCOUNT_ID`, `DATABASE_URL_UNPOOLED` (branch Neon lingkungan itu, host tanpa `-pooler`) |
+  | Variable | `VITE_API_URL`, `VITE_TURNSTILE_SITE_KEY`, `VITE_APP_URL`, `VITE_SITE_URL` (`VITE_APP_ENV` diisi otomatis) |
+  | Proteksi | `production`: required reviewers + deployment branch `main` |
+
+- Secret runtime Worker tetap diisi manusia dengan `CLOUDFLARE_ENV=<env> wrangler secret put` per Worker; workflow tidak menyentuhnya. Repo publik: `PHONE_ALLOWLIST` dan `EMAIL_ALLOWLIST` staging (nomor/email pribadi tim) juga diisi sebagai secret, bukan `vars` di `wrangler.jsonc`.
 
 ## Backup & pemulihan
 
