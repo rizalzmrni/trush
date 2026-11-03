@@ -233,6 +233,27 @@ describe("pra-pembajakan akun lewat verifikasi email (B19)", () => {
       expect(pendingSetCookie(response)).toBeDefined();
     });
 
+    it("atribut cookie login 403: HttpOnly, Secure, Path=/, SameSite=Lax, nilai bertanda tangan", async () => {
+      const auth = makeAuth();
+      const email = nextEmail();
+      await signUp(auth, email);
+      const userId = await userIdOf(email);
+
+      const raw = pendingSetCookie(await signIn(auth, email)) ?? "";
+      const attributes = raw.toLowerCase();
+      const value = decodeURIComponent(
+        raw.slice(`${PENDING_COOKIE}=`.length).split(";")[0] ?? ""
+      );
+
+      expect(attributes).toContain("httponly");
+      expect(attributes).toContain("secure");
+      expect(attributes).toContain("path=/");
+      expect(attributes).toContain("samesite=lax");
+      const isSignedForUser =
+        value.startsWith(`${userId}.`) && value.length > userId.length + 1;
+      expect(isSignedForUser).toBeTruthy();
+    });
+
     it("login kata sandi salah → 401 tanpa cookie email_pending", async () => {
       const auth = makeAuth();
       const email = nextEmail();
