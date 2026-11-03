@@ -383,11 +383,20 @@ describe("APP_URL (B19)", () => {
     "http://app.example.test",
     "https://app.example.test:8443",
     "https://sub.app.example.test",
-  ])("APP_URL %s di luar CORS_ORIGINS ditolak", (value) => {
-    expect(() =>
-      createApiEnv({ runtimeEnv: { ...validEnv, APP_URL: value } })
-    ).toThrow("APP_URL harus salah satu origin di CORS_ORIGINS.");
-  });
+  ])(
+    "APP_URL %s di luar CORS_ORIGINS ditolak tanpa nilai di pesan",
+    (value) => {
+      const create = () =>
+        createApiEnv({ runtimeEnv: { ...validEnv, APP_URL: value } });
+
+      expect(create).toThrow(
+        "APP_URL harus salah satu origin di CORS_ORIGINS."
+      );
+      expect(create).toThrow(
+        expect.objectContaining({ message: expect.not.stringContaining(value) })
+      );
+    }
+  );
 
   it("APP_URL dengan path: yang dibandingkan origin-nya", () => {
     const env = createApiEnv({
