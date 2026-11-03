@@ -2,6 +2,7 @@ import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 import { databaseUrlSchema } from "./db";
+import { assertEmailEnv, emailServerSchema } from "./email";
 import { assertPhoneEnv, phoneServerSchema } from "./phone";
 import {
   appEnvSchema,
@@ -56,12 +57,14 @@ const PRODUCTION_FORBIDDEN_LOG_LEVELS: ReadonlySet<string> = new Set([
 
 /**
  * `E2E=true` (lingkungan lokal Playwright, blok `env.e2e`) hanya sah di
- * development dan wajib memakai driver telepon `memory`, agar OTP terbaca
- * lewat `/__e2e/outbox` dan tidak pernah sampai ke penyedia nyata.
+ * development dan wajib memakai driver telepon dan email `memory`, agar OTP
+ * dan email terbaca lewat `/__e2e/outbox` dan tidak pernah sampai ke
+ * penyedia nyata.
  */
 const assertE2eEnv = (env: {
   APP_ENV: string;
   E2E: boolean;
+  EMAIL_DRIVER: string;
   PHONE_DRIVER: string;
 }): void => {
   if (!env.E2E) {
@@ -73,11 +76,15 @@ const assertE2eEnv = (env: {
   if (env.PHONE_DRIVER !== "memory") {
     throw new Error("E2E=true mewajibkan PHONE_DRIVER=memory.");
   }
+  if (env.EMAIL_DRIVER !== "memory") {
+    throw new Error("E2E=true mewajibkan EMAIL_DRIVER=memory.");
+  }
 };
 
 /**
  * Kombinasi berbahaya saat production (lihat `docs/environments.md`).
- * `PHONE_DRIVER` selain `twilio` ditolak `assertPhoneEnv`, `E2E=true` oleh
+ * `PHONE_DRIVER` selain `twilio` ditolak `assertPhoneEnv`, `EMAIL_DRIVER`
+ * selain `resend` oleh `assertEmailEnv`, `E2E=true` oleh
  * `assertE2eEnv`. Polar `sandbox` ditambahkan bersama env Polar (fase payments).
  */
 const assertProductionSafe = (env: {
@@ -104,6 +111,18 @@ const assertProductionSafe = (env: {
   }
 };
 
+/** `APP_URL` harus salah satu origin `CORS_ORIGINS` (tautan email ke app tepercaya). */
+const assertAppUrl = (env: {
+  APP_URL: string;
+  CORS_ORIGINS: readonly string[];
+}): void => {
+  const appOrigin = new URL(env.APP_URL).origin;
+  const origins = env.CORS_ORIGINS.map((origin) => new URL(origin).origin);
+  if (!origins.includes(appOrigin)) {
+    throw new Error("APP_URL harus salah satu origin di CORS_ORIGINS.");
+  }
+};
+
 export interface CreateApiEnvOptions {
   /** `c.env` dari Hono. */
   runtimeEnv: RuntimeEnvInput;
@@ -118,10 +137,16 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       APP_ENV: appEnvSchema,
       API_DOCS_ENABLED: booleanFlagSchema.default(false),
       CORS_ORIGINS: originListSchema,
+      /**
+       * URL origin `apps/app`, mis. `https://app.example.com`. Tujuan tautan
+       * email yang dibuat server (B19: tautan membuat kata sandi). Origin-nya
+       * wajib ada di `CORS_ORIGINS`.
+       */
+      APP_URL: z.url(),
       LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
       /**
        * Lingkungan lokal Playwright (`CLOUDFLARE_ENV=e2e`). Hanya development,
-       * wajib `PHONE_DRIVER=memory`; memasang route `/__e2e/*` di api.
+       * wajib `PHONE_DRIVER=memory` + `EMAIL_DRIVER=memory`; memasang route `/__e2e/*` di api.
        */
       E2E: booleanFlagSchema.default(false),
       /** URL ingest source BetterStack. Kosong: log hanya ke console. */
@@ -142,6 +167,7 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       /** Secret. Secret key widget Turnstile (plugin `captcha`). */
       TURNSTILE_SECRET_KEY: z.string().min(1),
       ...phoneServerSchema,
+      ...emailServerSchema,
     },
     runtimeEnv: toRuntimeEnv(runtimeEnv),
     isServer: true,
@@ -156,9 +182,11 @@ export const createApiEnv = ({ runtimeEnv }: CreateApiEnvOptions) => {
       "BETTERSTACK_INGEST_URL dan BETTERSTACK_SOURCE_TOKEN harus diisi bersama atau dikosongkan bersama."
     );
   }
+  assertAppUrl(env);
   assertProductionSafe(env);
   assertE2eEnv(env);
   assertPhoneEnv(env);
+  assertEmailEnv(env);
   return env;
 };
 

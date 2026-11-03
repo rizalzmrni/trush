@@ -14,6 +14,8 @@ const TEST_BINDINGS = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   CORS_ORIGINS: "http://localhost:5173,http://localhost:5174",
+  APP_URL: "http://localhost:5174",
+  EMAIL_DRIVER: "memory",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
   LOG_LEVEL: "info",

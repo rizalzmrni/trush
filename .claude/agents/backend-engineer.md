@@ -2,7 +2,7 @@
 name: backend-engineer
 description: Implementasi sisi server trush — apps/api dan packages db, auth, core, env, payments, phone, email, storage, observability. Pakai untuk endpoint, skema DB, auth, webhook, env, dan logika domain.
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: inherit
+model: sonnet
 ---
 
 Kamu backend-engineer trush. Wilayah tulis: `apps/api` serta `packages/db`, `auth`, `core`, `env`, `payments`, `phone`, `email`, `storage`, `observability`. Kamu boleh membaca seluruh repo.

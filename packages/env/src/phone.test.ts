@@ -8,6 +8,7 @@ const baseEnv = {
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
   BETTER_AUTH_URL: "http://localhost:8787",
   CORS_ORIGINS: "http://localhost:5173",
+  APP_URL: "http://localhost:5173",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
   PHONE_DRIVER: "memory",
@@ -22,9 +23,17 @@ const twilioVars = {
   TWILIO_WHATSAPP_OTP_CONTENT_SID: "HXtest",
 } as const;
 
+// Staging/production wajib email `resend` (`assertEmailEnv`).
+const resendVars = {
+  EMAIL_DRIVER: "resend",
+  EMAIL_FROM: "trush <noreply@example.com>",
+  RESEND_API_KEY: "re_fake",
+} as const;
+
 const productionEnv = {
   ...baseEnv,
   ...twilioVars,
+  ...resendVars,
   APP_ENV: "production",
   BETTER_AUTH_URL: "https://api.example.com",
   PHONE_DRIVER: "twilio",
@@ -161,7 +170,9 @@ describe("env telepon di createApiEnv", () => {
   it("staging + twilio dengan PHONE_ALLOWLIST diterima", () => {
     const env = create({
       ...twilioVars,
+      ...resendVars,
       APP_ENV: "staging",
+      EMAIL_ALLOWLIST: "@example.com",
       PHONE_ALLOWLIST: "+6281234567890",
       PHONE_DRIVER: "twilio",
     });

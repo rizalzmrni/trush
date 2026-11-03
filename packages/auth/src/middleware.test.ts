@@ -9,6 +9,7 @@ import { AUTH_BASE_PATH, createAuth } from "./auth";
 import type { Auth } from "./auth";
 import { requireSession } from "./middleware";
 import type { AuthVariables } from "./middleware";
+import { TEST_EMAIL_ENV, markEmailVerified } from "./testing";
 
 // Nilai palsu; Turnstile kunci uji Cloudflare yang selalu lolos.
 const BASE_URL = "http://localhost:8787";
@@ -62,14 +63,13 @@ const fakeFetch = (input: RequestInfo | URL): Promise<Response> => {
   throw new Error(`fetch tak terduga ke ${url.href}`);
 };
 
-const signUpCookie = async (): Promise<string> => {
-  const response = await auth.handler(
-    new Request(`${BASE_URL}${AUTH_BASE_PATH}/sign-up/email`, {
-      body: JSON.stringify({
-        email: "budi@example.test",
-        name: "Budi",
-        password: "kata-sandi-uji-yang-cukup-panjang-42",
-      }),
+const EMAIL = "budi@example.test";
+const PASSWORD = "kata-sandi-uji-yang-cukup-panjang-42";
+
+const authRequest = (path: string, body: unknown) =>
+  auth.handler(
+    new Request(`${BASE_URL}${AUTH_BASE_PATH}${path}`, {
+      body: JSON.stringify(body),
       headers: {
         "cf-connecting-ip": "203.0.113.10",
         "content-type": "application/json",
@@ -79,11 +79,29 @@ const signUpCookie = async (): Promise<string> => {
       method: "POST",
     })
   );
+
+/**
+ * Daftar, tandai email terverifikasi (sejak B15 sign-up tidak memberi sesi),
+ * lalu login; mengembalikan cookie sesi.
+ */
+const signUpCookie = async (): Promise<string> => {
+  await authRequest("/sign-up/email", {
+    email: EMAIL,
+    name: "Budi",
+    password: PASSWORD,
+  });
+  await markEmailVerified(auth, EMAIL);
+  const response = await authRequest("/sign-in/email", {
+    email: EMAIL,
+    password: PASSWORD,
+  });
   const raw = response.headers
     .getSetCookie()
     .find((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
   if (!raw) {
-    throw new Error("sign-up tidak memasang cookie sesi");
+    throw new Error(
+      `sign-in tidak memasang cookie sesi (HTTP ${response.status})`
+    );
   }
   return raw.split(";")[0] ?? "";
 };
@@ -95,6 +113,7 @@ describe(requireSession, () => {
     auth = createAuth({
       db: handle.db,
       env: {
+        ...TEST_EMAIL_ENV,
         APP_ENV: "development",
         AUTH_COOKIE_DOMAIN: undefined,
         BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",

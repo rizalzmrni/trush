@@ -17,7 +17,7 @@ export const E2E_OUTBOX_PATH = "/__e2e/outbox";
 
 /**
  * Route `/__e2e/*` hanya hidup bila `E2E=true`, yang oleh `createApiEnv`
- * hanya sah saat `APP_ENV=development` + `PHONE_DRIVER=memory`. Dicek ulang
+ * hanya sah saat `APP_ENV=development` + driver telepon dan email `memory`. Dicek ulang
  * di sini agar tetap 404 walau aturan env berubah. Di luar itu 404 seperti
  * route tak dikenal.
  */
@@ -31,7 +31,7 @@ export const e2eGuard = createMiddleware<AppContext>(async (c, next) => {
 
 const getOutbox = createRoute({
   description:
-    "Hanya lingkungan lokal e2e (`E2E=true`). Pesan driver memory per isolate Worker, terbaru dulu.",
+    "Hanya lingkungan lokal e2e (`E2E=true`). Pesan driver memory telepon dan email per isolate Worker, terbaru dulu.",
   hide: true,
   method: "get",
   middleware: [e2eGuard] as const,
@@ -40,7 +40,8 @@ const getOutbox = createRoute({
   responses: {
     [HTTP_OK]: {
       content: { "application/json": { schema: e2eOutboxResponseSchema } },
-      description: "Pesan outbox, disaring `to` bila diisi.",
+      description:
+        "Pesan outbox, disaring `to` (nomor E.164 atau email) bila diisi.",
     },
     400: errorResponse("Query tidak valid."),
     404: errorResponse("Bukan lingkungan e2e."),

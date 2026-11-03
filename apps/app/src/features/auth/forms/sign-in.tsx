@@ -7,10 +7,13 @@ import type {
   AuthActionResult,
   SignInForm as SignInFields,
 } from "../form-schema";
-import { REDIRECT_PARAM } from "../safe-redirect";
+import { FORGOT_PASSWORD_PATH, REDIRECT_PARAM } from "../safe-redirect";
+import { SwitchLink } from "./switch-link";
 import { Turnstile } from "./turnstile";
 
 interface SignInFormProps {
+  /** Email awal dari URL (mis. setelah verifikasi email). */
+  defaultEmail?: string;
   /** Hasil action terakhir (gagal); kosong pada kunjungan pertama. */
   result?: AuthActionResult<SignInFields>;
   redirectTo: string;
@@ -19,6 +22,7 @@ interface SignInFormProps {
 
 /** Form login email + kata sandi; dikirim ke action `/sign-in`. */
 export const SignInForm = ({
+  defaultEmail,
   redirectTo,
   result,
   turnstileSiteKey,
@@ -34,7 +38,7 @@ export const SignInForm = ({
       <input name={REDIRECT_PARAM} type="hidden" value={redirectTo} />
       <TextField
         autoComplete="email"
-        defaultValue={result?.values.email}
+        defaultValue={result?.values.email ?? defaultEmail}
         error={errors?.email}
         inputMode="email"
         label="Email"
@@ -51,6 +55,11 @@ export const SignInForm = ({
         required
         type="password"
       />
+      <p className="-mt-2 text-right text-sm">
+        <SwitchLink redirectTo={redirectTo} to={FORGOT_PASSWORD_PATH}>
+          Lupa kata sandi?
+        </SwitchLink>
+      </p>
       <Turnstile resetKey={result} siteKey={turnstileSiteKey} />
       {errors?.captchaToken ? (
         <FormMessage>{errors.captchaToken}</FormMessage>

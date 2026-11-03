@@ -20,6 +20,8 @@ export const BASE_ENV = {
   API_DOCS_ENABLED: "false",
   APP_ENV: "development",
   CORS_ORIGINS: "http://localhost:5173,http://localhost:5174",
+  // Origin app; wajib salah satu origin CORS_ORIGINS.
+  APP_URL: "http://localhost:5174",
   LOG_LEVEL: "info",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
@@ -27,11 +29,13 @@ export const BASE_ENV = {
   BETTER_AUTH_URL: "http://localhost:8787",
   TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
   PHONE_DRIVER: "memory",
+  EMAIL_DRIVER: "memory",
 } as const;
 
 /**
  * Penimpa agar `BASE_ENV` lolos guard production: Turnstile bukan kunci uji
- * Cloudflare dan `BETTER_AUTH_URL` https (nilai palsu).
+ * Cloudflare, `BETTER_AUTH_URL` https, driver telepon `twilio` dan email
+ * `resend` (nilai palsu).
  */
 export const PRODUCTION_OVERRIDES = {
   APP_ENV: "production",
@@ -43,17 +47,25 @@ export const PRODUCTION_OVERRIDES = {
   TWILIO_API_KEY_SECRET: "fake-secret",
   TWILIO_MESSAGING_SERVICE_SID: "MGtest",
   TWILIO_WHATSAPP_OTP_CONTENT_SID: "HXtest",
+  EMAIL_DRIVER: "resend",
+  EMAIL_FROM: "trush <noreply@example.com>",
+  RESEND_API_KEY: "re_fake",
 } as const;
 
 /**
- * Penimpa staging: driver telepon `memory`/`log` hanya sah di development,
- * jadi staging memakai `twilio-test` (test credentials palsu, tanpa kirim).
+ * Penimpa staging: driver telepon/email `memory`/`log` hanya sah di
+ * development, jadi staging memakai `twilio-test` (test credentials palsu,
+ * tanpa kirim) dan email `resend` + `EMAIL_ALLOWLIST` wajib (kunci palsu).
  */
 export const STAGING_OVERRIDES = {
   APP_ENV: "staging",
   PHONE_DRIVER: "twilio-test",
   TWILIO_TEST_ACCOUNT_SID: "ACtest",
   TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
+  EMAIL_DRIVER: "resend",
+  EMAIL_FROM: "trush <noreply@example.com>",
+  EMAIL_ALLOWLIST: "@example.com",
+  RESEND_API_KEY: "re_fake",
 } as const;
 
 /** `BASE_ENV` untuk `APP_ENV` tertentu; staging/production memakai penimpa di atas. */

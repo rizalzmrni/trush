@@ -15,6 +15,7 @@ const PRODUCTION_ENV = {
   ...BASE_ENV,
   ...PRODUCTION_OVERRIDES,
   CORS_ORIGINS: "https://app.example.com,https://example.com",
+  APP_URL: "https://app.example.com",
 };
 
 describe("header keamanan respons JSON", () => {

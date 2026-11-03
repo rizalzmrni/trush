@@ -3,9 +3,12 @@
 APP_ENV=development
 API_DOCS_ENABLED=true
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+# Origin apps/app (wajib, harus ada di CORS_ORIGINS): tujuan tautan email.
+APP_URL=http://localhost:5174
 LOG_LEVEL=debug
 # Lingkungan lokal Playwright saja (blok env.e2e + .dev.vars.e2e). true hanya
-# sah bila APP_ENV=development dan PHONE_DRIVER=memory; memasang /__e2e/outbox.
+# sah bila APP_ENV=development, PHONE_DRIVER=memory, dan EMAIL_DRIVER=memory;
+# memasang /__e2e/outbox.
 E2E=false
 # BetterStack: kosongkan keduanya di development (log hanya ke console).
 BETTERSTACK_INGEST_URL=
@@ -35,3 +38,13 @@ TWILIO_WHATSAPP_OTP_CONTENT_SID=
 # Driver twilio-test (test credentials dari Console Twilio, tanpa biaya).
 TWILIO_TEST_ACCOUNT_SID=
 TWILIO_TEST_AUTH_TOKEN=
+# Email (@trush/email). Development: `log` menulis kode/tautan ke log lokal.
+# Pilihan: memory | log | resend (production hanya resend). Untuk mencoba
+# Resend di dev: kunci uji + kirim ke delivered@resend.dev.
+EMAIL_DRIVER=log
+# Wajib untuk resend; domain harus terverifikasi di Resend.
+EMAIL_FROM=trush <noreply@example.com>
+# Wajib saat staging + resend: alamat atau @domain tim, dipisah koma.
+EMAIL_ALLOWLIST=
+# Secret (driver resend).
+RESEND_API_KEY=

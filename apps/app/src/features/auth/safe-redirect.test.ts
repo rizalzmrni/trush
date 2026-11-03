@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  authPath,
   DEFAULT_REDIRECT,
   getSafeRedirect,
   redirectFromUrl,
@@ -131,5 +132,64 @@ describe(redirectFromUrl, () => {
     expect(redirectFromUrl("https://app.example.test/sign-in")).toBe(
       DEFAULT_REDIRECT
     );
+  });
+});
+
+describe("halaman auth email (B15) bukan tujuan redirect", () => {
+  it.each([
+    "/verify-email",
+    "/verify-email?email=a%40b.test",
+    "/forgot-password",
+    "/reset-password?token=abc",
+    "/Reset-Password/",
+    "/VERIFY-EMAIL//",
+  ])("menolak %j", (input) => {
+    expect(getSafeRedirect(input)).toBe(DEFAULT_REDIRECT);
+  });
+
+  it("path yang hanya berawalan sama tetap diterima", () => {
+    expect(getSafeRedirect("/verify-email-settings")).toBe(
+      "/verify-email-settings"
+    );
+  });
+});
+
+describe(authPath, () => {
+  it("tanpa query dan redirectTo bawaan → path saja", () => {
+    expect(authPath("/verify-email")).toBe("/verify-email");
+    expect(authPath("/verify-email", "/")).toBe("/verify-email");
+  });
+
+  it("query kosong/undefined dibuang; nilai di-encode", () => {
+    expect(
+      authPath("/sign-in", undefined, {
+        email: "budi+uji@example.test",
+        notice: undefined,
+        reason: "",
+      })
+    ).toBe("/sign-in?email=budi%2Buji%40example.test");
+  });
+
+  it("redirectTo internal ikut setelah query", () => {
+    expect(
+      authPath("/sign-in", "/org/acme?tab=1", { notice: "email-verified" })
+    ).toBe("/sign-in?notice=email-verified&redirectTo=%2Forg%2Facme%3Ftab%3D1");
+  });
+
+  it.each([
+    "https://evil.example",
+    "//evil.example",
+    "/sign-up",
+    "/reset-password",
+  ])("redirectTo %j disaring → tidak ikut", (redirectTo) => {
+    expect(authPath("/sign-in", redirectTo, { notice: "password-reset" })).toBe(
+      "/sign-in?notice=password-reset"
+    );
+  });
+
+  it("query redirectTo tidak bisa menimpa redirectTo tersaring", () => {
+    expect(
+      authPath("/sign-in", "/billing", { redirectTo: "https://evil.example" })
+    ).toBe("/sign-in?redirectTo=%2Fbilling");
   });
 });

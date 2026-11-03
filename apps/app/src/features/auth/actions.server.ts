@@ -1,12 +1,20 @@
+import { EMAIL_AUTH_ERROR_CODES } from "@trush/core/schemas/auth";
 import { data, redirect } from "react-router";
 
 import type { RequestScope } from "../../lib/api.server";
+import {
+  EMAIL_PARAM,
+  REASON_PARAM,
+  VERIFY_REASONS,
+} from "../email-verification/form-schema";
+import type { VerifyReason } from "../email-verification/form-schema";
 import {
   AUTH_ENDPOINTS,
   authErrorMessage,
   forwardSetCookies,
   needsTwoFactor,
   postAuth,
+  readCode,
 } from "./api.server";
 import {
   parseAuthForm,
@@ -14,9 +22,15 @@ import {
   signUpFormSchema,
 } from "./form-schema";
 import type { AuthActionResult, SignInForm, SignUpForm } from "./form-schema";
-import { getSafeRedirect, SIGN_IN_PATH } from "./safe-redirect";
+import {
+  authPath,
+  getSafeRedirect,
+  SIGN_IN_PATH,
+  VERIFY_EMAIL_PATH,
+} from "./safe-redirect";
 
 const HTTP_BAD_REQUEST = 400;
+const HTTP_FORBIDDEN = 403;
 const HTTP_SERVER_ERROR = 500;
 
 const valuesFrom = (formData: FormData) => {
@@ -37,7 +51,45 @@ const failure = <Fields>(
 const redirectTarget = (formData: FormData): string =>
   getSafeRedirect(formData.get("redirectTo"));
 
-/** `POST /sign-in`: login email + kata sandi, teruskan cookie sesi. */
+/** `/verify-email?email=…&reason=…&redirectTo=…`. */
+const verifyEmailRedirect = (
+  formData: FormData,
+  email: string,
+  reason: VerifyReason
+) =>
+  authPath(VERIFY_EMAIL_PATH, redirectTarget(formData), {
+    [EMAIL_PARAM]: email,
+    [REASON_PARAM]: reason,
+  });
+
+/** Login ditolak karena email belum diverifikasi (server mengirim kode baru). */
+const isEmailNotVerified = async (response: Response): Promise<boolean> =>
+  response.status === HTTP_FORBIDDEN &&
+  (await readCode(response.clone())) ===
+    EMAIL_AUTH_ERROR_CODES.emailNotVerified;
+
+/**
+ * Sign-up sukses tanpa sesi (`requireEmailVerification`): better-auth
+ * membalas `{ token: null }` dan belum memasang cookie sesi.
+ */
+const awaitsVerification = async (response: Response): Promise<boolean> => {
+  try {
+    const body: unknown = await response.clone().json();
+    return (
+      typeof body === "object" &&
+      body !== null &&
+      "token" in body &&
+      body.token === null
+    );
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * `POST /sign-in`: login email + kata sandi, teruskan cookie sesi. Email
+ * belum terverifikasi (403 `EMAIL_NOT_VERIFIED`) → halaman verifikasi.
+ */
 export const signInAction = async (scope: RequestScope) => {
   const formData = await scope.request.formData();
   const values = valuesFrom(formData);
@@ -51,6 +103,14 @@ export const signInAction = async (scope: RequestScope) => {
     captchaToken,
     endpoint: AUTH_ENDPOINTS.signIn,
   });
+  if (await isEmailNotVerified(response)) {
+    // Cookie `email_pending` dari 403 membuktikan browser ini tahu kata
+    // sandinya saat verifikasi nanti; wajib sampai ke browser.
+    return redirect(
+      verifyEmailRedirect(formData, email, VERIFY_REASONS.signIn),
+      { headers: forwardSetCookies(response) }
+    );
+  }
   if (!response.ok) {
     return failure<SignInForm>(
       { formError: await authErrorMessage(response), values },
@@ -69,7 +129,11 @@ export const signInAction = async (scope: RequestScope) => {
   });
 };
 
-/** `POST /sign-up`: daftar akun (langsung aktif), teruskan cookie sesi. */
+/**
+ * `POST /sign-up`: daftar akun. Dengan verifikasi email wajib, api tidak
+ * membuat sesi dan sudah mengirim kode → halaman verifikasi. Bila api
+ * membuat sesi (verifikasi tidak wajib), cookie diteruskan seperti login.
+ */
 export const signUpAction = async (scope: RequestScope) => {
   const formData = await scope.request.formData();
   const values = valuesFrom(formData);
@@ -87,6 +151,14 @@ export const signUpAction = async (scope: RequestScope) => {
     return failure<SignUpForm>(
       { formError: await authErrorMessage(response), values },
       response.status
+    );
+  }
+  if (await awaitsVerification(response)) {
+    return redirect(
+      verifyEmailRedirect(formData, email, VERIFY_REASONS.signUp),
+      {
+        headers: forwardSetCookies(response),
+      }
     );
   }
   return redirect(redirectTarget(formData), {

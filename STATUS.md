@@ -2,28 +2,28 @@
 
 Disunting HANYA oleh lead. Teammate melapor lewat pesan (format di `AGENTS.md`); lead memindahkan isinya ke sini. Status: `todo | wip | review | done | blocked`.
 
-Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: Fase 0
+Terakhir diperbarui: 2026-11-03 · oleh lead · fase email selesai (PR #14) · sisa Fase 0: L3, L4, L6 · berikutnya: follow-up Low PR #14, lalu payments/storage/analytics
 
 ## Ringkasan per agent
 
 ### backend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
-- Berikutnya: fase email (`@trush/email` + driver `memory` email untuk outbox e2e)
+- Selesai terakhir: B19, B21, B20, B18; B15a, B17, B16, B15, B14, B13, B12; B11; B10a, B10; B7d, B9, B8, B7b, B7c; B7a (temuan keamanan PR #10: login OTP mati, `phoneNumber` di sign-up ditolak, driver `log`/`memory` hanya development); B7; B6
+- Berikutnya: perbaikan dari temuan Q16/Q17 bila ada
 - Blocker: —
 
 ### frontend-engineer
 
 - Sedang dikerjakan: —
-- Selesai terakhir: F6b; F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
-- Berikutnya: —
+- Selesai terakhir: F11; F10, F9, F8; F6b; F6c, F6a, F6; F7, F5; F4a (open redirect `getSafeRedirect` + vitest node/happy-dom); F4 `apps/app`; F3b
+- Berikutnya: perbaikan dari temuan Q17 bila ada
 - Blocker: —
 
 ### qa-tester
 
 - Sedang dikerjakan: —
-- Selesai terakhir: Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
+- Selesai terakhir: Q18, Q17, Q16, Q15, Q15a; Q14; Q13, Q12; Q11, Q3 (+ perbaikan flaky setup), Q10; Q9 (31 repro temuan keamanan PR #10, kini lulus); Q2b (app 163, tanpa bug); Q8 (test phone, env phone, OTP auth); Q2a (auth 29, api 76, core 37)
 - Berikutnya: —
 - Blocker: —
 
@@ -36,7 +36,7 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: Fase 0
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
 | L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
 | L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | todo | L3 |
-| L5 | Environment GitHub `e2e` (secret `NEON_API_KEY`, variable `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | wip (secret diisi 2026-10-31; branch Neon `dev` dibuat sebagai parent `e2e.yml`; job tetap merah sampai B4 + Q3) | Q3 |
+| L5 | Environment GitHub `e2e` (secret `NEON_API_KEY`, variable `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | done (secret + variable diisi 2026-10-31; branch Neon `dev` sebagai parent `e2e.yml`; job `e2e` hijau sejak PR #11) | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
 | B2 | `packages/core`: kerangka + skema Zod awal | backend-engineer | done (PR #2) | L0 |
@@ -73,7 +73,7 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: Fase 0
 | F4 | `apps/app`: kerangka SSR, Service Binding `API`, `api-client.ts`, `requireSession`, widget Turnstile di form auth | frontend-engineer | done (diuji Q2b, Q9) | F1, B6 |
 | Q1 | Test env, core, api `/health` | qa-tester | done (env, core PR #3; `/health` + fixture `VITE_SITE_URL` PR #4; validasi 400 diuji di Q2/B6) | B1, B2, B5 |
 | Q2 | Test alur auth (api) + guard (app) | qa-tester | done (Q2a PR #9; Q2b 163 test app, tanpa bug) | B6, F4 |
-| Q3 | Workspace `e2e/` + alur kritis (daftar, login email, tambah + verifikasi nomor telepon lewat OTP outbox, auth gate, logout); `write-dev-vars.ts` | qa-tester | done (12 test Playwright; telepon lewat API karena UI belum ada → F6; run penuh lewat job CI `e2e`) | F4, B8, F5 |
+| Q3 | Workspace `e2e/` + alur kritis (daftar, login email, tambah + verifikasi nomor telepon lewat OTP outbox, auth gate, logout); `write-dev-vars.ts` | qa-tester | done (12 test Playwright; run penuh lewat job CI `e2e`; alur telepon kini lewat UI `/settings/phone` sejak Q12) | F4, B8, F5 |
 | Q10 | Test B7b (respons reset password telepon tidak membedakan nomor) + B7c (rate limit per pengguna/nomor) | qa-tester | done (auth 95 test, tanpa bug) | B7b, B7c |
 | Q11 | Test api `/__e2e/outbox`: 404 di luar E2E, kontrak, filter `?to=`, tidak di `/openapi.json` | qa-tester | done (18 test, tanpa bug) | B8 |
 | B7d | Kuota OTP per pengguna tidak terpakai oleh nomor tak valid (hitung setelah validator; reset tetap untuk semua nomor valid) | backend-engineer | done (reset ke nomor tak valid tetap 200 identik: validator plugin tidak jalan di endpoint itu; tanpa kuota/kirim) | B7c, Q10 |
@@ -86,29 +86,63 @@ Terakhir diperbarui: 2026-11-02 · oleh lead · fase aktif: Fase 0
 | Q9 | Test reproduksi temuan review keamanan PR #10 (auth 7, app 22, env 2) | qa-tester | done | — |
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
-Catatan lanjutan dari batch ini:
+Catatan lanjutan (terbuka):
+
+- B19: developer lokal wajib menambah `APP_URL=http://localhost:5174` ke `apps/api/.dev.vars` (api tidak start tanpa itu); L3/L4 isi `APP_URL` per lingkungan.
+- Review keamanan PR #14 Low tambahan (B21): verify-email tanpa kirim kode lebih dulu masih membedakan alamat yang daftar/login ≤5 menit terakhir.
+
+- Review keamanan PR #14, Low (follow-up, keputusan user): DoS rotasi kode verifikasi (cek kuota sebelum OTP dibuat); timing `/sign-up/email` dan `send-verification-otp` (waktu minimum konstan; ukur di staging); token reset di URL/log (redaksi path `/reset-password/*` di logger error, token ke cookie HttpOnly lalu redirect tanpa query).
 
 - F4: klien auth `createAuthClient({ baseURL, plugins: createAuthClientPlugins() })` dari `better-auth/react` + `@trush/auth/client`; token Turnstile di header `x-captcha-response` (`CAPTCHA_HEADER`); `credentials: "include"`; teruskan header `cookie` saat SSR lewat Service Binding; kontrak `@trush/core/schemas/me`.
-- Saat `@trush/email` siap: `requireEmailVerification: true` + `emailVerification.sendVerificationEmail` di `packages/auth/src/auth.ts`.
 - Skema auth bawaan CLI: kolom `timestamp` tanpa zona waktu dan `member` tanpa unique (organization_id, user_id); perketat lewat migrasi terpisah bila diputuskan.
-- `/api/me` 200 end-to-end belum teruji di project worker (DATABASE_URL palsu); tutup di Q3 (Playwright ke branch Neon).
 - `apps/web` `entry.server.tsx` `onError` belum melaporkan error ke mana pun; sambungkan saat analytics/observability web dikerjakan.
 - `@trush/seo`: sitemap + JSON-LD saat ada halaman marketing nyata.
-- Q3: blok `env.e2e` di `wrangler.jsonc` web (dan api di B8).
 - L3/L4: ganti placeholder `CORS_ORIGINS` di `apps/api/wrangler.jsonc`; sediakan `VITE_SITE_URL`/`VITE_APP_URL`/`VITE_APP_ENV` saat `CLOUDFLARE_ENV=… vite build`.
-- `typegen` semua app memakai `wrangler types --env-file .dev.vars.example`: setiap var/secret baru WAJIB masuk `.dev.vars.example` agar ada di tipe `Env` (F4 `apps/app` ikut pola ini).
+- `typegen` semua app memakai `wrangler types --env-file .dev.vars.example`: setiap var/secret baru WAJIB masuk `.dev.vars.example` agar ada di tipe `Env`.
 - Naikkan `SCALAR_BUNDLE_URL` (`apps/api/src/middleware/security.ts`) bersamaan dengan `@scalar/hono-api-reference`.
-
-- B7 keputusan terbuka dijadikan task lanjutan B7b (timing reset password) dan B7c (rate limit per pengguna/nomor).
 - Test entry.server `apps/app` (`onError` 500) belum ada.
 - Migrasi `0003_otp_rate_limit` belum diterapkan ke branch Neon `dev` (manusia: `bunx turbo run db:migrate --filter=@trush/db`); job e2e CI menerapkannya ke branch sementara.
 - e2e masih memanggil Turnstile siteverify dan HIBP nyata dari Worker api (kunci uji Turnstile); bila job CI tidak stabil, stub di api saat `E2E=true`.
 - Dev lokal app↔api: `CLOUDFLARE_DEV_REGISTRY_PATH` absolut yang sama (lihat `docs/react-router.md`); api e2e lewat `bun run dev:e2e` (`wrangler dev --env e2e`).
-- B8: `TODO(B8)` di `packages/env/src/phone.ts` (`E2E=true` mewajibkan `PHONE_DRIVER=memory`).
+- Review PR #12: OTP telepon tidak terikat `userId` (Low, DoS verifikasi saja; risiko diterima sementara). Notifikasi ganti nomor + cabut sesi lain → B16.
 
-- Review PR #12: notifikasi "nomor telepon diubah" ke email (`callbackOnVerification`) saat `@trush/email` siap; pertimbangkan cabut sesi lain setelah ganti nomor; OTP telepon tidak terikat `userId` (Low, DoS verifikasi saja).
+Ditutup saat perapian 2026-11-02: `/api/me` 200 end-to-end (teruji e2e: login → beranda memanggil `/api/me` lewat `requireSession`); `TODO(B8)` di `packages/env/src/phone.ts` (sudah dihapus); `env.e2e` web/api (F5, B8); task lanjutan B7 (B7b, B7c done); `requireEmailVerification` → B15.
 
-Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analytics.
+Fase berikutnya (belum dipecah): payments, storage, analytics.
+
+## Backlog fase email
+
+Batch `feat/email-verification` (dibuka 2026-11-02 setelah PR #13 di-merge; selesai di PR #14, di-approve user 2026-11-03). Satu PR untuk B12–B17, F8–F10, Q15–Q17: begitu B15 mewajibkan verifikasi email, fixture e2e `createUserViaApi` (Q17) harus ikut, atau job `e2e` merah.
+
+Keputusan (disetujui user 2026-11-02):
+
+- Verifikasi email memakai **kode OTP** (plugin `emailOTP`, `overrideDefaultEmailVerification: true`), sejalan dengan alur telepon; bukan tautan.
+- Reset password lewat **tautan** (`sendResetPassword`, endpoint `/request-password-reset` yang sudah dijaga captcha).
+- Driver email meniru telepon: `memory` (e2e), `log` (dev tanpa kunci), `resend`; `log`/`memory` hanya development, production wajib `resend`.
+
+| ID | Tugas | Pemilik | Status | Bergantung |
+| --- | --- | --- | --- | --- |
+| L7 | Resend: domain pengirim terverifikasi (staging, produksi), secret `RESEND_API_KEY` per lingkungan, kunci uji untuk dev | manusia | todo | L3 (staging), L4 (produksi) |
+| L8 | Dependensi `packages/email` (`resend`, `@react-email/components`, `@react-email/render`, `react`, `@trush/env`) dan `apps/email` (`@trush/email-preview`: `react-email`, `@react-email/ui`, `@trush/email`); semua dari catalog `services`/`react` yang sudah ada | lead | done (manifest saja; `tsconfig`, script, dan `src/` milik pemilik paket di B14/F8; task turbo `dev` yang ada sudah mencakup `apps/email`) | — |
+| B12 | Kontrak: `e2eOutboxChannelSchema` + `email` dan field `subject` (nullable) di `@trush/core/schemas/e2e`; skema form verifikasi kode email, lupa password, reset password di `@trush/core/schemas/auth` | backend-engineer | done (`2834d7f`; `EMAIL_AUTH_ERROR_CODES`, verify-email tanpa sesi, `redirectTo` reset harus di `CORS_ORIGINS`) | — |
+| B13 | `@trush/env` email: `EMAIL_DRIVER` (`memory`/`log`/`resend`), `EMAIL_FROM`, `RESEND_API_KEY` (secret), allowlist penerima staging; guard: `E2E=true` wajib `memory`, `log`/`memory` hanya development, production wajib `resend`; `.dev.vars.example` | backend-engineer | done (`1bd1198`; default `EMAIL_DRIVER=log`, staging+resend wajib allowlist; test `ad76df5`) | — |
+| B14 | `packages/email`: `theme.ts` dari tabel hex `DESIGN.md`, driver `memory`/`log`/`resend`, template `verification-otp`, `password-reset`, `phone-number-changed` (+ `PreviewProps`), fungsi `send<Nama>()` dengan `idempotencyKey`; outbox `memory` bersama driver telepon | backend-engineer | done (`c955058`; kunci idempotensi hanya hash; test Q15 `75945da`) | B12, B13, L8 |
+| B15 | `@trush/auth`: plugin `emailOTP` (kirim lewat `@trush/email`), `requireEmailVerification: true`, kirim saat sign-up, `sendResetPassword` + `revokeSessionsOnPasswordReset`; kuota OTP email per alamat; `/email-otp/*` di captcha + rate limit; migrasi bila CLI better-auth menghasilkan perubahan | backend-engineer | done (`ff19b63`; tanpa migrasi; endpoint OTP lain 404; sesi email belum terverifikasi dicabut di hook `after`, termasuk login telepon/2FA; helper `@trush/auth/testing`; fixture test `a7d4759`) | B14 |
+| B16 | Notifikasi email "nomor telepon diubah" (`callbackOnVerification`) + cabut sesi lain setelah nomor diganti (follow-up review PR #12) | backend-engineer | done (`ff19b63`, `phone-changed.ts`) | B15 |
+| B17 | `/__e2e/outbox` memuat pesan email (filter `?to=` alamat email) | backend-engineer | done (`4965710`) | B12, B14 |
+| F8 | `apps/email`: workspace preview React Email untuk template `@trush/email` | frontend-engineer | done (`3613d78`; port 3030, tanpa script export karena `email export` tidak memakai `PreviewProps`) | B14, L8 |
+| F9 | UI verifikasi email `apps/app`: halaman kode setelah sign-up, kirim ulang (Turnstile), login dengan email belum terverifikasi diarahkan ke verifikasi; pesan 429 | frontend-engineer | done (`5488abd`; route auth dipindah ke `routes/auth/` di commit yang sama) | B12, B15 |
+| F10 | UI lupa + reset password `apps/app` (`/forgot-password` dengan Turnstile, `/reset-password?token=`); pesan sukses identik untuk email terdaftar/tidak | frontend-engineer | done (`5488abd`; `redirectTo` dari origin request, tanpa env baru) | B12, B15 |
+| Q15 | Test `@trush/env` email (guard) + `packages/email` (render tiap template dengan `PreviewProps`, `idempotencyKey`, pemilihan driver, Resend di-mock) | qa-tester | done (`ad76df5` env 46 kasus, `75945da` email 87 test; tanpa bug) | B13, B14 |
+| Q16 | Test `@trush/auth` + api: login ditolak sebelum verifikasi, OTP email (salah, kedaluwarsa, kuota), reset password (respons identik, sesi dicabut), notifikasi ganti nomor + sesi lain dicabut, outbox email | qa-tester | done (`cc97880`; auth 171, api 106; bug keamanan: token reset bocor lewat `redirectTo` asing → B15a) | B15, B16, B17 |
+| B15a | Bug Q16 (High): `redirectTo`/`callbackURL` reset password di luar `CORS_ORIGINS` meneruskan token ke origin penyerang (`originCheck` better-auth melewatkan request tanpa cookie) → 403 `INVALID_REDIRECT_URL` di hook `before` | backend-engineer | done (`c8d3ead`) | B15, Q16 |
+| Q17 | Test UI F9/F10 + e2e: fixture `createUserViaApi` memverifikasi email lewat outbox, alur daftar → verifikasi, lupa → reset password | qa-tester | done (`752fae7` app 490, `8e438b0` e2e; e2e dijalankan job CI PR #14) | F9, F10, B17 |
+| B18 | CI `checks` PR #14: worker `cloudflare-pool` test api crash "WebSocket 1009 Message is too large" (lokal hijau) — cari akar masalah | backend-engineer | done (`b454b3b`; render sendiri lewat `react-dom/server.edge` + komponen `@react-email/*` satuan; pesan terbesar 896 KB prettier → 839 KB neon; CI `checks` hijau setelahnya) | B17 |
+| B19 | Review keamanan PR #14 Medium #1 (pra-pembajakan akun): verify-email tanpa bukti kata sandi (cookie "pending verification") mencabut akses tak terbukti (password, sesi, telepon) + kirim tautan set password | backend-engineer | done (`177f2c8`; cookie `email_pending`, env baru `APP_URL` api; username pendaftar tetap ada tanpa kata sandi) | B18 |
+| B20 | Review keamanan PR #14 Medium #2: `/send-verification-email` dimatikan; kuota kegagalan verify-email per alamat | backend-engineer | done (`a122943`) | B18 |
+| B21 | Review keamanan PR #14 Medium #3: verify-email identik untuk alamat terdaftar/tidak (tanpa oracle `TOO_MANY_ATTEMPTS`/`OTP_EXPIRED`) | backend-engineer | done (`a122943`; sisa Low: tebakan tanpa kirim dulu bisa mengenali alamat yang daftar/login ≤5 menit terakhir) | B18 |
+| F11 | UI kasus B19 (verifikasi tanpa bukti kata sandi → "cek email untuk membuat kata sandi") | frontend-engineer | done (`b8054a9`) | B19 |
+| Q18 | Test B19–B21 + F11 (auth, api, app; e2e bila alur berubah) | qa-tester | done (auth 193, env 186, api 106, app 497; e2e pra-pembajakan; tanpa bug) | B19, B20, B21, F11 |
 
 ## Kontrak lintas-wilayah (`packages/core`)
 
@@ -124,6 +158,24 @@ Fase berikutnya (belum dipecah): payments, email + `apps/email`, storage, analyt
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-03 — Q18 done (+ test atribut cookie `email_pending` dan `APP_URL` tidak bocor di pesan error; auth 194, env 186). Semua task fase email done; PR #14 di-approve user, CI hijau → ready + auto-merge squash. `.dev.vars` lokal api/db sudah diisi user.
+
+- 2026-11-03 — B18 (CI api hijau kembali), B20, B21, B19, F11 done. Medium #1–#3 review keamanan PR #14 tertutup; Q18 wip.
+
+- 2026-11-02 — PR #14: CI `e2e` + `pr-title` hijau, `checks` merah (test api crash di CI → B18). Review keamanan subagent (komentar PR): 3 Medium + 3 Low. Keputusan user: ketiga Medium diperbaiki di PR ini (B19–B21, F11, Q18); #1 dengan "cabut akses tak terbukti" (lead menambah cookie pending-verification agar pengguna sah tetap memegang kata sandinya); Low jadi follow-up.
+
+- 2026-11-02 — Q17 done. PR #14 (Draft) dibuka untuk batch `feat/email-verification`; menunggu CI `e2e` + review keamanan subagent (menyentuh `packages/auth`).
+
+- 2026-11-02 — Q16 done (`cc97880`). Bug keamanan Q16 → B15a done (`c8d3ead`): reset password menolak `redirectTo`/`callbackURL` di luar `CORS_ORIGINS`; belum pernah ada di `main`. Q17 wip.
+
+- 2026-11-02 — B13–B17, F8–F10, Q15 done (`1bd1198`…`3613d78`). Verifikasi email kini wajib (sign-up tanpa sesi; 403 `EMAIL_NOT_VERIFIED`). Freeze singkat tim agar hook pre-commit tidak tertahan file setengah jadi di working tree bersama. Pemindahan route auth ikut `feat(app)` (lint-staged `--no-stash` menyulitkan commit parsial; PR di-squash). `docs/auth-plugins.md` diperbarui. Q16, Q17 wip.
+
+- 2026-11-02 — B12 done (`2834d7f`, kontrak email + outbox `subject`). backend-engineer lanjut B13; frontend-engineer di-spawn untuk F9, F10.
+
+- 2026-11-02 — PR #13 di-merge (`b9b3e8b`; F6b, Q14). Batch `feat/email-verification` dibuka; user menyetujui tiga keputusan fase email. L8 done (manifest `packages/email` + `apps/email`, `bun.lock`).
+
+- 2026-11-02 — Perapian STATUS: L5 done, catatan usang ditutup. Fase email dipecah (L7, L8, B12–B17, F8–F10, Q15–Q17); keputusan bawaan: verifikasi email lewat kode OTP, reset password lewat tautan.
 
 - 2026-11-02 — Q14 done (test regresi F6b, app 346 test, tanpa bug). Batch `fix/f6b-phone-form-edge-cases`: PR #13 (Draft).
 - 2026-11-02 — F6b done (`b6a6804`, app 310 test hijau). Efek samping diterima lead: `password` sign-up yang tidak ada sama sekali (request buatan) kini "Masukkan kata sandi.", bukan "minimal 8 karakter"; field kosong tetap sama. Q14 wip.

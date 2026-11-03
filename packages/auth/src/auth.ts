@@ -1,15 +1,19 @@
-import { PHONE_OTP_LENGTH } from "@trush/core/schemas/auth";
+import { EMAIL_OTP_LENGTH, PHONE_OTP_LENGTH } from "@trush/core/schemas/auth";
 import { newId } from "@trush/db";
 import type { AnyDatabase } from "@trush/db";
 import * as schema from "@trush/db/schema";
+import { createEmailSender } from "@trush/email";
+import type { EmailEnv, EmailLogger, EmailSender } from "@trush/email";
 import type { ApiEnv } from "@trush/env/api";
 import { createPhoneSender } from "@trush/phone";
 import type { PhoneEnv, PhoneLogger, PhoneSender } from "@trush/phone";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { createAuthMiddleware } from "better-auth/api";
 import {
   admin,
   captcha,
+  emailOTP,
   haveIBeenPwned,
   lastLoginMethod,
   multiSession,
@@ -20,15 +24,30 @@ import {
   username,
 } from "better-auth/plugins";
 
+import {
+  createSendResetPassword,
+  createSendVerificationOtp,
+  DISABLED_EMAIL_OTP_PATHS,
+  EMAIL_OTP_EXPIRES_SECONDS,
+  emailAfter,
+  emailBefore,
+  PASSWORD_RESET_EXPIRES_SECONDS,
+} from "./email";
 import { createOtpRateLimiter } from "./otp-rate-limit";
 import type { OtpRateLimiter } from "./otp-rate-limit";
 import {
+  markPasswordProven,
+  recordPendingVerification,
+  settleVerification,
+} from "./pending-verification";
+import {
   createSendOtp,
   createSendPasswordResetOtp,
-  phoneAfterHook,
-  phoneBeforeHook,
+  phoneAfter,
+  phoneBefore,
 } from "./phone";
 import type { WaitUntil } from "./phone";
+import { createPhoneVerifiedCallback } from "./phone-changed";
 import { PHONE_OTP_EXPIRES_SECONDS } from "./phone-step-up";
 
 /** Path handler better-auth di `apps/api`. */
@@ -36,9 +55,7 @@ export const AUTH_BASE_PATH = "/api/auth";
 
 /**
  * Endpoint ber-captcha. Ditulis eksplisit karena opsi ini mengganti daftar
- * bawaan; cocokkan dengan versi better-auth setiap upgrade. Tambahkan
- * `/email-otp/send-verification-otp` saat plugin `emailOTP` dipasang.
- * Varian login lain (`/sign-in/username`, `/sign-in/phone-number`) dan
+ * bawaan; cocokkan dengan versi better-auth setiap upgrade. Varian login lain (`/sign-in/username`, `/sign-in/phone-number`) dan
  * pengirim OTP reset (`/phone-number/request-password-reset`) ikut agar
  * captcha tidak bisa dilewati lewat jalur lain.
  */
@@ -50,6 +67,7 @@ export const CAPTCHA_ENDPOINTS = [
   "/request-password-reset",
   "/phone-number/send-otp",
   "/phone-number/request-password-reset",
+  "/email-otp/send-verification-otp",
 ];
 
 const MINUTE_SECONDS = 60;
@@ -71,6 +89,9 @@ const RATE_LIMIT_RULES = {
   // langsung 429; tebakan kode tetap dibatasi plugin (3x per OTP).
   "/phone-number/verify": { max: 10, window: MINUTE_SECONDS },
   "/phone-number/*": { max: 3, window: MINUTE_SECONDS },
+  // WAJIB sebelum `/email-otp/*` (alasan sama dengan `/phone-number/verify`);
+  // tebakan kode dibatasi plugin 3x per OTP.
+  "/email-otp/verify-email": { max: 10, window: MINUTE_SECONDS },
   "/email-otp/*": { max: 3, window: MINUTE_SECONDS },
 };
 
@@ -78,13 +99,15 @@ const RATE_LIMIT_RULES = {
 export type AuthEnv = Pick<
   ApiEnv,
   | "APP_ENV"
+  | "APP_URL"
   | "AUTH_COOKIE_DOMAIN"
   | "BETTER_AUTH_SECRET"
   | "BETTER_AUTH_URL"
   | "CORS_ORIGINS"
   | "TURNSTILE_SECRET_KEY"
 > &
-  PhoneEnv;
+  PhoneEnv &
+  EmailEnv;
 
 export interface CreateAuthOptions {
   /** Klien per request dari `createDb`; auth tidak membuka koneksi sendiri. */
@@ -101,6 +124,16 @@ export interface CreateAuthOptions {
   waitUntil?: WaitUntil | undefined;
   /** Error pengiriman OTP reset password di latar (untuk log, tanpa PII). */
   onPasswordResetOtpError?: ((error: unknown) => void) | undefined;
+  /** Logger untuk driver `log` `@trush/email` (development). */
+  emailLogger?: EmailLogger | undefined;
+  /** Pengganti pengirim email (test); default `createEmailSender` dari env. */
+  emailSender?: EmailSender | undefined;
+  /**
+   * Error pengiriman email di latar (kode verifikasi, tautan reset): untuk
+   * log, tanpa alamat/kode/tautan. Semua email auth dikirim lewat
+   * `waitUntil`, jadi error tidak pernah sampai ke pengguna.
+   */
+  onEmailDeliveryError?: ((error: unknown) => void) | undefined;
   /**
    * Kuota OTP per pengguna/nomor (B7c). Default: tabel `otp_rate_limit` di
    * `db`, aktif bila `APP_ENV` bukan development (sama dengan rate limit IP).
@@ -115,7 +148,10 @@ export interface CreateAuthOptions {
  */
 export const createAuth = ({
   db,
+  emailLogger,
+  emailSender: emailSenderOverride,
   env,
+  onEmailDeliveryError,
   onPasswordResetOtpError,
   otpRateLimiter = env.APP_ENV === "development"
     ? undefined
@@ -124,10 +160,20 @@ export const createAuth = ({
   phoneSender = createPhoneSender({ env, logger: phoneLogger }),
   waitUntil,
 }: CreateAuthOptions) => {
+  const emailSender =
+    emailSenderOverride ?? createEmailSender({ env, logger: emailLogger });
+  const emailDelivery = {
+    emailSender,
+    onDeliveryError: onEmailDeliveryError,
+    otpRateLimiter,
+    waitUntil,
+  };
   const phonePlugin = phoneNumber({
     // Eksplisit (bukan default better-auth) agar upgrade tidak melonggarkan:
     // 3 tebakan per OTP, panjang = kontrak form, umur = umur grant step-up.
     allowedAttempts: 3,
+    // Setelah nomor ditambah/diganti: cabut sesi lain + notifikasi email (B16).
+    callbackOnVerification: createPhoneVerifiedCallback(emailDelivery),
     expiresIn: PHONE_OTP_EXPIRES_SECONDS,
     otpLength: PHONE_OTP_LENGTH,
     // Ditolak (400 INVALID_PHONE_NUMBER) sebelum OTP dibuat: nomor tidak
@@ -141,6 +187,35 @@ export const createAuth = ({
       onDeliveryError: onPasswordResetOtpError,
       waitUntil,
     }),
+  });
+  const emailOtpPlugin = emailOTP({
+    // Eksplisit (bukan default better-auth) agar upgrade tidak melonggarkan.
+    allowedAttempts: 3,
+    // Tidak ada pendaftaran lewat OTP; login OTP juga dimatikan
+    // (`DISABLED_EMAIL_OTP_PATHS`).
+    disableSignUp: true,
+    expiresIn: EMAIL_OTP_EXPIRES_SECONDS,
+    otpLength: EMAIL_OTP_LENGTH,
+    // Verifikasi email bawaan (tautan) diganti kode OTP.
+    overrideDefaultEmailVerification: true,
+    sendVerificationOTP: createSendVerificationOtp(emailDelivery),
+    // Kode di tabel `verification` hanya berupa hash.
+    storeOTP: "hashed",
+  });
+  const emailAfterHook = emailAfter(emailDelivery);
+  const settleHook = settleVerification({
+    ...emailDelivery,
+    appUrl: env.APP_URL,
+  });
+  const emailHook = emailBefore({
+    allowedOrigins: env.CORS_ORIGINS,
+    emailSender,
+    otpRateLimiter,
+  });
+  const phoneHook = phoneBefore({
+    errors: phonePlugin.$ERROR_CODES,
+    otpRateLimiter,
+    phoneSender,
   });
   return betterAuth({
     advanced: {
@@ -164,22 +239,55 @@ export const createAuth = ({
     basePath: AUTH_BASE_PATH,
     baseURL: env.BETTER_AUTH_URL,
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    // Nomor di body → E.164; login OTP dan phoneNumber di sign-up ditolak;
-    // nomor tak terdaftar/belum terverifikasi tidak membocorkan keberadaannya.
-    hooks: {
-      // Grant step-up ganti nomor dihapus setelah verify sukses (B11).
-      after: phoneAfterHook(),
-      before: phoneBeforeHook({
-        errors: phonePlugin.$ERROR_CODES,
-        otpRateLimiter,
-        phoneSender,
-      }),
-    },
+    // Endpoint `emailOTP` yang tidak dipakai → 404 di router.
+    disabledPaths: DISABLED_EMAIL_OTP_PATHS,
     emailAndPassword: {
       enabled: true,
-      // WAJIB diubah ke `true` (plus `emailVerification.sendVerificationEmail`)
-      // begitu `@trush/email` siap; sementara akun baru langsung aktif.
-      requireEmailVerification: false,
+      // Login (email/username) ditolak 403 `EMAIL_NOT_VERIFIED` sesudah
+      // password benar, sampai kode email diverifikasi.
+      requireEmailVerification: true,
+      // Reset lewat tautan; semua sesi pengguna dicabut setelah sukses.
+      resetPasswordTokenExpiresIn: PASSWORD_RESET_EXPIRES_SECONDS,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: createSendResetPassword(emailDelivery),
+    },
+    emailVerification: {
+      // Pengguna login sendiri setelah verifikasi (tanpa sesi otomatis).
+      autoSignInAfterVerification: false,
+      // Kode baru dikirim saat login dengan email belum terverifikasi.
+      sendOnSignIn: true,
+      sendOnSignUp: true,
+      // `sendVerificationEmail` diisi plugin `emailOTP`
+      // (`overrideDefaultEmailVerification`): kode OTP, bukan tautan.
+    },
+    // Nomor di body → E.164; login OTP dan phoneNumber di sign-up ditolak;
+    // nomor tak terdaftar/belum terverifikasi tidak membocorkan keberadaannya.
+    // Email: jenis OTP dibatasi, kuota per alamat (`emailBefore`).
+    hooks: {
+      // Sesi untuk email belum terverifikasi dicabut (semua jalur login);
+      // grant step-up ganti nomor dihapus setelah verify sukses (B11).
+      after: createAuthMiddleware(async (ctx) => {
+        await emailAfterHook(ctx);
+        // B19: verify-email → cabut akses tak terbukti + `passwordSetupRequired`;
+        // jalur lain → cookie bukti kata sandi (sign-up, login 403).
+        if (ctx.path === "/email-otp/verify-email") {
+          return await settleHook(ctx);
+        }
+        await markPasswordProven(ctx);
+        await phoneAfter(ctx);
+      }),
+      before: createAuthMiddleware(async (ctx) => {
+        const override = (await emailHook(ctx)) ?? (await phoneHook(ctx));
+        // B19: catat status akun + bukti kata sandi sebelum kode diperiksa.
+        const email = override?.context.body.email;
+        if (
+          ctx.path === "/email-otp/verify-email" &&
+          typeof email === "string"
+        ) {
+          await recordPendingVerification(ctx, email);
+        }
+        return override;
+      }),
     },
     plugins: [
       organization(),
@@ -190,6 +298,7 @@ export const createAuth = ({
       lastLoginMethod(),
       multiSession(),
       phonePlugin,
+      emailOtpPlugin,
       // Referensi bawaan memuat skrip Scalar tanpa pin; skemanya digabung ke
       // `/docs` api lewat `/api/auth/open-api/generate-schema`.
       openAPI({ disableDefaultReference: true }),

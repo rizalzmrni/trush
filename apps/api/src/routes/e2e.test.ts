@@ -1,9 +1,10 @@
 import { e2eOutboxResponseSchema } from "@trush/core/schemas/e2e";
 import { errorResponseSchema } from "@trush/core/schemas/error";
+import { defaultEmailOutbox } from "@trush/email";
 import { createApiEnv } from "@trush/env/api";
 import { defaultOutbox } from "@trush/phone";
 import { Hono } from "hono";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { AppContext } from "../context";
 import { onError } from "../middleware/error";
@@ -14,7 +15,7 @@ const WARMUP_TIMEOUT_MS = 30_000;
 const FIRST = "+6281200000001";
 const SECOND = "+6281200000002";
 
-/** Development + `E2E=true` + `PHONE_DRIVER=memory` (semua nilai palsu). */
+/** Development + `E2E=true` + driver telepon/email `memory` (semua nilai palsu). */
 const E2E_ENV = { ...envForAppEnv("development"), E2E: "true" };
 
 const outboxRequest = (
@@ -190,6 +191,155 @@ describe("/__e2e/outbox", () => {
     const text = await response.text();
     expect(text).not.toContain("__e2e");
     expect(text).not.toContain("E2eOutbox");
+  });
+});
+
+const EMAIL = "budi@example.test";
+
+/** Email palsu ke outbox email bersama; `at` mengatur waktu kirim. */
+const seedEmail = (to: string, code: string | null, at: string) => {
+  vi.setSystemTime(new Date(at));
+  defaultEmailOutbox.add({
+    code,
+    html: "<p>palsu</p>",
+    idempotencyKey: `uji/${at}`,
+    subject:
+      code === null
+        ? "Atur ulang kata sandi trush"
+        : "Kode verifikasi email trush",
+    template: code === null ? "password-reset" : "verification-otp",
+    text:
+      code === null
+        ? "Tautan: http://localhost:8787/api/auth/reset-password/tok"
+        : `Kode ${code}`,
+    to,
+  });
+};
+
+const seedPhone = (to: string, code: string, at: string) => {
+  vi.setSystemTime(new Date(at));
+  defaultOutbox.add({ channel: "whatsapp", code, to });
+};
+
+/** Telepon dan email berselang-seling dengan waktu kirim yang diketahui. */
+const seedMixed = () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  seedPhone(FIRST, "111111", "2026-11-02T01:00:00.000Z");
+  seedEmail(EMAIL, "222222", "2026-11-02T02:00:00.000Z");
+  seedPhone(FIRST, "333333", "2026-11-02T03:00:00.000Z");
+  seedEmail("ani@example.test", null, "2026-11-02T04:00:00.000Z");
+  vi.useRealTimers();
+};
+describe("/__e2e/outbox email (B17)", () => {
+  beforeAll(async () => {
+    await outboxRequest(E2E_ENV);
+  }, WARMUP_TIMEOUT_MS);
+
+  afterEach(() => {
+    vi.useRealTimers();
+    defaultOutbox.clear();
+    defaultEmailOutbox.clear();
+  });
+
+  it("GET menggabung telepon + email sesuai kontrak, terbaru dulu", async () => {
+    seedMixed();
+
+    const response = await outboxRequest(E2E_ENV);
+    const body = e2eOutboxResponseSchema.parse(await response.json());
+
+    expect(
+      body.messages.map(({ channel, code, subject, to }) => ({
+        channel,
+        code,
+        subject,
+        to,
+      }))
+    ).toStrictEqual([
+      {
+        channel: "email",
+        code: null,
+        subject: "Atur ulang kata sandi trush",
+        to: "ani@example.test",
+      },
+      { channel: "whatsapp", code: "333333", subject: null, to: FIRST },
+      {
+        channel: "email",
+        code: "222222",
+        subject: "Kode verifikasi email trush",
+        to: EMAIL,
+      },
+      { channel: "whatsapp", code: "111111", subject: null, to: FIRST },
+    ]);
+    expect(body.messages[0]?.body).toContain("/reset-password/tok");
+    expect(body.messages[2]?.createdAt).toBe("2026-11-02T02:00:00.000Z");
+  });
+
+  it("GET ?to= email tanpa beda huruf besar/kecil, hanya pesan alamat itu", async () => {
+    seedMixed();
+
+    const response = await outboxRequest(E2E_ENV, {
+      to: "  BUDI@Example.TEST ",
+    });
+
+    await expect(codesOf(response)).resolves.toStrictEqual(["222222"]);
+  });
+
+  it("GET ?to= alamat lain → kosong (tanpa pencocokan sebagian)", async () => {
+    seedMixed();
+
+    const response = await outboxRequest(E2E_ENV, { to: "udi@example.test" });
+
+    await expect(codesOf(response)).resolves.toStrictEqual([]);
+  });
+
+  it("DELETE ?to= email (beda huruf) 204 hanya menghapus email alamat itu", async () => {
+    seedMixed();
+
+    const deleted = await outboxRequest(E2E_ENV, {
+      method: "DELETE",
+      to: "Budi@EXAMPLE.test",
+    });
+    const remaining = await outboxRequest(E2E_ENV);
+
+    expect(deleted.status).toBe(204);
+    await expect(codesOf(remaining)).resolves.toStrictEqual([
+      null,
+      "333333",
+      "111111",
+    ]);
+  });
+
+  it("DELETE ?to= nomor tidak menyentuh email", async () => {
+    seedMixed();
+
+    await outboxRequest(E2E_ENV, { method: "DELETE", to: FIRST });
+
+    expect(defaultOutbox.list()).toStrictEqual([]);
+    expect(defaultEmailOutbox.list()).toHaveLength(2);
+  });
+
+  it("DELETE tanpa to → 204 mengosongkan telepon dan email", async () => {
+    seedMixed();
+
+    const deleted = await outboxRequest(E2E_ENV, { method: "DELETE" });
+
+    expect(deleted.status).toBe(204);
+    expect(defaultOutbox.list()).toStrictEqual([]);
+    expect(defaultEmailOutbox.list()).toStrictEqual([]);
+  });
+
+  it("E2E=false: email di outbox tidak terbaca (404)", async () => {
+    seedMixed();
+
+    const response = await outboxRequest({
+      ...envForAppEnv("development"),
+      E2E: "false",
+    });
+    const text = await response.text();
+
+    expect(response.status).toBe(404);
+    expect(text).not.toContain("222222");
+    expect(text).not.toContain(EMAIL);
   });
 });
 

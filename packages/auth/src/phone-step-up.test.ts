@@ -9,6 +9,7 @@ import type { AuthEnv } from "./auth";
 import { createOtpRateLimiter, OTP_RATE_RULES } from "./otp-rate-limit";
 import type { OtpRateLimiter } from "./otp-rate-limit";
 import { PHONE_OTP_EXPIRES_SECONDS } from "./phone-step-up";
+import { TEST_EMAIL_ENV, markEmailVerified } from "./testing";
 
 // Step-up password tambah/ganti nomor (B11). Semua nilai palsu; pengirim
 // telepon driver memory, fetch keluar (Turnstile, HIBP) di-mock.
@@ -30,6 +31,7 @@ const INVALID_PASSWORD = { code: "INVALID_PASSWORD" };
 const PASSWORD_ATTEMPTS_LIMITED = { code: "PASSWORD_ATTEMPTS_LIMITED" };
 
 const BASE_ENV: AuthEnv = {
+  ...TEST_EMAIL_ENV,
   APP_ENV: "development",
   AUTH_COOKIE_DOMAIN: undefined,
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
@@ -107,9 +109,18 @@ const postTo = (
   );
 };
 
+/**
+ * Daftar, tandai email terverifikasi (sejak B15 sign-up tidak memberi sesi),
+ * lalu login; mengembalikan cookie sesi.
+ */
 const signUp = async (auth: TestAuth): Promise<string> => {
-  const response = await postTo(auth, "/sign-up/email", {
-    body: { email: nextEmail(), name: "Pengguna Step-up", password: PASSWORD },
+  const email = nextEmail();
+  await postTo(auth, "/sign-up/email", {
+    body: { email, name: "Pengguna Step-up", password: PASSWORD },
+  });
+  await markEmailVerified(auth, email);
+  const response = await postTo(auth, "/sign-in/email", {
+    body: { email, password: PASSWORD },
   });
   const raw = response.headers
     .getSetCookie()
@@ -240,9 +251,10 @@ describe("step-up password send-otp/verify (B11)", () => {
     return result.rows;
   };
 
+  /** Kunci kuota telepon/step-up; kuota email (`email:*`, terpakai saat sign-up B15) diabaikan. */
   const quotaKeys = async (): Promise<string[]> => {
     const result = await handle.db.execute<{ key: string }>(
-      sql`select key from "otp_rate_limit" order by key`
+      sql`select key from "otp_rate_limit" where key not like 'email:%' order by key`
     );
     return result.rows.map((row) => row.key);
   };

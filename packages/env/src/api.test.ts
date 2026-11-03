@@ -5,6 +5,7 @@ import { createApiEnv } from "./api";
 const validEnv = {
   APP_ENV: "staging",
   CORS_ORIGINS: "https://app.example.test",
+  APP_URL: "https://app.example.test",
   DATABASE_URL:
     "postgresql://user:password@ep-example-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
   BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
@@ -14,6 +15,11 @@ const validEnv = {
   PHONE_DRIVER: "twilio-test",
   TWILIO_TEST_ACCOUNT_SID: "ACtest",
   TWILIO_TEST_AUTH_TOKEN: "fake-test-token",
+  // Email `log`/`memory` juga hanya development; staging + resend wajib allowlist.
+  EMAIL_DRIVER: "resend",
+  EMAIL_FROM: "trush <noreply@example.com>",
+  EMAIL_ALLOWLIST: "@example.com",
+  RESEND_API_KEY: "re_fake",
 } as const;
 
 const productionEnv = {
@@ -44,6 +50,7 @@ describe(createApiEnv, () => {
       runtimeEnv: {
         ...validEnv,
         CORS_ORIGINS: "http://localhost:5173, http://localhost:5174,",
+        APP_URL: "http://localhost:5174",
       },
     });
 
@@ -340,5 +347,62 @@ describe(createApiEnv, () => {
         },
       })
     ).toThrow(/BETTER_AUTH_URL.*https/u);
+  });
+});
+
+describe("APP_URL (B19)", () => {
+  it("origin app yang ada di CORS_ORIGINS diterima", () => {
+    const env = createApiEnv({
+      runtimeEnv: {
+        ...validEnv,
+        APP_URL: "https://app.example.test",
+        CORS_ORIGINS: "https://web.example.test,https://app.example.test",
+      },
+    });
+
+    expect(env.APP_URL).toBe("https://app.example.test");
+  });
+
+  it("APP_URL hilang ditolak dengan nama var", () => {
+    const { APP_URL: _omitted, ...rest } = validEnv;
+
+    expect(() => createApiEnv({ runtimeEnv: rest })).toThrow(/APP_URL/u);
+  });
+
+  it.each(["bukan-url", "app.example.test"])(
+    "APP_URL %s bukan URL ditolak",
+    (value) => {
+      expect(() =>
+        createApiEnv({ runtimeEnv: { ...validEnv, APP_URL: value } })
+      ).toThrow(/APP_URL/u);
+    }
+  );
+
+  it.each([
+    "https://evil.example",
+    "http://app.example.test",
+    "https://app.example.test:8443",
+    "https://sub.app.example.test",
+  ])(
+    "APP_URL %s di luar CORS_ORIGINS ditolak tanpa nilai di pesan",
+    (value) => {
+      const create = () =>
+        createApiEnv({ runtimeEnv: { ...validEnv, APP_URL: value } });
+
+      expect(create).toThrow(
+        "APP_URL harus salah satu origin di CORS_ORIGINS."
+      );
+      expect(create).toThrow(
+        expect.objectContaining({ message: expect.not.stringContaining(value) })
+      );
+    }
+  );
+
+  it("APP_URL dengan path: yang dibandingkan origin-nya", () => {
+    const env = createApiEnv({
+      runtimeEnv: { ...validEnv, APP_URL: "https://app.example.test/" },
+    });
+
+    expect(new URL(env.APP_URL).origin).toBe("https://app.example.test");
   });
 });

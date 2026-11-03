@@ -1,0 +1,9 @@
+{
+  "extends": "@trush/typescript-config/base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    // crypto.subtle, TextEncoder, fetch tanpa DOM; mendekati global workerd.
+    "lib": ["ES2024", "WebWorker"]
+  },
+  "include": ["src", "vitest.config.ts"]
+}

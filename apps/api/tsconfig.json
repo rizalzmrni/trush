@@ -3,6 +3,8 @@
   "compilerOptions": {
     // Global Worker (fetch, Request, crypto) dari `wrangler types`, bukan DOM.
     "lib": ["ES2024"],
+    // Template `@trush/email` (.tsx) ikut dicek lewat impor.
+    "jsx": "react-jsx",
     "types": ["./worker-configuration.d.ts"]
   },
   "include": ["src", "vitest.config.ts"],

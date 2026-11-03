@@ -1,13 +1,16 @@
 import { redirect } from "react-router";
 
-import { signUpAction } from "../features/auth/actions.server";
-import { PageCard } from "../features/auth/forms/page-card";
-import { SignUpForm } from "../features/auth/forms/sign-up";
-import { SwitchLink } from "../features/auth/forms/switch-link";
-import { redirectFromUrl, SIGN_IN_PATH } from "../features/auth/safe-redirect";
-import { getOptionalSession } from "../features/auth/session.server";
-import { getAppEnv } from "../lib/cloudflare";
-import type { RouteHandle } from "../lib/route-handle";
+import { signUpAction } from "../../features/auth/actions.server";
+import { PageCard } from "../../features/auth/forms/page-card";
+import { SignUpForm } from "../../features/auth/forms/sign-up";
+import { SwitchLink } from "../../features/auth/forms/switch-link";
+import {
+  redirectFromUrl,
+  SIGN_IN_PATH,
+} from "../../features/auth/safe-redirect";
+import { getOptionalSession } from "../../features/auth/session.server";
+import { getAppEnv } from "../../lib/cloudflare";
+import type { RouteHandle } from "../../lib/route-handle";
 import type { Route } from "./+types/sign-up";
 
 export const handle = { turnstile: true } satisfies RouteHandle;

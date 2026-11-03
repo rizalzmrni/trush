@@ -23,6 +23,7 @@
     "@trush/auth": "workspace:*",
     "@trush/core": "workspace:*",
     "@trush/db": "workspace:*",
+    "@trush/email": "workspace:*",
     "@trush/env": "workspace:*",
     "@trush/observability": "workspace:*",
     "@trush/phone": "workspace:*",

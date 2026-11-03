@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./testing": "./src/testing.ts"
   },
   "scripts": {
     "auth:generate": "bun x auth@1.7.14 generate --config src/auth.cli.ts --output ../db/src/schema/auth.ts --yes",
@@ -15,6 +16,7 @@
   "dependencies": {
     "@trush/core": "workspace:*",
     "@trush/db": "workspace:*",
+    "@trush/email": "workspace:*",
     "@trush/env": "workspace:*",
     "@trush/phone": "workspace:*",
     "better-auth": "catalog:services",

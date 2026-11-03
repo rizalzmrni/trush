@@ -18,6 +18,23 @@ export interface OtpRateRule {
  * dari banyak IP; per pengguna menahan satu akun yang berganti-ganti nomor.
  */
 export const OTP_RATE_RULES = {
+  /**
+   * Percobaan kode verifikasi email per alamat (B20), benar atau salah,
+   * untuk semua alamat valid: membatasi tebakan dari banyak IP.
+   */
+  emailCheck: { max: 10, windowSeconds: HOUR_SECONDS },
+  /**
+   * Email terkirim per alamat (verifikasi: daftar, login sebelum verifikasi,
+   * kirim ulang). Dihitung di latar saat benar-benar akan mengirim; habis →
+   * email tidak dikirim tanpa error ke pengguna (sumber login/daftar).
+   */
+  emailDelivery: { max: 10, windowSeconds: HOUR_SECONDS },
+  /**
+   * Permintaan publik per alamat (`/email-otp/send-verification-otp`,
+   * `/request-password-reset`, masing-masing kunci sendiri), dihitung untuk
+   * SEMUA alamat valid, terdaftar atau tidak: 429 tanpa oracle.
+   */
+  emailRequest: { max: 5, windowSeconds: HOUR_SECONDS },
   phone: { max: 5, windowSeconds: HOUR_SECONDS },
   /**
    * Percobaan step-up password ganti nomor (B11) per pengguna, benar atau
@@ -41,6 +58,12 @@ export const otpPhoneKey = (phoneNumber: string): string =>
   `otp:phone:${phoneNumber}`;
 
 export const otpUserKey = (userId: string): string => `otp:user:${userId}`;
+
+/** Kunci per alamat email + jenis (`verify`, `reset`, `delivery`). */
+export const emailQuotaKey = (
+  kind: "check" | "delivery" | "reset" | "verify",
+  email: string
+): string => `email:${kind}:${email}`;
 
 export const stepUpUserKey = (userId: string): string =>
   `step-up:user:${userId}`;

@@ -88,8 +88,115 @@ export const verifyPhoneOtpInputSchema = z.object({
   code: z.string().trim().regex(OTP_CODE),
 });
 
+/** Panjang OTP verifikasi email; dipasang eksplisit sebagai `otpLength` plugin `emailOTP` (`@trush/auth`). */
+export const EMAIL_OTP_LENGTH = 6;
+
+const EMAIL_OTP_CODE = new RegExp(`^\\d{${EMAIL_OTP_LENGTH}}$`, "u");
+
+/**
+ * Satu-satunya `type` OTP email yang dilayani server. Login OTP email, reset
+ * password lewat OTP, dan ganti email lewat OTP ditolak `@trush/auth` (404).
+ */
+export const EMAIL_VERIFICATION_OTP_TYPE = "email-verification";
+
+/** Alamat email form; dipangkas dan dijadikan huruf kecil seperti server. */
+export const emailInputSchema = z.string().trim().toLowerCase().pipe(z.email());
+
+/**
+ * Input form verifikasi kode email (`/api/auth/email-otp/verify-email`,
+ * body JSON `{ email, otp }`). Setelah sukses pengguna login ulang (sesi
+ * tidak dibuat otomatis).
+ */
+export const verifyEmailOtpInputSchema = z.object({
+  email: emailInputSchema,
+  otp: z.string().trim().regex(EMAIL_OTP_CODE),
+});
+
+/**
+ * Respons sukses `/api/auth/email-otp/verify-email` (B19). Sesi tidak
+ * pernah dibuat (`token` selalu null).
+ * - `passwordSetupRequired: false`: alur normal, arahkan ke login.
+ * - `passwordSetupRequired: true`: akun belum terverifikasi dan browser ini
+ *   tidak membuktikan tahu kata sandinya (tanpa cookie `email_pending` sah),
+ *   jadi kata sandi lama, semua sesi, dan nomor telepon yang belum terbukti
+ *   dicabut, lalu tautan reset dikirim ke email. Tampilkan "cek email untuk
+ *   membuat kata sandi", jangan arahkan ke login.
+ * Field lain (`user`) mengikuti better-auth dan tidak dijamin kontrak ini.
+ */
+export const verifyEmailOtpResponseSchema = z.object({
+  status: z.literal(true),
+  token: z.null(),
+  passwordSetupRequired: z.boolean(),
+});
+
+/**
+ * Input "kirim ulang kode" (`/api/auth/email-otp/send-verification-otp`,
+ * body JSON `{ email, type }`, header Turnstile `x-captcha-response`).
+ * Respons 200 identik untuk email terdaftar/tidak/sudah terverifikasi.
+ * Kuota per alamat → 429 `OTP_RATE_LIMITED` + `Retry-After`.
+ */
+export const sendEmailVerificationOtpInputSchema = z.object({
+  email: emailInputSchema,
+  type: z
+    .literal(EMAIL_VERIFICATION_OTP_TYPE)
+    .default(EMAIL_VERIFICATION_OTP_TYPE),
+});
+
+/**
+ * Input form lupa password (`/api/auth/request-password-reset`, body JSON
+ * `{ email, redirectTo }`, header Turnstile). `redirectTo` diisi klien:
+ * URL absolut halaman `/reset-password` app (harus termasuk `CORS_ORIGINS`).
+ * Tautan di email membuka api lalu dialihkan ke `redirectTo?token=...`, atau
+ * `redirectTo?error=INVALID_TOKEN` bila token tidak sah/kedaluwarsa. Respons
+ * 200 identik untuk email terdaftar/tidak.
+ */
+export const forgotPasswordInputSchema = z.object({
+  email: emailInputSchema,
+});
+
+/**
+ * Input form reset password (`/api/auth/reset-password`, body JSON
+ * `{ newPassword, token }`). Aturan password sama dengan daftar. Sukses →
+ * semua sesi pengguna dicabut; token salah/kedaluwarsa/terpakai → 400
+ * `INVALID_TOKEN`.
+ */
+export const resetPasswordInputSchema = z.object({
+  token: z.string().trim().min(1),
+  newPassword: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
+});
+
+/**
+ * Kode error alur email (body `{ code, message }`):
+ * - `EMAIL_NOT_VERIFIED` (403): login email/username sebelum verifikasi;
+ *   server sekaligus mengirim kode baru, arahkan ke halaman verifikasi.
+ * - `INVALID_OTP` (400), `OTP_EXPIRED` (400), `TOO_MANY_ATTEMPTS` (403,
+ *   kode dihapus, minta kode baru): verifikasi kode email.
+ * - `OTP_RATE_LIMITED` (429 + `Retry-After`): kuota kirim kode per alamat.
+ * - `INVALID_TOKEN` (400): reset password dengan token tidak sah.
+ */
+export const EMAIL_AUTH_ERROR_CODES = {
+  emailNotVerified: "EMAIL_NOT_VERIFIED",
+  invalidOtp: "INVALID_OTP",
+  invalidToken: "INVALID_TOKEN",
+  otpExpired: "OTP_EXPIRED",
+  otpRateLimited: "OTP_RATE_LIMITED",
+  tooManyAttempts: "TOO_MANY_ATTEMPTS",
+} as const;
+
+export type EmailAuthErrorCode =
+  (typeof EMAIL_AUTH_ERROR_CODES)[keyof typeof EMAIL_AUTH_ERROR_CODES];
+
 export type SignInEmailInput = z.infer<typeof signInEmailInputSchema>;
 export type SignUpEmailInput = z.infer<typeof signUpEmailInputSchema>;
 export type PhoneOtpChannel = z.infer<typeof phoneOtpChannelSchema>;
 export type SendPhoneOtpInput = z.infer<typeof sendPhoneOtpInputSchema>;
 export type VerifyPhoneOtpInput = z.infer<typeof verifyPhoneOtpInputSchema>;
+export type VerifyEmailOtpInput = z.infer<typeof verifyEmailOtpInputSchema>;
+export type VerifyEmailOtpResponse = z.infer<
+  typeof verifyEmailOtpResponseSchema
+>;
+export type SendEmailVerificationOtpInput = z.infer<
+  typeof sendEmailVerificationOtpInputSchema
+>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;

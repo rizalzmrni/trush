@@ -4,6 +4,9 @@ export const DEFAULT_REDIRECT = "/";
 export const SIGN_IN_PATH = "/sign-in";
 export const SIGN_UP_PATH = "/sign-up";
 export const SIGN_OUT_PATH = "/sign-out";
+export const VERIFY_EMAIL_PATH = "/verify-email";
+export const FORGOT_PASSWORD_PATH = "/forgot-password";
+export const RESET_PASSWORD_PATH = "/reset-password";
 
 /** Nama query string tujuan setelah login. */
 export const REDIRECT_PARAM = "redirectTo";
@@ -12,7 +15,14 @@ export const REDIRECT_PARAM = "redirectTo";
 const INTERNAL_ORIGIN = "http://trush.internal";
 
 /** Halaman auth tidak pernah menjadi tujuan (mencegah putaran redirect). */
-const AUTH_PATHS = new Set([SIGN_IN_PATH, SIGN_UP_PATH, SIGN_OUT_PATH]);
+const AUTH_PATHS = new Set([
+  SIGN_IN_PATH,
+  SIGN_UP_PATH,
+  SIGN_OUT_PATH,
+  VERIFY_EMAIL_PATH,
+  FORGOT_PASSWORD_PATH,
+  RESET_PASSWORD_PATH,
+]);
 
 const TRAILING_SLASHES = /\/+$/u;
 
@@ -63,14 +73,32 @@ export const getSafeRedirect = (
   return result;
 };
 
-/** `/sign-in?redirectTo=…` dengan tujuan yang sudah disaring. */
-export const signInPath = (redirectTo?: string): string => {
-  const target = getSafeRedirect(redirectTo);
-  if (target === DEFAULT_REDIRECT) {
-    return SIGN_IN_PATH;
+/**
+ * `path?…` dengan query tambahan dan `redirectTo` tersaring (dihilangkan bila
+ * sama dengan tujuan bawaan). Query kosong → path saja.
+ */
+export const authPath = (
+  path: string,
+  redirectTo?: string,
+  query: Readonly<Record<string, string | undefined>> = {}
+): string => {
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    if (value) {
+      params.set(name, value);
+    }
   }
-  return `${SIGN_IN_PATH}?${new URLSearchParams({ [REDIRECT_PARAM]: target })}`;
+  const target = getSafeRedirect(redirectTo);
+  if (target !== DEFAULT_REDIRECT) {
+    params.set(REDIRECT_PARAM, target);
+  }
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
 };
+
+/** `/sign-in?redirectTo=…` dengan tujuan yang sudah disaring. */
+export const signInPath = (redirectTo?: string): string =>
+  authPath(SIGN_IN_PATH, redirectTo);
 
 /** Tujuan redirect dari query string URL (sudah disaring). */
 export const redirectFromUrl = (url: string | URL): string =>

@@ -6,6 +6,10 @@ import type { RequestScope } from "../../lib/api.server";
 
 /** Endpoint better-auth yang dipanggil action app lewat Service Binding. */
 export const AUTH_ENDPOINTS = {
+  emailSendVerificationOtp: "/api/auth/email-otp/send-verification-otp",
+  emailVerify: "/api/auth/email-otp/verify-email",
+  passwordRequestReset: "/api/auth/request-password-reset",
+  passwordReset: "/api/auth/reset-password",
   phoneSendOtp: "/api/auth/phone-number/send-otp",
   phoneVerify: "/api/auth/phone-number/verify",
   signIn: "/api/auth/sign-in/email",

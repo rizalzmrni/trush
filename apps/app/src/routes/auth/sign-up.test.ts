@@ -8,9 +8,9 @@ import {
   ME_FIXTURE,
   SESSION_COOKIE,
   TEST_ENV,
-} from "../testing/cloudflare";
-import type { ApiHandler } from "../testing/cloudflare";
-import { handle, loader } from "./sign-in";
+} from "../../testing/cloudflare";
+import type { ApiHandler } from "../../testing/cloudflare";
+import { handle, loader } from "./sign-up";
 
 const runLoader = async (path: string, handler: ApiHandler) => {
   const api = createFakeApi(handler);
@@ -18,7 +18,7 @@ const runLoader = async (path: string, handler: ApiHandler) => {
   const args: Parameters<typeof loader>[0] = {
     context: createTestContext({ api }),
     params: {},
-    pattern: "/sign-in",
+    pattern: "/sign-up",
     request,
     url: new URL(request.url),
   };
@@ -29,14 +29,14 @@ const runLoader = async (path: string, handler: ApiHandler) => {
   }
 };
 
-describe("route /sign-in", () => {
+describe("route /sign-up", () => {
   it("memuat Turnstile (CSP mengizinkan widget)", () => {
     expect(handle.turnstile).toBeTruthy();
   });
 
   it("tanpa sesi → data halaman dengan redirectTo tersaring dan site key", async () => {
     const result = await runLoader(
-      "/sign-in?redirectTo=%2Fbilling%3Fplan%3Dpro",
+      "/sign-up?redirectTo=%2Fbilling%3Fplan%3Dpro",
       () => new Response(null, { status: 401 })
     );
 
@@ -48,7 +48,7 @@ describe("route /sign-in", () => {
 
   it("redirectTo eksternal diganti /", async () => {
     const result = await runLoader(
-      "/sign-in?redirectTo=https%3A%2F%2Fevil.example",
+      "/sign-up?redirectTo=https%3A%2F%2Fevil.example",
       () => new Response(null, { status: 401 })
     );
 
@@ -56,7 +56,7 @@ describe("route /sign-in", () => {
   });
 
   it("api gagal → halaman tetap terbuka", async () => {
-    const result = await runLoader("/sign-in", () => {
+    const result = await runLoader("/sign-up", () => {
       throw new TypeError("Network connection lost.");
     });
 
@@ -64,7 +64,7 @@ describe("route /sign-in", () => {
   });
 
   it("sudah login → redirect ke redirectTo internal", async () => {
-    const result = await runLoader("/sign-in?redirectTo=%2Fsettings", () =>
+    const result = await runLoader("/sign-up?redirectTo=%2Fsettings", () =>
       jsonResponse(ME_FIXTURE)
     );
 
@@ -74,7 +74,7 @@ describe("route /sign-in", () => {
 
   it("sudah login dengan redirectTo eksternal → redirect ke /", async () => {
     const result = await runLoader(
-      "/sign-in?redirectTo=%2F%2Fevil.example",
+      "/sign-up?redirectTo=%2F%2Fevil.example",
       () => jsonResponse(ME_FIXTURE)
     );
 
@@ -88,7 +88,7 @@ describe("route /sign-in", () => {
   ])(
     "sudah login dengan redirectTo dot-segment %s → redirect ke /",
     async (encoded) => {
-      const result = await runLoader(`/sign-in?redirectTo=${encoded}`, () =>
+      const result = await runLoader(`/sign-up?redirectTo=${encoded}`, () =>
         jsonResponse(ME_FIXTURE)
       );
 
@@ -97,7 +97,7 @@ describe("route /sign-in", () => {
   );
 
   it("sudah login dengan redirectTo /sign-in/ → redirect ke /", async () => {
-    const result = await runLoader("/sign-in?redirectTo=%2Fsign-in%2F", () =>
+    const result = await runLoader("/sign-up?redirectTo=%2Fsign-in%2F", () =>
       jsonResponse(ME_FIXTURE)
     );
 

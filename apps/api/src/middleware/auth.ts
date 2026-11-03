@@ -1,5 +1,6 @@
 import { createAuth } from "@trush/auth";
 import { createDb } from "@trush/db";
+import { EmailError } from "@trush/email";
 import { getLogger } from "@trush/observability/logger";
 import { PhoneError } from "@trush/phone";
 import { createMiddleware } from "hono/factory";
@@ -20,11 +21,25 @@ const logPasswordResetOtpError = (error: unknown): void => {
   });
 };
 
+/** Logger driver `log` `@trush/email` (development): satu-satunya tempat isi email di-log. */
+const emailLogger = getLogger(["trush", "email"]);
+
+/**
+ * Kegagalan email auth di latar (kode verifikasi, tautan reset): hanya kode
+ * error, tanpa alamat, kode, atau tautan. Respons sudah terkirim.
+ */
+const logEmailDeliveryError = (error: unknown): void => {
+  emailLogger.error("Email auth gagal dikirim: {code}.", {
+    code: error instanceof EmailError ? error.code : "UNKNOWN",
+    providerCode: error instanceof EmailError ? error.providerCode : undefined,
+  });
+};
+
 /**
  * Membuat klien DB dan instance better-auth per request (tidak ada klien
- * global) untuk route di bawah `/api/*`. `waitUntil` hanya dipakai OTP reset
- * password (B7b); OTP tambah nomor dan tugas better-auth lain tetap ditunggu
- * sebelum respons (lihat `createAuth`).
+ * global) untuk route di bawah `/api/*`. `waitUntil` dipakai OTP reset
+ * password telepon (B7b) dan semua email auth; OTP tambah nomor dan tugas
+ * better-auth lain tetap ditunggu sebelum respons (lihat `createAuth`).
  */
 export const authContext = createMiddleware<AppContext>(async (c, next) => {
   const { env } = c.var;
@@ -34,7 +49,9 @@ export const authContext = createMiddleware<AppContext>(async (c, next) => {
     "auth",
     createAuth({
       db,
+      emailLogger,
       env,
+      onEmailDeliveryError: logEmailDeliveryError,
       onPasswordResetOtpError: logPasswordResetOtpError,
       phoneLogger,
       waitUntil: (promise) => {
