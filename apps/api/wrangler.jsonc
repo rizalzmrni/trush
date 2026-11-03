@@ -40,23 +40,25 @@
         "APP_ENV": "staging",
         "API_DOCS_ENABLED": true,
         "LOG_LEVEL": "info",
-        // L3: ganti dengan URL *.workers.dev app & web staging yang sebenarnya.
-        "CORS_ORIGINS": "https://trush-app-staging.example.workers.dev,https://trush-web-staging.example.workers.dev",
-        // L3: URL app staging (harus ada di CORS_ORIGINS).
-        "APP_URL": "https://trush-app-staging.example.workers.dev",
-        // L3: URL Worker api staging. AUTH_COOKIE_DOMAIN kosong di *.workers.dev.
-        "BETTER_AUTH_URL": "https://trush-api-staging.example.workers.dev",
+        "CORS_ORIGINS": "https://trush-app-staging.rizalzmrni.workers.dev,https://trush-web-staging.rizalzmrni.workers.dev",
+        // URL app staging (harus ada di CORS_ORIGINS).
+        "APP_URL": "https://trush-app-staging.rizalzmrni.workers.dev",
+        // URL Worker api staging. AUTH_COOKIE_DOMAIN kosong di *.workers.dev.
+        "BETTER_AUTH_URL": "https://trush-api-staging.rizalzmrni.workers.dev",
         // Twilio sungguhan, hanya ke nomor tim (PHONE_ALLOWLIST wajib).
         "PHONE_DRIVER": "twilio",
         "PHONE_ALLOWED_COUNTRIES": "ID",
-        // L3: isi nomor E.164 tim, dipisah koma.
-        "PHONE_ALLOWLIST": "+6280000000000",
+        // PHONE_ALLOWLIST (nomor E.164 tim, dipisah koma) berisi data pribadi
+        // dan repo publik, jadi diisi sebagai secret:
+        // `CLOUDFLARE_ENV=staging wrangler secret put PHONE_ALLOWLIST`.
         // Resend sungguhan, hanya ke alamat/domain tim (EMAIL_ALLOWLIST wajib).
-        // L7: domain pengirim staging terverifikasi di Resend.
         "EMAIL_DRIVER": "resend",
-        "EMAIL_FROM": "trush staging <noreply@staging.example.com>",
-        // L3: isi alamat atau @domain tim, dipisah koma.
-        "EMAIL_ALLOWLIST": "@example.com",
+        // Tanpa domain terverifikasi, Resend hanya menerima pengirim
+        // onboarding@resend.dev (dan hanya ke email pemilik akun Resend).
+        // L7: ganti ke domain pengirim staging setelah terverifikasi.
+        "EMAIL_FROM": "trush staging <onboarding@resend.dev>",
+        // EMAIL_ALLOWLIST juga secret (data pribadi):
+        // `CLOUDFLARE_ENV=staging wrangler secret put EMAIL_ALLOWLIST`.
       },
     },
     "production": {

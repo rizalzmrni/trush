@@ -159,6 +159,7 @@ Keputusan (disetujui user 2026-11-02):
 
 ## Log (terbaru di atas)
 
+- 2026-11-03 — L3: `apps/api/wrangler.jsonc` staging memakai URL `*.rizalzmrni.workers.dev`; `EMAIL_FROM` staging `onboarding@resend.dev` sampai L7; `PHONE_ALLOWLIST`/`EMAIL_ALLOWLIST` staging dipindah ke secret Worker (repo publik).
 - 2026-11-03 — L4 wip: Workers Builds dari dashboard gagal (`npx` ditolak `devEngines` bun; root `/` tanpa `wrangler.jsonc`; Worker `trush` tak cocok dengan nama di repo). Diputuskan deploy lewat GitHub Actions (`deploy.yml`) sesuai `docs/environments.md`; Workers Builds dimatikan.
 - 2026-11-03 — Q18 done (+ test atribut cookie `email_pending` dan `APP_URL` tidak bocor di pesan error; auth 194, env 186). Semua task fase email done; PR #14 di-approve user, CI hijau → ready + auto-merge squash. `.dev.vars` lokal api/db sudah diisi user.
 

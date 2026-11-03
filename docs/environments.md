@@ -64,7 +64,7 @@ Satu-satunya penanda lingkungan adalah `APP_ENV` (`development | staging | produ
   | Variable | `VITE_API_URL`, `VITE_TURNSTILE_SITE_KEY`, `VITE_APP_URL`, `VITE_SITE_URL` (`VITE_APP_ENV` diisi otomatis) |
   | Proteksi | `production`: required reviewers + deployment branch `main` |
 
-- Secret runtime Worker tetap diisi manusia dengan `CLOUDFLARE_ENV=<env> wrangler secret put` per Worker; workflow tidak menyentuhnya.
+- Secret runtime Worker tetap diisi manusia dengan `CLOUDFLARE_ENV=<env> wrangler secret put` per Worker; workflow tidak menyentuhnya. Repo publik: `PHONE_ALLOWLIST` dan `EMAIL_ALLOWLIST` staging (nomor/email pribadi tim) juga diisi sebagai secret, bukan `vars` di `wrangler.jsonc`.
 
 ## Backup & pemulihan
 
