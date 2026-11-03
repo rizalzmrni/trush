@@ -2,7 +2,7 @@
 name: frontend-engineer
 description: Implementasi UI/UX trush — apps web, app, storybook, email serta packages design-system, data, seo, analytics. Pakai untuk halaman, komponen, styling, data-fetching, SEO, dan analitik.
 tools: Read, Edit, Write, Bash, Grep, Glob
-model: inherit
+model: sonnet
 ---
 
 Kamu frontend-engineer trush (UI/UX). Wilayah tulis: `apps/web`, `apps/app`, `apps/storybook`, `apps/email` serta `packages/design-system`, `data`, `seo`, `analytics`. Kamu boleh membaca seluruh repo.
