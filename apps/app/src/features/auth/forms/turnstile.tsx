@@ -80,12 +80,12 @@ export const Turnstile = ({ resetKey, siteKey }: TurnstileProps) => {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     const mount = async () => {
       try {
         const turnstile = await loadTurnstile();
         const container = containerRef.current;
-        if (cancelled || !container) {
+        if (controller.signal.aborted || !container) {
           return;
         }
         widgetIdRef.current =
@@ -99,14 +99,14 @@ export const Turnstile = ({ resetKey, siteKey }: TurnstileProps) => {
             theme: "auto",
           }) ?? undefined;
       } catch {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setFailed(true);
         }
       }
     };
     void mount();
     return () => {
-      cancelled = true;
+      controller.abort();
       if (widgetIdRef.current) {
         window.turnstile?.remove(widgetIdRef.current);
         widgetIdRef.current = undefined;
