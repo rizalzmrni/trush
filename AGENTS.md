@@ -45,6 +45,22 @@ Field `tools` di definisi agent membatasi JENIS alat, bukan path file. Semua age
 - Dependensi: teammate mengirim permintaan ke lead (paket, alasan, workspace tujuan, usulan catalog sesuai `docs/dependencies.md`); lead menjalankan `bun add` supaya `bun.lock` tidak ditulis bersamaan.
 - Teammate tidak mewarisi riwayat percakapan lead. Lead wajib menyertakan konteks tugas di prompt spawn.
 
+## Prinsip kode: sederhana, efektif, efisien
+
+Berlaku untuk semua agent. Targetnya kode paling sederhana yang benar-benar berjalan, bukan yang paling "lengkap".
+
+- Kerjakan yang diminta task, tidak lebih. Tanpa fitur, opsi, parameter, atau konfigurasi "untuk nanti".
+- Pakai yang sudah ada dulu: cari (Grep) helper di paket, fitur stack, atau komponen design-system sebelum menulis yang baru.
+- Abstraksi (helper, hook, generic, factory) baru dibuat bila logika yang sama dipakai di 3 tempat. Dua salinan kecil lebih baik daripada abstraksi yang salah.
+- Fungsi kecil dengan satu tanggung jawab, early return, tanpa nesting dalam. Nama yang jelas menggantikan komentar; komentar hanya untuk "mengapa".
+- Validasi di batas sistem (request, env, webhook, form) dengan Zod; di dalam, percayai tipe. Jangan cek defensif berlapis untuk kondisi yang tidak mungkin.
+- Tangani error di tempat yang bisa bertindak. Jangan `try/catch` yang hanya me-rethrow atau menelan error diam-diam.
+- Efisien di Workers & browser: I/O independen diparalelkan (`Promise.all`), hindari query N+1 (pakai join/batch), ambil hanya kolom dan baris yang dipakai (select eksplisit, pagination), tanpa kerja berulang per request yang bisa dihitung sekali.
+- Diff minimal: jangan refactor atau merapikan kode di luar lingkup task. Temuan lain ditulis di bagian "Berikutnya" laporan akhir.
+- "Berjalan dengan baik" harus terbukti: jalankan `check-types` dan `test` paket terdampak, dan pikirkan kasus tepi (kosong, null, gagal jaringan, tidak berhak) sebelum melapor selesai.
+- Test (qa-tester): satu perilaku per test, mock hanya batas luar (jaringan, layanan pihak ketiga), tanpa test untuk detail implementasi.
+- Lead menolak saat review: kode yang over-engineered, dead code, atau perubahan yang tidak diminta task.
+
 ## Bug dari qa-tester
 
 1. qa-tester menulis test reproduksi sebagai `test.fails(...)` dengan komentar `// BUG: <ringkas>`, supaya suite tetap hijau.
