@@ -2,7 +2,7 @@
 
 Disunting HANYA oleh lead. Teammate melapor lewat pesan (format di `AGENTS.md`); lead memindahkan isinya ke sini. Status: `todo | wip | review | done | blocked`.
 
-Terakhir diperbarui: 2026-11-04 · oleh lead · staging terverifikasi (L3 done, `deploy.yml` PR #15) · sisa Fase 0: L4 (produksi), L6, L7 · berikutnya: logger better-auth, follow-up Low PR #14, lalu payments/storage/analytics
+Terakhir diperbarui: 2026-11-06 · oleh lead · staging terverifikasi (L3 done PR #16, `deploy.yml` PR #15) · prinsip kode agent di `AGENTS.md` · sisa Fase 0: L4 (produksi), L6, L7 · berikutnya: logger better-auth, follow-up Low PR #14, lalu payments/storage/analytics
 
 ## Ringkasan per agent
 
@@ -160,6 +160,8 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-06 — PR #16: L3 done dicatat; `AGENTS.md` mendapat bagian "Prinsip kode: sederhana, efektif, efisien" untuk semua agent; oxlint 1.91 / oxfmt 0.76 / ultracite 8.1.1. Rule baru `react(immutability)` menolak reassign flag lokal di cleanup `useEffect` → `turnstile.tsx` memakai `AbortController`. `gh` lokal wajib dari repo apt cli.github.com (versi Ubuntu 2.46 gagal `gh pr edit`: Projects classic).
 
 - 2026-11-04 — L3 done: alur daftar → verifikasi email → login berhasil di staging. Branch Neon `staging` (`br-dawn-salad-a1d0oqmj`) dibuat dari `production` (produksi belum berisi data; 4 migrasi ikut); Worker memakai `DATABASE_URL` host `-pooler`, GitHub Environment `staging` memakai `DATABASE_URL_UNPOOLED` tanpa `-pooler`. Insiden: `/sign-up/email` 500 karena `TURNSTILE_SECRET_KEY` staging tidak valid (siteverify HTTP 400 `invalid-input-secret` → plugin captcha melempar `SERVICE_UNAVAILABLE`; secret valid + token salah = 403); manusia mengganti secret. Penyebab sulit dilacak karena logger better-auth tidak tersambung ke `@trush/observability` (log hanya "error").
 
