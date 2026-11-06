@@ -2,7 +2,7 @@
 
 Disunting HANYA oleh lead. Teammate melapor lewat pesan (format di `AGENTS.md`); lead memindahkan isinya ke sini. Status: `todo | wip | review | done | blocked`.
 
-Terakhir diperbarui: 2026-11-03 · oleh lead · fase email selesai (PR #14) · sisa Fase 0: L3, L4, L6 · berikutnya: follow-up Low PR #14, lalu payments/storage/analytics
+Terakhir diperbarui: 2026-11-06 · oleh lead · staging terverifikasi (L3 done PR #16, `deploy.yml` PR #15) · prinsip kode agent di `AGENTS.md` · sisa Fase 0: L4 (produksi), L6, L7 · berikutnya: logger better-auth, follow-up Low PR #14, lalu payments/storage/analytics
 
 ## Ringkasan per agent
 
@@ -34,8 +34,8 @@ Terakhir diperbarui: 2026-11-03 · oleh lead · fase email selesai (PR #14) · s
 | L0 | Root: workspaces bun, `turbo.json`, `typescript-config`, Ultracite (`oxlint.config.mts`, `oxfmt.config.mts`), Husky + lint-staged + `commitlint.config.ts`, catalog bun, template PR | lead | done (PR #1) | — |
 | L1 | CI GitHub Actions (check-types, check, test, commitlint judul PR) + ruleset `main` + akun bot agent | lead + manusia | done (CI, ruleset `protect-main` lengkap, bot `trush-app[bot]`) | L0 |
 | L2 | `DESIGN.md` + `packages/design-system/components.json` | lead + manusia | done | — |
-| L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | todo | B5, F3 |
-| L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | wip (staging siap: secret Worker `trush-api-staging` + GitHub Environment `staging` terisi, PR `ci/l4-deploy-workflow`; sisa: domain, `wrangler.jsonc` production, secret + Environment `production`, hapus Worker `trush` sisa Workers Builds) | L3 |
+| L3 | Deploy manual staging ke `*.workers.dev` (`wrangler.jsonc` `env.staging`) | manusia | done (2026-11-04: daftar, login, verifikasi email OTP diuji manual di `trush-app-staging.rizalzmrni.workers.dev`; branch Neon `staging` dari `production`) | B5, F3 |
+| L4 | Domain + `deploy.yml` (staging otomatis, produksi manual) | lead + manusia | wip (staging done: `deploy.yml` di `main` lewat PR #15, run push pertama sukses; sisa: domain, `wrangler.jsonc` production, secret + Environment `production`, hapus Worker `trush` sisa Workers Builds) | L3 |
 | L5 | Environment GitHub `e2e` (secret `NEON_API_KEY`, variable `NEON_PROJECT_ID`) untuk `e2e.yml` | manusia | done (secret + variable diisi 2026-10-31; branch Neon `dev` sebagai parent `e2e.yml`; job `e2e` hijau sejak PR #11) | Q3 |
 | L6 | Atur retensi PITR Neon produksi + uji pemulihan pertama (`docs/environments.md`) | manusia | todo | L4 |
 | B1 | `packages/env`: factory web/app/api + `.dev.vars.example` | backend-engineer | done (PR #2) | L0 |
@@ -87,6 +87,8 @@ Terakhir diperbarui: 2026-11-03 · oleh lead · fase email selesai (PR #14) · s
 | Q5 | Test observability: redaksi (termasuk bersarang), bentuk JSON, `requestId` di setiap log, sink BetterStack gagal tidak melempar, guard level production | qa-tester | done (PR #3) | B3 |
 
 Catatan lanjutan (terbuka):
+
+- Logger better-auth (opsi `logger` di `createAuth`) belum diteruskan ke LogTape `@trush/observability`; error internal plugin (mis. captcha) muncul di Workers Logs tanpa pesan. Task backend berikutnya; tanpa PII/token.
 
 - B19: developer lokal wajib menambah `APP_URL=http://localhost:5174` ke `apps/api/.dev.vars` (api tidak start tanpa itu); L3/L4 isi `APP_URL` per lingkungan.
 - Review keamanan PR #14 Low tambahan (B21): verify-email tanpa kirim kode lebih dulu masih membedakan alamat yang daftar/login ≤5 menit terakhir.
@@ -158,6 +160,10 @@ Keputusan (disetujui user 2026-11-02):
 - —
 
 ## Log (terbaru di atas)
+
+- 2026-11-06 — PR #16: L3 done dicatat; `AGENTS.md` mendapat bagian "Prinsip kode: sederhana, efektif, efisien" untuk semua agent; oxlint 1.91 / oxfmt 0.76 / ultracite 8.1.1. Rule baru `react(immutability)` menolak reassign flag lokal di cleanup `useEffect` → `turnstile.tsx` memakai `AbortController`. `gh` lokal wajib dari repo apt cli.github.com (versi Ubuntu 2.46 gagal `gh pr edit`: Projects classic).
+
+- 2026-11-04 — L3 done: alur daftar → verifikasi email → login berhasil di staging. Branch Neon `staging` (`br-dawn-salad-a1d0oqmj`) dibuat dari `production` (produksi belum berisi data; 4 migrasi ikut); Worker memakai `DATABASE_URL` host `-pooler`, GitHub Environment `staging` memakai `DATABASE_URL_UNPOOLED` tanpa `-pooler`. Insiden: `/sign-up/email` 500 karena `TURNSTILE_SECRET_KEY` staging tidak valid (siteverify HTTP 400 `invalid-input-secret` → plugin captcha melempar `SERVICE_UNAVAILABLE`; secret valid + token salah = 403); manusia mengganti secret. Penyebab sulit dilacak karena logger better-auth tidak tersambung ke `@trush/observability` (log hanya "error").
 
 - 2026-11-03 — L4: staging pakai `PHONE_DRIVER=twilio-test` sementara (belum ada nomor Twilio/Messaging Service/template WhatsApp; ADR 0001 dicatat). Daftar secret Cloudflare dan Variable GitHub per lingkungan ditulis di komentar ketiga `wrangler.jsonc`. Secret `trush-api-staging` (7) diverifikasi lewat API Cloudflare; GitHub Environment `staging` diisi manusia (tidak bisa dicek bot, 403).
 - 2026-11-03 — L3: `apps/api/wrangler.jsonc` staging memakai URL `*.rizalzmrni.workers.dev`; `EMAIL_FROM` staging `onboarding@resend.dev` sampai L7; `PHONE_ALLOWLIST`/`EMAIL_ALLOWLIST` staging dipindah ke secret Worker (repo publik).
